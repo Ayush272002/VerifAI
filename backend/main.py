@@ -1,10 +1,13 @@
 """FastAPI backend application."""
 
+import dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers.contract_router import router as contract_router
 from .routers.test_router import router as test_router
+
+dotenv.load_dotenv()
 
 app = FastAPI()
 

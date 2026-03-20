@@ -4,18 +4,35 @@ from typing import Any
 
 from web3 import Web3
 
-from ..core.constants import CONTRACT_ABI, CONTRACT_ADDRESS, RPC_ENDPOINT
+from ..core.constants import CONTRACT_ABI, CONTRACT_ADDRESS, RPC_ENDPOINTS
 
 
 class ContractService:
-    """Service for interacting with smart contract."""
+    """Service for interacting with smart contract.
+
+    Attributes:
+        w3: Web3 instance
+        contract: Web3 contract instance
+    """
 
     def __init__(self) -> None:
-        """Initialize Web3 and contract instance."""
-        self.w3 = Web3(Web3.HTTPProvider(RPC_ENDPOINT))
+        """Initialise Web3 and contract instance."""
+        self.w3 = None
+        for endpoint in RPC_ENDPOINTS:
+            candidate = Web3(Web3.HTTPProvider(endpoint))
+            try:
+                if candidate.is_connected():
+                    self.w3 = candidate
+                    break
+            except Exception:  # pylint: disable=broad-exception-caught
+                continue
+
+        if self.w3 is None:
+            # Keep the app booting even if RPC is temporarily unavailable
+            self.w3 = Web3(Web3.HTTPProvider(RPC_ENDPOINTS[0]))
+
         self.contract = self.w3.eth.contract(
-            address=Web3.to_checksum_address(CONTRACT_ADDRESS),
-            abi=CONTRACT_ABI
+            address=self.w3.to_checksum_address(CONTRACT_ADDRESS), abi=CONTRACT_ABI
         )
 
     def get_status(self) -> dict[str, Any]:
@@ -27,7 +44,7 @@ class ContractService:
         return {
             "connected": self.w3.is_connected(),
             "chain_id": self.w3.eth.chain_id,
-            "contract_address": CONTRACT_ADDRESS
+            "contract_address": CONTRACT_ADDRESS,
         }
 
     def get_value(self) -> dict[str, Any]:
@@ -52,18 +69,20 @@ class ContractService:
             Dictionary with transaction parameters or error message
         """
         try:
-            tx_data = self.contract.functions.incBy(amount).build_transaction({
-                "from": "0x0000000000000000000000000000000000000000",
-                "gasPrice": self.w3.eth.gas_price,
-                "nonce": 0,
-            })
+            tx_data = self.contract.functions.incBy(amount).build_transaction(
+                {
+                    "from": "0x0000000000000000000000000000000000000000",
+                    "gasPrice": self.w3.eth.gas_price,
+                    "nonce": 0,
+                }
+            )
             return {
                 "success": True,
                 "transaction_data": {
                     "to": tx_data["to"],
                     "data": tx_data["data"],
-                    "value": tx_data.get("value", "0")
-                }
+                    "value": tx_data.get("value", "0"),
+                },
             }
         except Exception as e:  # pylint: disable=broad-exception-caught
             return {"success": False, "error": str(e)}
