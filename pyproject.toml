@@ -6,12 +6,10 @@ readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastapi[standard]>=0.128.0",
-    "requests>=2.32.5",
-    "langchain[google-genai]>=0.3.27",
-    "langchain-google-genai>=2.1.10",
+    "langchain-ollama>=0.3.3",
     "python-multipart>=0.0.20",
+    "requests>=2.32.5",
     "web3>=7.14.1",
-    "langchain-google-vertexai>=3.2.2",
 ]
 
 [dependency-groups]

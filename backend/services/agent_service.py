@@ -1,24 +1,25 @@
-"""Service layer for Gemini text query operations."""
+"""Service layer for agents."""
 
 import logging
-import os
 
-from langchain.chat_models import init_chat_model
+from langchain_ollama import ChatOllama
 
-from ..core.constants import GOOGLE_API_KEY
+from ..core.constants import OLLAMA_BASE_URL, OLLAMA_MODEL_NAME
 
 
-class GoogleGenAIService:
-    """Service wrapper around the Gemini chat model."""
+class OllamaAgentService:
+    """Service wrapper around the Ollama chat model."""
 
     def __init__(self) -> None:
-        """Initialise chat model and API key configuration."""
-        if GOOGLE_API_KEY:
-            os.environ["GOOGLE_API_KEY"] = GOOGLE_API_KEY
-        self.model = init_chat_model("google_genai:gemini-2.5-flash")
+        """Initialise Ollama chat model."""
+        self.model = ChatOllama(
+            model=OLLAMA_MODEL_NAME,
+            base_url=OLLAMA_BASE_URL,
+            temperature=0,
+        )
 
     def text_query(self, query: str) -> str:
-        """Send text query to Gemini model.
+        """Send text query to Ollama model.
 
         Args:
             query: Prompt text sent to the model
@@ -26,7 +27,7 @@ class GoogleGenAIService:
         Returns:
             Model response text
         """
-        logging.info("Processing Gemini query")
+        logging.info("Processing Ollama query with model %s", OLLAMA_MODEL_NAME)
         response = self.model.invoke(query)
         if not response:
             return "No response from model"

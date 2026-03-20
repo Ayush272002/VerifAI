@@ -4,10 +4,10 @@ import dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from .routers.agent_router import router as agent_router
 from .routers.contract_router import router as contract_router
 from .routers.ipfs_router import router as ipfs_router
 from .routers.test_router import router as test_router
-from .routers.agent_router  import router as agent_router
 
 
 dotenv.load_dotenv()

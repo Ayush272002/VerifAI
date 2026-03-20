@@ -2,10 +2,10 @@
 
 from fastapi import APIRouter
 
-from ..services.agent_service import GoogleGenAIService
+from ..services.agent_service import OllamaAgentService
 
 router = APIRouter(prefix="/agent", tags=["agent"])
-_ai_service = GoogleGenAIService()
+_ai_service = OllamaAgentService()
 
 
 @router.get("/health")
@@ -20,7 +20,7 @@ def health() -> dict[str, str]:
 
 @router.get("/query/{query}")
 def query_vlm(query: str) -> dict[str, str]:
-    """Send query to Gemini model.
+    """Send query to Ollama model.
 
     Args:
         query: Prompt text
