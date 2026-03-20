@@ -1,0 +1,15 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "Backend for the Modern Next.js + FastAPI template"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.128.0",
+    "web3>=7.14.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.11",
+]
