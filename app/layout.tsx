@@ -20,8 +20,8 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Template",
-  description: "A modern Next.js + FastAPI template",
+  title: "VerifAI — Onchain Dispute Arbitration in Under 60 Seconds",
+  description: "Lock evidence on-chain. AI analyzes immutable facts. Smart contracts execute rulings automatically. Resolve disputes in under 60 seconds.",
 };
 
 export default function RootLayout({
