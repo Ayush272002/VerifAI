@@ -1,11 +1,18 @@
 """FastAPI backend for the Modern Next.js + FastAPI Template."""
 
 import json
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from web3 import Web3
+import dotenv
+
+dotenv.load_dotenv()  
 
 app = FastAPI()
+
+INFURA_PROJECT_ID = os.getenv("INFURA_PROJECT_ID")
+CONTRACT_ADDRESS = os.getenv("CONTRACT_ADDRESS")
 
 # Allow requests from the Next.js frontend
 app.add_middleware(
@@ -19,61 +26,32 @@ app.add_middleware(
 )
 
 # Smart Contract Configuration
-CONTRACT_ADDRESS = "0xD4Fc541236927E2EAf8F27606bD7309C1Fc2cbee"
-RPC_ENDPOINT = "https://sepolia.drpc.org"  # Update to your RPC endpoint
+RPC_ENDPOINTS = [
+    f"https://sepolia.infura.io/v3/{INFURA_PROJECT_ID}",  # Infura Sepolia RPC
+    "https://rpc.sepolia.org",       # Public Sepolia testnet RPC
+    "https://ethereum-sepolia-rpc.publicnode.com",
+]
 
 # Initialize Web3
-w3 = Web3(Web3.HTTPProvider(RPC_ENDPOINT))
+w3 = None
+for endpoint in RPC_ENDPOINTS:
+    candidate = Web3(Web3.HTTPProvider(endpoint))
+    try:
+        if candidate.is_connected():
+            w3 = candidate
+            break
+    except Exception:
+        continue
 
-# Load Contract ABI
-CONTRACT_ABI = [
-    {
-        "anonymous": False,
-        "inputs": [
-            {
-                "indexed": False,
-                "internalType": "uint256",
-                "name": "by",
-                "type": "uint256"
-            }
-        ],
-        "name": "Increment",
-        "type": "event"
-    },
-    {
-        "inputs": [],
-        "name": "inc",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "by",
-                "type": "uint256"
-            }
-        ],
-        "name": "incBy",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "x",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    }
-]
+if w3 is None:
+    # Keep the app booting even if RPC is temporarily unavailable.
+    w3 = Web3(Web3.HTTPProvider(RPC_ENDPOINTS[0]))
+
+# Load Contract ABI from file
+import os
+abi_path = os.path.join(os.path.dirname(__file__), "ABI.json")
+with open(abi_path, "r") as f:
+    CONTRACT_ABI = json.load(f)
 
 # Create Contract Instance
 contract = w3.eth.contract(address=Web3.to_checksum_address(CONTRACT_ADDRESS), abi=CONTRACT_ABI)
