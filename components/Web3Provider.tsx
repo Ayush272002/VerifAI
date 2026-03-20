@@ -1,9 +1,7 @@
 'use client';
 
-import { WagmiProvider, createConfig } from 'wagmi';
-import { http } from 'viem';
+import { WagmiProvider, createConfig, http } from 'wagmi';
 import { sepolia } from 'wagmi/chains';
-import { metaMask } from 'wagmi/connectors';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 const queryClient = new QueryClient();
@@ -15,7 +13,6 @@ const RPC_URL = INFURA_PROJECT_ID
 
 const config = createConfig({
   chains: [sepolia],
-  connectors: [metaMask()],
   transports: {
     [sepolia.id]: http(RPC_URL),
   },
