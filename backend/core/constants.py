@@ -24,6 +24,9 @@ PINATA_GATEWAY_BASE_URL = os.getenv(
 PINATA_FILE_UPLOAD_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS"
 PINATA_JSON_UPLOAD_URL = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
 
+# Agent Configuration
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+
 RPC_ENDPOINTS = [
     f"https://sepolia.infura.io/v3/{INFURA_PROJECT_ID}"
     if INFURA_PROJECT_ID
