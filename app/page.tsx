@@ -1,7 +1,3 @@
-/**
- * @fileoverview VerifAI Landing Page — Onchain Freelance Marketplace
- */
-
 "use client";
 
 import {
@@ -24,7 +20,11 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAccount } from "wagmi";
+import { useRouter } from "next/navigation";
+
+import WalletConnect from "@/components/WalletConnect";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -97,6 +97,13 @@ const STAGGER_CONTAINER = {
 
 const LandingPage = (): React.JSX.Element => {
   const [searchQuery, setSearchQuery] = useState("");
+  const { isConnected } = useAccount();
+  const router = useRouter();
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-purple-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-purple-950/20">
@@ -122,9 +129,7 @@ const LandingPage = (): React.JSX.Element => {
               <Link href="#disputes">My Disputes</Link>
             </Button>
             <ThemeToggle />
-            <Button size="sm" className="bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white" asChild>
-              <Link href="#get-started">Sign In</Link>
-            </Button>
+            <WalletConnect />
           </div>
         </div>
       </motion.nav>
@@ -157,14 +162,27 @@ const LandingPage = (): React.JSX.Element => {
             </span>
           </motion.h1>
 
-          {/* Subheadline */}
           <motion.p
             variants={FADE_UP}
-            className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto"
+            className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8"
           >
             Browse thousands of services. Pay with crypto. Every transaction
             protected by onchain dispute resolution.
           </motion.p>
+
+          <motion.div variants={FADE_UP} className="flex flex-col sm:flex-row justify-center items-center gap-4">
+            {isMounted && isConnected ? (
+              <Button
+                size="lg"
+                className="gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
+                onClick={() => router.push("/create-dispute")}
+              >
+                Enter App
+              </Button>
+            ) : (
+              <WalletConnect />
+            )}
+          </motion.div>
 
           {/* Search Bar */}
           <motion.div variants={FADE_UP} className="pt-4">
