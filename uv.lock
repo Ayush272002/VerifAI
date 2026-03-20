@@ -136,6 +136,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "fastapi", extra = ["standard"] },
+    { name = "requests" },
     { name = "web3" },
 ]
 
@@ -147,6 +148,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", extras = ["standard"], specifier = ">=0.128.0" },
+    { name = "requests", specifier = ">=2.32.5" },
     { name = "web3", specifier = ">=7.14.1" },
 ]
 

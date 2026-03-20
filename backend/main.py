@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers.contract_router import router as contract_router
+from .routers.ipfs_router import router as ipfs_router
 from .routers.test_router import router as test_router
 
 dotenv.load_dotenv()
@@ -23,4 +24,5 @@ app.add_middleware(
 )
 
 app.include_router(contract_router)
+app.include_router(ipfs_router)
 app.include_router(test_router)
