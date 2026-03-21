@@ -112,7 +112,7 @@ export function MyPendingWorksModal({
                 args: [requestId],
               })) as any;
 
-              if (requestData) {
+              if (requestData && requestData.escrowAmount !== undefined) {
                 const escrowAmountEth = formatEther(requestData.escrowAmount);
                 const clientAddr =
                   typeof requestData.client === "string"
@@ -135,9 +135,15 @@ export function MyPendingWorksModal({
                   createdAt: "Recently",
                   messages: [],
                 });
+              } else {
+                console.warn(
+                  "Invalid request data for provider request:",
+                  requestId,
+                  requestData,
+                );
               }
             } catch (e) {
-              console.error("Error fetching provider request:", e);
+              console.error("Error fetching provider request:", requestId, e);
             }
           }
         }
@@ -154,7 +160,7 @@ export function MyPendingWorksModal({
                 args: [requestId],
               })) as any;
 
-              if (requestData) {
+              if (requestData && requestData.escrowAmount !== undefined) {
                 const escrowAmountEth = formatEther(requestData.escrowAmount);
                 const providerAddr =
                   typeof requestData.provider === "string"
@@ -177,9 +183,15 @@ export function MyPendingWorksModal({
                   createdAt: "Recently",
                   messages: [],
                 });
+              } else {
+                console.warn(
+                  "Invalid request data for client request:",
+                  requestId,
+                  requestData,
+                );
               }
             } catch (e) {
-              console.error("Error fetching client request:", e);
+              console.error("Error fetching client request:", requestId, e);
             }
           }
         }
