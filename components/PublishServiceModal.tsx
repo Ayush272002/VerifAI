@@ -175,9 +175,39 @@ const handleSubmit = async (e: React.FormEvent) => {
     if (!isFormValid || isPending) return;
 
     try {
+      // Step 1: Verify form with Toast's endpoint
+      console.log("Verifying service form...");
+      const verifyRes = await fetch("http://localhost:8000/agent/verify/form/service", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          tags,
+          category: formData.category,
+        }),
+      });
+
+      if (!verifyRes.ok) {
+        try {
+          const errorData = await verifyRes.json();
+          // Extract the detail message from FastAPI's HTTPException response
+          const errorMessage = errorData.detail || "Form validation failed";
+          toast.error(`Validation failed: ${errorMessage}`);
+        } catch {
+          toast.error("Form verification failed. Please check your inputs.");
+        }
+        return;
+      }
+
+      const verifyData = await verifyRes.json();
+      console.log("Form verification result:", verifyData);
+      toast.success("Form verified successfully!");
+
+      // Step 2: Proceed with blockchain submission
       const resolvedBackgroundImage =
         formData.backgroundImage || getRandomPlaceholderImage(formData.category);
-      
+
       const deliverablesText = validDeliverables.map((d, i) => `${i + 1}. ${d.text}`).join('\n');
       const fullDescription = `${formData.description}\n\nWhat You'll Get:\n${deliverablesText}\n\nCategory: ${formData.category}\nDelivery Time: ${formData.deliveryTime}\nTags: ${tags.join(", ")}`;
 
