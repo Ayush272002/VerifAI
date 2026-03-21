@@ -90,6 +90,7 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
                   <div className={`aspect-video rounded-2xl ${service.thumbnail} overflow-hidden relative`}>
                     <div className="absolute inset-0 opacity-70">
                       <div className="absolute top-0 left-0 w-32 h-32 bg-white/30 dark:bg-white/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '3s' }}></div>
+                        <img src={service.thumbnail}/>
                       <div className="absolute bottom-0 right-0 w-40 h-40 bg-black/20 dark:bg-white/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s', animationDelay: '0.5s' }}></div>
                     </div>
                     {service.featured && (
