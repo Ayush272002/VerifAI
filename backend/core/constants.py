@@ -36,6 +36,21 @@ OLLAMA_MODEL_CHOICES = {
 }
 OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", OLLAMA_MODEL_CHOICES["text"])
 
+# Marketplace categories used for gig classification and placeholder selection
+GIG_CATEGORIES = [
+    "Art & Design",
+    "Business",
+    "Programming & Tech",
+    "Marketing",
+    "Writing & Translation",
+    "Video & Animation",
+    "Photography",
+    "Music & Audio",
+    "Data Science & AI",
+    "Education & Tutoring",
+    "Lifestyle & Hobbies",
+]
+
 RPC_ENDPOINTS = [
     f"https://sepolia.infura.io/v3/{INFURA_PROJECT_ID}"
     if INFURA_PROJECT_ID
