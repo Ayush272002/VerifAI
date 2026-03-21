@@ -182,6 +182,8 @@ export function MyPendingWorksModal({
   const [currentStage, setCurrentStage] = useState<StageInfo | null>(null);
   const streamScrollRef = useRef<HTMLDivElement>(null);
   const [isCompleting, setIsCompleting] = useState(false);
+  const [isConfirmingAccept, setIsConfirmingAccept] = useState(false);
+  const [isConfirmingReject, setIsConfirmingReject] = useState(false);
 
   // Auto-scroll streaming output to bottom
   useEffect(() => {
@@ -475,6 +477,7 @@ export function MyPendingWorksModal({
     try {
       const hash = await acceptRequest(workId as `0x${string}`);
       if (hash) {
+        setIsConfirmingAccept(true);
         toast.info("Transaction submitted, waiting for confirmation...");
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status === "success") {
@@ -491,9 +494,15 @@ export function MyPendingWorksModal({
           toast.error("Transaction failed");
         }
       }
-    } catch (err) {
-      console.error("Error accepting request:", err);
-      toast.error("Failed to accept request");
+    } catch (err: any) {
+      if (err?.message?.includes("User rejected the request") || err?.code === 4001) {
+        toast.error("Transaction cancelled by user.");
+      } else {
+        console.error("Error accepting request:", err);
+        toast.error("Failed to accept request");
+      }
+    } finally {
+      setIsConfirmingAccept(false);
     }
   };
 
@@ -501,6 +510,7 @@ export function MyPendingWorksModal({
     try {
       const hash = await rejectRequest(workId as `0x${string}`);
       if (hash) {
+        setIsConfirmingReject(true);
         toast.info("Transaction submitted, waiting for confirmation...");
         const receipt = await publicClient.waitForTransactionReceipt({ hash });
         if (receipt.status === "success") {
@@ -513,9 +523,15 @@ export function MyPendingWorksModal({
           toast.error("Transaction failed");
         }
       }
-    } catch (err) {
-      console.error("Error rejecting request:", err);
-      toast.error("Failed to reject request");
+    } catch (err: any) {
+      if (err?.message?.includes("User rejected the request") || err?.code === 4001) {
+        toast.error("Transaction cancelled by user.");
+      } else {
+        console.error("Error rejecting request:", err);
+        toast.error("Failed to reject request");
+      }
+    } finally {
+      setIsConfirmingReject(false);
     }
   };
 
@@ -983,20 +999,20 @@ export function MyPendingWorksModal({
                           selectedWork.status === "pending" && (
                             <div className="flex gap-3 mt-4">
                               <motion.button
-                                whileHover={{ scale: isAccepting || isRejecting ? 1 : 1.02 }}
-                                whileTap={{ scale: isAccepting || isRejecting ? 1 : 0.98 }}
+                                whileHover={{ scale: isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject ? 1 : 1.02 }}
+                                whileTap={{ scale: isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject ? 1 : 0.98 }}
                                 onClick={() => handleAccept(selectedWork.id)}
-                                disabled={isAccepting || isRejecting}
+                                disabled={isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject}
                                 className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 ${
-                                  isAccepting || isRejecting
+                                  isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject
                                     ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
                                     : "bg-gradient-to-r from-emerald-500 to-teal-500"
                                 }`}
                               >
-                                {isAccepting ? (
+                                {isAccepting || isConfirmingAccept ? (
                                   <>
                                     <Clock className="w-4 h-4 animate-spin" />
-                                    Accepting...
+                                    {isConfirmingAccept ? "Confirming on-chain..." : "Accepting..."}
                                   </>
                                 ) : (
                                   <>
@@ -1006,20 +1022,20 @@ export function MyPendingWorksModal({
                                 )}
                               </motion.button>
                               <motion.button
-                                whileHover={{ scale: isAccepting || isRejecting ? 1 : 1.02 }}
-                                whileTap={{ scale: isAccepting || isRejecting ? 1 : 0.98 }}
+                                whileHover={{ scale: isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject ? 1 : 1.02 }}
+                                whileTap={{ scale: isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject ? 1 : 0.98 }}
                                 onClick={() => handleReject(selectedWork.id)}
-                                disabled={isAccepting || isRejecting}
+                                disabled={isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject}
                                 className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 ${
-                                  isAccepting || isRejecting
+                                  isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject
                                     ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
                                     : "bg-gradient-to-r from-rose-500 to-red-500"
                                 }`}
                               >
-                                {isRejecting ? (
+                                {isRejecting || isConfirmingReject ? (
                                   <>
                                     <Clock className="w-4 h-4 animate-spin" />
-                                    Declining...
+                                    {isConfirmingReject ? "Confirming on-chain..." : "Declining..."}
                                   </>
                                 ) : (
                                   <>
