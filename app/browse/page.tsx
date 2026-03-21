@@ -25,7 +25,7 @@ const FADE_UP = {
     opacity: 1,
     y: 0,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       damping: 25,
       stiffness: 100,
     }
@@ -41,10 +41,10 @@ const STAGGER = {
 };
 
 const SPRING = {
-  type: "spring",
+  type: "spring" as const,
   damping: 20,
   stiffness: 100,
-} as const;
+};
 
 function BrowsePageContent() {
   const router = useRouter();
@@ -114,10 +114,9 @@ function BrowsePageContent() {
                   whileTap={{ scale: 0.98 }}
                   transition={SPRING}
                   onClick={() => setShowPublishModal(true)}
-                  className="btn-macos !py-2 !px-4 flex items-center gap-2"
+                  className="rounded-lg px-4 py-1.5 text-sm font-medium border border-black/10 dark:border-white/10 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden md:inline">Publish Service</span>
+                  Publish
                 </motion.button>
               )}
               <WalletConnect
@@ -142,7 +141,7 @@ function BrowsePageContent() {
             <motion.div variants={FADE_UP} className="space-y-6">
               {/* Enhanced Search Bar */}
               <div className="relative max-w-4xl">
-                <div className="glass-search flex items-center pl-6 pr-2 py-3 rounded-full">
+                <div className="flex items-center pl-6 pr-2 py-2 rounded-full border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] transition-colors focus-within:border-black/20 dark:focus-within:border-white/20">
                   <Search className="w-5 h-5 text-black/50 dark:text-white/50 mr-3 flex-shrink-0" />
                   <input
                     type="text"
@@ -157,7 +156,7 @@ function BrowsePageContent() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     transition={SPRING}
-                    className="btn-macos ml-2 !py-2 !px-5"
+                    className="bg-black dark:bg-white text-white dark:text-black text-sm font-medium ml-2 py-2 px-6 rounded-full hover:bg-black/90 dark:hover:bg-white/90 transition-colors"
                   >
                     Search
                   </motion.button>
