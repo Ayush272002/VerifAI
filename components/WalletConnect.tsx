@@ -360,7 +360,7 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
               }}
             >
               {/* Animated gradient background on hover */}
-              <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-amber-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 bg-linear-to-r from-orange-400/20 to-amber-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
               {/* Pulse animation */}
               <div className="absolute inset-0 rounded-full bg-orange-400/30 animate-pulse opacity-50"></div>
