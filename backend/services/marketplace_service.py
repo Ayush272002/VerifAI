@@ -224,6 +224,29 @@ class MarketplaceService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    def post_verification_log(self, verification_summary: str, request_id: str = "verification_audit") -> dict[str, Any]:
+        """Store verification audit trail on-chain for permanent record.
+        
+        Args:
+            verification_summary: Formatted verification results (completion %, confidence, requirements passed)
+            request_id: Optional request ID to link verification to a specific work request
+            
+        Returns:
+            Transaction result with tx_hash and success status
+        """
+        try:
+            formatted_log = f"[VERIFICATION AUDIT LOG]\n{verification_summary}"
+            fn = self.contract.functions.postMessage(
+                self._to_bytes32(request_id), formatted_log
+            )
+            result = self._send_oracle_tx(fn)
+            logger.info("Verification audit stored on-chain: request=%s, tx=%s", 
+                       request_id, result.get("tx_hash"))
+            return result
+        except Exception as e:
+            logger.error("Failed to store verification log: %s", e)
+            return {"success": False, "error": str(e)}
+
     def submit_ruling(
         self, request_id: str, ruling_text: str, winner: str
     ) -> dict[str, Any]:

@@ -28,6 +28,7 @@ import { toast } from "sonner";
 import ABI from "../ABI.json";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FileText, ImageIcon, Loader2, Upload } from "lucide-react";
+import { CompleteWorkModal } from "@/components/CompleteWorkModal";
 
 // --- Verification Types & Helpers ---
 type RequirementCheck = {
@@ -176,7 +177,8 @@ export function MyPendingWorksModal({
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [isVerifying, setIsVerifying] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [verificationResult, setVerificationResult] =
+    useState<VerificationResult | null>(null);
   const [analyses, setAnalyses] = useState<FileAnalysis[]>([]);
   const [streamingOutput, setStreamingOutput] = useState<string>("");
   const [isStreaming, setIsStreaming] = useState(false);
@@ -185,6 +187,7 @@ export function MyPendingWorksModal({
   const [isCompleting, setIsCompleting] = useState(false);
   const [isConfirmingAccept, setIsConfirmingAccept] = useState(false);
   const [isConfirmingReject, setIsConfirmingReject] = useState(false);
+  const [showCompleteWorkModal, setShowCompleteWorkModal] = useState(false);
 
   // Auto-scroll streaming output to bottom
   useEffect(() => {
@@ -193,7 +196,9 @@ export function MyPendingWorksModal({
     }
   }, [streamingOutput]);
 
-  const handleFilesChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+  const handleFilesChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ): void => {
     const selected = Array.from(event.target.files ?? []);
     setUploadedFiles((prev) => [...prev, ...selected]);
     event.target.value = "";
@@ -232,7 +237,7 @@ export function MyPendingWorksModal({
       timestamp: new Date(parseInt(msg.timestamp) * 1000).toLocaleTimeString(),
     }));
 
-    setSelectedWork(prev => {
+    setSelectedWork((prev) => {
       if (!prev) return null;
       return {
         ...prev,
@@ -284,13 +289,30 @@ export function MyPendingWorksModal({
 
               // Handle both array and object formats for `requests`
               if (requestDataArray) {
-                const client = (requestDataArray as any).client ?? requestDataArray[0] ?? "";
-                const provider = (requestDataArray as any).provider ?? requestDataArray[1] ?? "";
-                const serviceIndex = (requestDataArray as any).serviceIndex ?? requestDataArray[2] ?? BigInt(0);
-                const escrowAmount = (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
-                const clientNote = (requestDataArray as any).clientNote ?? requestDataArray[3] ?? "";
-                const contractStatus = (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
-                const completionProofCid = (requestDataArray as any).completionProofCid ?? requestDataArray[6] ?? "";
+                const client =
+                  (requestDataArray as any).client ?? requestDataArray[0] ?? "";
+                const provider =
+                  (requestDataArray as any).provider ??
+                  requestDataArray[1] ??
+                  "";
+                const serviceIndex =
+                  (requestDataArray as any).serviceIndex ??
+                  requestDataArray[2] ??
+                  BigInt(0);
+                const escrowAmount =
+                  (requestDataArray as any).escrowAmount ??
+                  requestDataArray[4] ??
+                  BigInt(0);
+                const clientNote =
+                  (requestDataArray as any).clientNote ??
+                  requestDataArray[3] ??
+                  "";
+                const contractStatus =
+                  (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
+                const completionProofCid =
+                  (requestDataArray as any).completionProofCid ??
+                  requestDataArray[6] ??
+                  "";
 
                 // Fetch the service title using provider and serviceIndex
                 let serviceTitle = "Service Request";
@@ -313,8 +335,11 @@ export function MyPendingWorksModal({
                 }
 
                 // Map contract status to UI status: 0=Pending, 1=Accepted, 3=PendingReview, 4=Resolved
-                let uiStatus: "pending" | "in_progress" | "pending_review" | "completed" =
-                  "pending";
+                let uiStatus:
+                  | "pending"
+                  | "in_progress"
+                  | "pending_review"
+                  | "completed" = "pending";
                 if (contractStatus === 1) {
                   uiStatus = "in_progress";
                 } else if (contractStatus === 3) {
@@ -383,13 +408,30 @@ export function MyPendingWorksModal({
 
               // Handle both array and object formats for `requests`
               if (requestDataArray) {
-                const client = (requestDataArray as any).client ?? requestDataArray[0] ?? "";
-                const provider = (requestDataArray as any).provider ?? requestDataArray[1] ?? "";
-                const serviceIndex = (requestDataArray as any).serviceIndex ?? requestDataArray[2] ?? BigInt(0);
-                const escrowAmount = (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
-                const clientNote = (requestDataArray as any).clientNote ?? requestDataArray[3] ?? "";
-                const contractStatus = (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
-                const completionProofCid = (requestDataArray as any).completionProofCid ?? requestDataArray[6] ?? "";
+                const client =
+                  (requestDataArray as any).client ?? requestDataArray[0] ?? "";
+                const provider =
+                  (requestDataArray as any).provider ??
+                  requestDataArray[1] ??
+                  "";
+                const serviceIndex =
+                  (requestDataArray as any).serviceIndex ??
+                  requestDataArray[2] ??
+                  BigInt(0);
+                const escrowAmount =
+                  (requestDataArray as any).escrowAmount ??
+                  requestDataArray[4] ??
+                  BigInt(0);
+                const clientNote =
+                  (requestDataArray as any).clientNote ??
+                  requestDataArray[3] ??
+                  "";
+                const contractStatus =
+                  (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
+                const completionProofCid =
+                  (requestDataArray as any).completionProofCid ??
+                  requestDataArray[6] ??
+                  "";
 
                 // Fetch the service title using provider and serviceIndex
                 let serviceTitle = "My Service Request";
@@ -412,8 +454,11 @@ export function MyPendingWorksModal({
                 }
 
                 // Map contract status to UI status: 0=Pending, 1=Accepted, 3=PendingReview, 4=Resolved
-                let uiStatus: "pending" | "in_progress" | "pending_review" | "completed" =
-                  "pending";
+                let uiStatus:
+                  | "pending"
+                  | "in_progress"
+                  | "pending_review"
+                  | "completed" = "pending";
                 if (contractStatus === 1) {
                   uiStatus = "in_progress";
                 } else if (contractStatus === 3) {
@@ -503,7 +548,10 @@ export function MyPendingWorksModal({
         }
       }
     } catch (err: any) {
-      if (err?.message?.includes("User rejected the request") || err?.code === 4001) {
+      if (
+        err?.message?.includes("User rejected the request") ||
+        err?.code === 4001
+      ) {
         toast.error("Transaction cancelled by user.");
       } else {
         console.error("Error accepting request:", err);
@@ -532,7 +580,10 @@ export function MyPendingWorksModal({
         }
       }
     } catch (err: any) {
-      if (err?.message?.includes("User rejected the request") || err?.code === 4001) {
+      if (
+        err?.message?.includes("User rejected the request") ||
+        err?.code === 4001
+      ) {
         toast.error("Transaction cancelled by user.");
       } else {
         console.error("Error rejecting request:", err);
@@ -657,22 +708,28 @@ export function MyPendingWorksModal({
       const isSuccess =
         report.overall_status.toLowerCase() === "success" ||
         report.completion_pct >= 60;
-      
+
       const winnerAddress = isSuccess
         ? selectedWork.providerAddress
         : selectedWork.clientAddress;
 
-      toast.info(`Submitting Oracle Ruling... ${isSuccess ? "Paying Provider" : "Refunding Client"}`, { id: "oracle-ruling" });
+      toast.info(
+        `Submitting Oracle Ruling... ${isSuccess ? "Paying Provider" : "Refunding Client"}`,
+        { id: "oracle-ruling" },
+      );
 
-      const res = await fetch(`${BACKEND_BASE_URL}/marketplace/oracle/submit-ruling`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          request_id: selectedWork.id,
-          ruling_text: JSON.stringify(report),
-          winner: winnerAddress,
-        }),
-      });
+      const res = await fetch(
+        `${BACKEND_BASE_URL}/marketplace/oracle/submit-ruling`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            request_id: selectedWork.id,
+            ruling_text: JSON.stringify(report),
+            winner: winnerAddress,
+          }),
+        },
+      );
 
       if (!res.ok) {
         throw new Error("Oracle API rejected the task.");
@@ -680,15 +737,22 @@ export function MyPendingWorksModal({
 
       const oracleData = await res.json();
       if (!oracleData.success) {
-        if (oracleData.error && oracleData.error.includes("Not pending oracle review")) {
-          toast.success("Already evaluated and resolved on-chain!", { id: "oracle-ruling" });
+        if (
+          oracleData.error &&
+          oracleData.error.includes("Not pending oracle review")
+        ) {
+          toast.success("Already evaluated and resolved on-chain!", {
+            id: "oracle-ruling",
+          });
         } else {
           throw new Error(oracleData.error);
         }
       } else {
-        toast.success("Transaction Resolved On-Chain!", { id: "oracle-ruling" });
+        toast.success("Transaction Resolved On-Chain!", {
+          id: "oracle-ruling",
+        });
       }
-      
+
       const newStatus = "completed";
       setSelectedWork({ ...selectedWork, status: newStatus as any });
       setWorks((prev) =>
@@ -721,13 +785,13 @@ export function MyPendingWorksModal({
       if (!res.ok) throw new Error("Decentralised storage cluster unavailable");
       const uploadData = await res.json();
       const ipfsHash = uploadData.file_pin?.IpfsHash || uploadData.IpfsHash;
-      
+
       toast.info("Locking Evidence on-chain...");
       const txHash = await completeRequest(
         selectedWork.id as `0x${string}`,
         ipfsHash,
       );
-      
+
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: txHash,
       });
@@ -740,7 +804,9 @@ export function MyPendingWorksModal({
       setSelectedWork({ ...selectedWork, status: "pending_review" as any });
       setWorks((prev) =>
         prev.map((w) =>
-          w.id === selectedWork.id ? { ...w, status: "pending_review" as any } : w,
+          w.id === selectedWork.id
+            ? { ...w, status: "pending_review" as any }
+            : w,
         ),
       );
     } catch (e: any) {
@@ -790,30 +856,35 @@ export function MyPendingWorksModal({
           const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${selectedWork.completionProofCid}`;
           const response = await fetch(ipfsUrl);
           const blob = await response.blob();
-          
+
           let fileData: string;
           if (!blob.type.includes("text/")) {
-             fileData = await new Promise<string>((resolve) => {
-               const reader = new FileReader();
-               reader.onloadend = () => resolve(reader.result as string);
-               reader.readAsDataURL(blob);
-             });
+            fileData = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
           } else {
-             fileData = await blob.text();
+            fileData = await blob.text();
           }
 
-          filePayloads = [{
-             file_name: `evidence_recovered_${selectedWork.completionProofCid}`,
-             content: fileData,
-             content_type: blob.type || "application/octet-stream",
-          }];
+          filePayloads = [
+            {
+              file_name: `evidence_recovered_${selectedWork.completionProofCid}`,
+              content: fileData,
+              content_type: blob.type || "application/octet-stream",
+            },
+          ];
         } catch (e) {
           console.error("IPFS Fetch Failed:", e);
-          filePayloads = [{
-            file_name: `evidence_recovered_${selectedWork.id}.txt`,
-            content: "The provider locked the evidence securely on IPFS but the retrieval failed due to CORS or gateway delay.",
-            content_type: "text/plain",
-          }];
+          filePayloads = [
+            {
+              file_name: `evidence_recovered_${selectedWork.id}.txt`,
+              content:
+                "The provider locked the evidence securely on IPFS but the retrieval failed due to CORS or gateway delay.",
+              content_type: "text/plain",
+            },
+          ];
         }
       } else {
         filePayloads = await Promise.all(
@@ -862,9 +933,9 @@ export function MyPendingWorksModal({
   };
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait">
       {isOpen && (
-        <>
+        <div key="modal-container">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -936,7 +1007,10 @@ export function MyPendingWorksModal({
                   {loading ? (
                     <div className="p-4 space-y-3">
                       {[1, 2, 3].map((i) => (
-                        <div key={i} className="w-full glass-macos rounded-2xl p-4">
+                        <div
+                          key={i}
+                          className="w-full glass-macos rounded-2xl p-4"
+                        >
                           <Skeleton className="h-4 w-3/4 mb-2" />
                           <Skeleton className="h-3 w-1/2 mb-4" />
                           <div className="flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/5">
@@ -988,7 +1062,9 @@ export function MyPendingWorksModal({
                                       : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
                               }`}
                             >
-                              {work.status === "completed" ? "resolved" : work.status.replace("_", " ")}
+                              {work.status === "completed"
+                                ? "resolved"
+                                : work.status.replace("_", " ")}
                             </div>
                           </div>
                           <div className="flex items-center justify-between mt-3 pt-3 border-t border-black/5 dark:border-white/5">
@@ -1056,12 +1132,36 @@ export function MyPendingWorksModal({
                           selectedWork.status === "pending" && (
                             <div className="flex gap-3 mt-4">
                               <motion.button
-                                whileHover={{ scale: isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject ? 1 : 1.02 }}
-                                whileTap={{ scale: isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject ? 1 : 0.98 }}
+                                whileHover={{
+                                  scale:
+                                    isAccepting ||
+                                    isConfirmingAccept ||
+                                    isRejecting ||
+                                    isConfirmingReject
+                                      ? 1
+                                      : 1.02,
+                                }}
+                                whileTap={{
+                                  scale:
+                                    isAccepting ||
+                                    isConfirmingAccept ||
+                                    isRejecting ||
+                                    isConfirmingReject
+                                      ? 1
+                                      : 0.98,
+                                }}
                                 onClick={() => handleAccept(selectedWork.id)}
-                                disabled={isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject}
+                                disabled={
+                                  isAccepting ||
+                                  isConfirmingAccept ||
+                                  isRejecting ||
+                                  isConfirmingReject
+                                }
                                 className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 ${
-                                  isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject
+                                  isAccepting ||
+                                  isConfirmingAccept ||
+                                  isRejecting ||
+                                  isConfirmingReject
                                     ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
                                     : "bg-gradient-to-r from-emerald-500 to-teal-500"
                                 }`}
@@ -1069,7 +1169,9 @@ export function MyPendingWorksModal({
                                 {isAccepting || isConfirmingAccept ? (
                                   <>
                                     <Clock className="w-4 h-4 animate-spin" />
-                                    {isConfirmingAccept ? "Confirming on-chain..." : "Accepting..."}
+                                    {isConfirmingAccept
+                                      ? "Confirming on-chain..."
+                                      : "Accepting..."}
                                   </>
                                 ) : (
                                   <>
@@ -1079,12 +1181,36 @@ export function MyPendingWorksModal({
                                 )}
                               </motion.button>
                               <motion.button
-                                whileHover={{ scale: isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject ? 1 : 1.02 }}
-                                whileTap={{ scale: isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject ? 1 : 0.98 }}
+                                whileHover={{
+                                  scale:
+                                    isAccepting ||
+                                    isConfirmingAccept ||
+                                    isRejecting ||
+                                    isConfirmingReject
+                                      ? 1
+                                      : 1.02,
+                                }}
+                                whileTap={{
+                                  scale:
+                                    isAccepting ||
+                                    isConfirmingAccept ||
+                                    isRejecting ||
+                                    isConfirmingReject
+                                      ? 1
+                                      : 0.98,
+                                }}
                                 onClick={() => handleReject(selectedWork.id)}
-                                disabled={isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject}
+                                disabled={
+                                  isAccepting ||
+                                  isConfirmingAccept ||
+                                  isRejecting ||
+                                  isConfirmingReject
+                                }
                                 className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 ${
-                                  isAccepting || isConfirmingAccept || isRejecting || isConfirmingReject
+                                  isAccepting ||
+                                  isConfirmingAccept ||
+                                  isRejecting ||
+                                  isConfirmingReject
                                     ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
                                     : "bg-gradient-to-r from-rose-500 to-red-500"
                                 }`}
@@ -1092,7 +1218,9 @@ export function MyPendingWorksModal({
                                 {isRejecting || isConfirmingReject ? (
                                   <>
                                     <Clock className="w-4 h-4 animate-spin" />
-                                    {isConfirmingReject ? "Confirming on-chain..." : "Declining..."}
+                                    {isConfirmingReject
+                                      ? "Confirming on-chain..."
+                                      : "Declining..."}
                                   </>
                                 ) : (
                                   <>
@@ -1106,177 +1234,280 @@ export function MyPendingWorksModal({
                       </div>
 
                       {/* Verification & Proof Upload Section */}
-                      {selectedWork.role === "provider" && (selectedWork.status === "in_progress" || selectedWork.status === "pending_review" || selectedWork.status === "completed") && (
-                        <div className="p-6 border-b border-black/5 dark:border-white/5 bg-white/30 dark:bg-black/30">
-                          {selectedWork.status === "in_progress" ? (
-                            <>
-                              <h4 className="text-sm font-semibold text-black dark:text-white mb-2">
-                                Lock In Verification Proofs
-                              </h4>
-                              <p className="text-xs text-black/60 dark:text-white/60 mb-4">
-                                Upload evidence, lock it permanently into the contract, and allow the Oracle agents to review.
-                              </p>
-
-                              {/* Multi-file upload */}
-                              <div className="space-y-2 mb-4">
-                                <input
-                                  type="file"
-                                  multiple
-                                  onChange={handleFilesChange}
-                                  disabled={isVerifying || isCompleting}
-                                  className="w-full rounded-md border border-input glass-macos px-3 py-2 text-sm text-black dark:text-white"
-                                />
-                                {uploadedFiles.length > 0 && (
-                                  <div className="space-y-1 mt-2">
-                                    {uploadedFiles.map((file, index) => (
-                                      <div
-                                        key={`${file.name}-${index}`}
-                                        className="flex items-center justify-between gap-2 rounded-md border border-black/5 dark:border-white/10 px-2 py-1 text-xs"
-                                      >
-                                        <div className="flex items-center gap-1.5 truncate text-black dark:text-white">
-                                          {(file.type || inferContentType(file.name)).startsWith(
-                                            "image/",
-                                          ) ? (
-                                            <ImageIcon className="w-3.5 h-3.5 text-black/60 dark:text-white/60 flex-shrink-0" />
-                                          ) : (
-                                            <FileText className="w-3.5 h-3.5 text-black/60 dark:text-white/60 flex-shrink-0" />
-                                          )}
-                                          <span className="truncate">{file.name}</span>
-                                        </div>
-                                        <button
-                                          type="button"
-                                          onClick={() => removeFile(index)}
-                                          disabled={isVerifying || isCompleting}
-                                          className="text-black/50 dark:text-white/50 hover:text-red-500 transition-colors disabled:opacity-50"
-                                        >
-                                          <X className="w-3.5 h-3.5" />
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
+                      {selectedWork.role === "provider" &&
+                        (selectedWork.status === "in_progress" ||
+                          selectedWork.status === "pending_review" ||
+                          selectedWork.status === "completed") && (
+                          <div className="p-6 border-b border-black/5 dark:border-white/5 bg-white/30 dark:bg-black/30">
+                            {/* Quick Access Button to Complete Work Modal */}
+                            {selectedWork.status === "in_progress" && (
+                              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 rounded-xl border border-blue-200 dark:border-blue-800">
+                                <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
+                                  ✨ New Verification Experience
+                                </p>
+                                <p className="text-xs text-blue-800 dark:text-blue-200 mb-4">
+                                  Try our advanced MoA (Mixture-of-Agents)
+                                  verification system. Upload files and let our
+                                  AI evaluate your work against requirements
+                                  automatically.
+                                </p>
+                                <motion.button
+                                  whileHover={{ scale: 1.02 }}
+                                  whileTap={{ scale: 0.98 }}
+                                  onClick={() => setShowCompleteWorkModal(true)}
+                                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-sm rounded-lg transition-all"
+                                >
+                                  🚀 Submit Work with Advanced Verification
+                                </motion.button>
                               </div>
+                            )}
 
-                              <motion.button
-                                whileHover={{ scale: isVerifying ? 1 : 1.02 }}
-                                whileTap={{ scale: isVerifying ? 1 : 0.98 }}
-                                onClick={handleLockEvidence}
-                                disabled={isVerifying || uploadedFiles.length === 0}
-                                className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 ${
-                                  isVerifying || uploadedFiles.length === 0
-                                    ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
-                                    : "bg-blue-600 hover:bg-blue-500 text-white"
-                                }`}
-                              >
-                                {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                Lock Evidence On-Chain
-                              </motion.button>
-                            </>
-                          ) : (
-                            <>
-                              <h4 className="text-sm font-semibold text-purple-600 dark:text-purple-400 mb-2 flex items-center gap-2">
-                                <CheckCircle2 className="w-4 h-4" />
-                                Evidence Locked
-                              </h4>
-                              <p className="text-xs text-black/60 dark:text-white/60 mb-4">
-                                Your evidence has safely been committed. Proceed with autonomous agent evaluation to resolve the transaction.
-                              </p>
+                            {selectedWork.status === "in_progress" ? (
+                              <>
+                                <h4 className="text-sm font-semibold text-black dark:text-white mb-2">
+                                  Lock In Verification Proofs
+                                </h4>
+                                <p className="text-xs text-black/60 dark:text-white/60 mb-4">
+                                  Upload evidence, lock it permanently into the
+                                  contract, and allow the Oracle agents to
+                                  review.
+                                </p>
 
-                              {errorMessage && (
-                                <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-500 mb-4">
-                                  {errorMessage}
-                                </div>
-                              )}
-
-                              {(!isStreaming && !verificationResult) ? (
-                                <div className="flex flex-col items-center justify-center py-8 glass-macos rounded-xl border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 gap-4">
-                                  <Loader2 className="w-8 h-8 animate-spin" />
-                                  <p className="text-sm font-semibold text-black dark:text-white">Agents Analyzing Evidence...</p>
-                                  <p className="text-xs text-black/60 dark:text-white/60 text-center px-4">
-                                    The Oracle network is processing the payload autonomously. Please wait.
-                                  </p>
-                                </div>
-                              ) : (
-                                <div className="space-y-4">
-                                  {/* Streaming Text Output */}
-                                  <div className="glass-macos rounded-xl p-3 max-h-48 overflow-y-auto custom-scrollbar font-mono text-[10px] leading-relaxed relative text-black dark:text-white bg-black/5 dark:bg-black/40" ref={streamScrollRef}>
-                                    {currentStage && (
-                                      <div className="mb-2 flex items-center gap-1.5 opacity-70 border-b border-black/10 dark:border-white/10 pb-1 w-full font-sans text-xs">
-                                        <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
-                                        <span className="font-semibold text-cyan-600 dark:text-cyan-400">ORACLE {">"}</span> {currentStage.message}
-                                      </div>
-                                    )}
-                                    <div className="whitespace-pre-wrap">{streamingOutput}</div>
-                                    {isStreaming && (
-                                      <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-70">
-                                        <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
-                                        <span className="text-cyan-600 dark:text-cyan-400 font-semibold font-sans">Evaluating...</span>
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Live Analyses */}
-                                  {analyses.length > 0 && !verificationResult && (
-                                    <div className="space-y-2">
-                                      {analyses.map((a, idx) => (
-                                        <div key={idx} className="glass-macos rounded-lg p-2 text-xs">
-                                          <div className="flex justify-between font-bold text-black dark:text-white">
-                                            <span>{a.file_name}</span>
-                                            <span className="opacity-60">{a.media_type}</span>
+                                {/* Multi-file upload */}
+                                <div className="space-y-2 mb-4">
+                                  <input
+                                    type="file"
+                                    multiple
+                                    onChange={handleFilesChange}
+                                    disabled={isVerifying || isCompleting}
+                                    className="w-full rounded-md border border-input glass-macos px-3 py-2 text-sm text-black dark:text-white"
+                                  />
+                                  {uploadedFiles.length > 0 && (
+                                    <div className="space-y-1 mt-2">
+                                      {uploadedFiles.map((file, index) => (
+                                        <div
+                                          key={`${file.name}-${index}`}
+                                          className="flex items-center justify-between gap-2 rounded-md border border-black/5 dark:border-white/10 px-2 py-1 text-xs"
+                                        >
+                                          <div className="flex items-center gap-1.5 truncate text-black dark:text-white">
+                                            {(
+                                              file.type ||
+                                              inferContentType(file.name)
+                                            ).startsWith("image/") ? (
+                                              <ImageIcon className="w-3.5 h-3.5 text-black/60 dark:text-white/60 flex-shrink-0" />
+                                            ) : (
+                                              <FileText className="w-3.5 h-3.5 text-black/60 dark:text-white/60 flex-shrink-0" />
+                                            )}
+                                            <span className="truncate">
+                                              {file.name}
+                                            </span>
                                           </div>
-                                          <p className="opacity-80 mt-1">{a.summary}</p>
+                                          <button
+                                            type="button"
+                                            onClick={() => removeFile(index)}
+                                            disabled={
+                                              isVerifying || isCompleting
+                                            }
+                                            className="text-black/50 dark:text-white/50 hover:text-red-500 transition-colors disabled:opacity-50"
+                                          >
+                                            <X className="w-3.5 h-3.5" />
+                                          </button>
                                         </div>
                                       ))}
                                     </div>
                                   )}
-
-                                  {/* Final Verification Result */}
-                                  {verificationResult && (
-                                    <div className="space-y-3">
-                                      <div className="grid grid-cols-3 gap-2 text-center">
-                                        <div className="glass-macos rounded-lg p-2">
-                                          <p className="text-[10px] opacity-60">Status</p>
-                                          <p className="font-semibold capitalize text-sm">{verificationResult.overall_status}</p>
-                                        </div>
-                                        <div className="glass-macos rounded-lg p-2">
-                                          <p className="text-[10px] opacity-60">Completion</p>
-                                          <p className="font-semibold text-sm">{verificationResult.completion_pct}%</p>
-                                        </div>
-                                        <div className="glass-macos rounded-lg p-2">
-                                          <p className="text-[10px] opacity-60">Confidence</p>
-                                          <p className="font-semibold text-sm">{verificationResult.confidence_pct}%</p>
-                                        </div>
-                                      </div>
-
-                                      <div className="glass-macos rounded-lg p-3 text-xs opacity-80 border border-black/10 dark:border-white/10">
-                                        {verificationResult.summary}
-                                      </div>
-
-                                      <div className="space-y-1 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
-                                        {verificationResult.requirement_checks.map((req, idx) => (
-                                          <div key={idx} className="glass-macos rounded-md p-2 flex justify-between items-center gap-2 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
-                                            <span className="text-xs truncate font-medium" title={req.requirement}>{req.requirement}</span>
-                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                              req.checked ? "bg-emerald-500/20 text-emerald-600 block" : "bg-red-500/20 text-red-600 block"
-                                            }`}>{req.checked ? "Pass" : "Fail"}</span>
-                                          </div>
-                                        ))}
-                                      </div>
-                                    </div>
-                                  )}
-
-                                  {isCompleting && (
-                                    <div className="flex flex-col items-center justify-center gap-2 p-4 text-cyan-600 dark:text-cyan-400 glass-macos rounded-xl border border-cyan-500/20">
-                                      <Loader2 className="w-6 h-6 animate-spin" />
-                                      <span className="text-sm font-semibold tracking-wide">Executing Oracle Smart Contract Ruling...</span>
-                                    </div>
-                                  )}
                                 </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
+
+                                <motion.button
+                                  whileHover={{ scale: isVerifying ? 1 : 1.02 }}
+                                  whileTap={{ scale: isVerifying ? 1 : 0.98 }}
+                                  onClick={handleLockEvidence}
+                                  disabled={
+                                    isVerifying || uploadedFiles.length === 0
+                                  }
+                                  className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 ${
+                                    isVerifying || uploadedFiles.length === 0
+                                      ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
+                                      : "bg-blue-600 hover:bg-blue-500 text-white"
+                                  }`}
+                                >
+                                  {isVerifying ? (
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <Upload className="w-4 h-4" />
+                                  )}
+                                  Lock Evidence On-Chain
+                                </motion.button>
+                              </>
+                            ) : (
+                              <>
+                                <h4 className="text-sm font-semibold text-purple-600 dark:text-purple-400 mb-2 flex items-center gap-2">
+                                  <CheckCircle2 className="w-4 h-4" />
+                                  Evidence Locked
+                                </h4>
+                                <p className="text-xs text-black/60 dark:text-white/60 mb-4">
+                                  Your evidence has safely been committed.
+                                  Proceed with autonomous agent evaluation to
+                                  resolve the transaction.
+                                </p>
+
+                                {errorMessage && (
+                                  <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-500 mb-4">
+                                    {errorMessage}
+                                  </div>
+                                )}
+
+                                {!isStreaming && !verificationResult ? (
+                                  <div className="flex flex-col items-center justify-center py-8 glass-macos rounded-xl border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 gap-4">
+                                    <Loader2 className="w-8 h-8 animate-spin" />
+                                    <p className="text-sm font-semibold text-black dark:text-white">
+                                      Agents Analyzing Evidence...
+                                    </p>
+                                    <p className="text-xs text-black/60 dark:text-white/60 text-center px-4">
+                                      The Oracle network is processing the
+                                      payload autonomously. Please wait.
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div className="space-y-4">
+                                    {/* Streaming Text Output */}
+                                    <div
+                                      className="glass-macos rounded-xl p-3 max-h-48 overflow-y-auto custom-scrollbar font-mono text-[10px] leading-relaxed relative text-black dark:text-white bg-black/5 dark:bg-black/40"
+                                      ref={streamScrollRef}
+                                    >
+                                      {currentStage && (
+                                        <div className="mb-2 flex items-center gap-1.5 opacity-70 border-b border-black/10 dark:border-white/10 pb-1 w-full font-sans text-xs">
+                                          <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+                                          <span className="font-semibold text-cyan-600 dark:text-cyan-400">
+                                            ORACLE {">"}
+                                          </span>{" "}
+                                          {currentStage.message}
+                                        </div>
+                                      )}
+                                      <div className="whitespace-pre-wrap">
+                                        {streamingOutput}
+                                      </div>
+                                      {isStreaming && (
+                                        <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-70">
+                                          <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+                                          <span className="text-cyan-600 dark:text-cyan-400 font-semibold font-sans">
+                                            Evaluating...
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+
+                                    {/* Live Analyses */}
+                                    {analyses.length > 0 &&
+                                      !verificationResult && (
+                                        <div className="space-y-2">
+                                          {analyses.map((a, idx) => (
+                                            <div
+                                              key={`${a.file_name}-${idx}`}
+                                              className="glass-macos rounded-lg p-2 text-xs"
+                                            >
+                                              <div className="flex justify-between font-bold text-black dark:text-white">
+                                                <span>{a.file_name}</span>
+                                                <span className="opacity-60">
+                                                  {a.media_type}
+                                                </span>
+                                              </div>
+                                              <p className="opacity-80 mt-1">
+                                                {a.summary}
+                                              </p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
+
+                                    {/* Final Verification Result */}
+                                    {verificationResult && (
+                                      <div className="space-y-3">
+                                        <div className="grid grid-cols-3 gap-2 text-center">
+                                          <div className="glass-macos rounded-lg p-2">
+                                            <p className="text-[10px] opacity-60">
+                                              Status
+                                            </p>
+                                            <p className="font-semibold capitalize text-sm">
+                                              {
+                                                verificationResult.overall_status
+                                              }
+                                            </p>
+                                          </div>
+                                          <div className="glass-macos rounded-lg p-2">
+                                            <p className="text-[10px] opacity-60">
+                                              Completion
+                                            </p>
+                                            <p className="font-semibold text-sm">
+                                              {
+                                                verificationResult.completion_pct
+                                              }
+                                              %
+                                            </p>
+                                          </div>
+                                          <div className="glass-macos rounded-lg p-2">
+                                            <p className="text-[10px] opacity-60">
+                                              Confidence
+                                            </p>
+                                            <p className="font-semibold text-sm">
+                                              {
+                                                verificationResult.confidence_pct
+                                              }
+                                              %
+                                            </p>
+                                          </div>
+                                        </div>
+
+                                        <div className="glass-macos rounded-lg p-3 text-xs opacity-80 border border-black/10 dark:border-white/10">
+                                          {verificationResult.summary}
+                                        </div>
+
+                                        <div className="space-y-1 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                          {verificationResult.requirement_checks.map(
+                                            (req, idx) => (
+                                              <div
+                                                key={`${req.requirement}-${req.checked}-${idx}`}
+                                                className="glass-macos rounded-md p-2 flex justify-between items-center gap-2 hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                                              >
+                                                <span
+                                                  className="text-xs truncate font-medium"
+                                                  title={req.requirement}
+                                                >
+                                                  {req.requirement}
+                                                </span>
+                                                <span
+                                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                                    req.checked
+                                                      ? "bg-emerald-500/20 text-emerald-600 block"
+                                                      : "bg-red-500/20 text-red-600 block"
+                                                  }`}
+                                                >
+                                                  {req.checked
+                                                    ? "Pass"
+                                                    : "Fail"}
+                                                </span>
+                                              </div>
+                                            ),
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {isCompleting && (
+                                      <div className="flex flex-col items-center justify-center gap-2 p-4 text-cyan-600 dark:text-cyan-400 glass-macos rounded-xl border border-cyan-500/20">
+                                        <Loader2 className="w-6 h-6 animate-spin" />
+                                        <span className="text-sm font-semibold tracking-wide">
+                                          Executing Oracle Smart Contract
+                                          Ruling...
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
 
                       {/* Chat / Messages Section */}
                       {selectedWork.status !== "pending" && (
@@ -1296,39 +1527,54 @@ export function MyPendingWorksModal({
                             ) : (
                               selectedWork.messages.map((msg, idx) => (
                                 <div
-                                  key={idx}
+                                  key={`${msg.timestamp}-${msg.sender}-${idx}`}
                                   className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
                                 >
                                   <div
                                     className={`max-w-[85%] px-4 py-3 rounded-2xl ${
-                                        msg.text.includes("[ORACLE VERIFICATION RULING]")
-                                          ? "bg-purple-500/10 border border-purple-500/30 text-purple-900 dark:text-purple-100 font-mono text-xs w-full"
-                                          : msg.sender === "me"
-                                            ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
-                                            : "glass-macos text-black dark:text-white"
+                                      msg.text.includes(
+                                        "[ORACLE VERIFICATION RULING]",
+                                      )
+                                        ? "bg-purple-500/10 border border-purple-500/30 text-purple-900 dark:text-purple-100 font-mono text-xs w-full"
+                                        : msg.sender === "me"
+                                          ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
+                                          : "glass-macos text-black dark:text-white"
+                                    }`}
+                                  >
+                                    {msg.text.includes(
+                                      "[ORACLE VERIFICATION RULING]",
+                                    ) && (
+                                      <div className="flex items-center gap-2 mb-2 font-sans font-bold text-purple-600 dark:text-purple-400 border-b border-purple-500/20 pb-2">
+                                        <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+                                        Autonomous Agent Verification Log
+                                        (Stored on-chain)
+                                      </div>
+                                    )}
+                                    <p className="whitespace-pre-wrap">
+                                      {msg.text
+                                        .replace(
+                                          "[ORACLE VERIFICATION RULING]\\n",
+                                          "",
+                                        )
+                                        .replace(
+                                          "[ORACLE VERIFICATION RULING]\n",
+                                          "",
+                                        )}
+                                    </p>
+                                    <p
+                                      className={`text-[10px] mt-2 font-sans ${
+                                        msg.sender === "me"
+                                          ? "text-white/70"
+                                          : "text-black/50 dark:text-white/50"
                                       }`}
                                     >
-                                      {msg.text.includes("[ORACLE VERIFICATION RULING]") && (
-                                        <div className="flex items-center gap-2 mb-2 font-sans font-bold text-purple-600 dark:text-purple-400 border-b border-purple-500/20 pb-2">
-                                          <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-                                          Autonomous Agent Verification Log (Stored on-chain)
-                                        </div>
-                                      )}
-                                      <p className="whitespace-pre-wrap">{msg.text.replace("[ORACLE VERIFICATION RULING]\\n", "").replace("[ORACLE VERIFICATION RULING]\n", "")}</p>
-                                      <p
-                                        className={`text-[10px] mt-2 font-sans ${
-                                          msg.sender === "me"
-                                            ? "text-white/70"
-                                            : "text-black/50 dark:text-white/50"
-                                        }`}
-                                      >
-                                        {msg.timestamp}
-                                      </p>
-                                    </div>
+                                      {msg.timestamp}
+                                    </p>
                                   </div>
-                                ))
-                              )}
-                            </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
 
                           {/* Message Input */}
                           <div className="border-t border-black/5 dark:border-white/5 p-4">
@@ -1336,28 +1582,52 @@ export function MyPendingWorksModal({
                               <input
                                 type="text"
                                 value={messageInput}
-                                onChange={(e) => setMessageInput(e.target.value)}
+                                onChange={(e) =>
+                                  setMessageInput(e.target.value)
+                                }
                                 onKeyDown={(e) => {
                                   if (e.key === "Enter" && !isSendingMessage) {
                                     handleSendMessage(selectedWork.id);
                                   }
                                 }}
                                 disabled={isSendingMessage}
-                                placeholder={isSendingMessage ? "Sending..." : "Type a message..."}
+                                placeholder={
+                                  isSendingMessage
+                                    ? "Sending..."
+                                    : "Type a message..."
+                                }
                                 className="flex-1 glass-search px-4 py-2.5 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all disabled:opacity-50"
                               />
                               <motion.button
-                                whileHover={{ scale: !messageInput.trim() || isSendingMessage ? 1 : 1.05 }}
-                                whileTap={{ scale: !messageInput.trim() || isSendingMessage ? 1 : 0.95 }}
-                                onClick={() => handleSendMessage(selectedWork.id)}
-                                disabled={!messageInput.trim() || isSendingMessage}
+                                whileHover={{
+                                  scale:
+                                    !messageInput.trim() || isSendingMessage
+                                      ? 1
+                                      : 1.05,
+                                }}
+                                whileTap={{
+                                  scale:
+                                    !messageInput.trim() || isSendingMessage
+                                      ? 1
+                                      : 0.95,
+                                }}
+                                onClick={() =>
+                                  handleSendMessage(selectedWork.id)
+                                }
+                                disabled={
+                                  !messageInput.trim() || isSendingMessage
+                                }
                                 className={`px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
                                   messageInput.trim() && !isSendingMessage
                                     ? "btn-macos"
                                     : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
                                 }`}
                               >
-                                {isSendingMessage ? <Clock className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                                {isSendingMessage ? (
+                                  <Clock className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <Send className="w-4 h-4" />
+                                )}
                               </motion.button>
                             </div>
                           </div>
@@ -1378,7 +1648,19 @@ export function MyPendingWorksModal({
               </div>
             </motion.div>
           </div>
-        </>
+        </div>
+      )}
+      {/* Complete Work Modal */}
+      {selectedWork && (
+        <CompleteWorkModal
+          isOpen={showCompleteWorkModal}
+          onClose={() => setShowCompleteWorkModal(false)}
+          requestId={selectedWork.id}
+          requirements={selectedWork.taskDetails
+            .split("\n")
+            .filter((line: string) => line.trim().length > 0)}
+          buyerAddress={selectedWork.clientAddress}
+        />
       )}
     </AnimatePresence>
   );
