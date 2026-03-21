@@ -91,17 +91,40 @@ export function MyPendingWorksModal({
     setMounted(true);
   }, []);
 
+  // Debug: Log pending request IDs
+  useEffect(() => {
+    console.log("Provider pending IDs:", providerPendingIds);
+    console.log("Client pending IDs:", clientPendingIds);
+    console.log("Current address:", address);
+  }, [providerPendingIds, clientPendingIds, address]);
+
   // Fetch pending requests data
   useEffect(() => {
     const fetchPendingWorks = async () => {
-      if (!address) return;
+      if (!address) {
+        console.log("No address, skipping fetch");
+        return;
+      }
+
+      console.log("Fetching pending works for address:", address);
+      console.log("Provider pending IDs:", providerPendingIds);
+      console.log("Client pending IDs:", clientPendingIds);
 
       setLoading(true);
       try {
         const allWorks: PendingWork[] = [];
 
         // Fetch provider pending requests
-        if (providerPendingIds && Array.isArray(providerPendingIds)) {
+        if (
+          providerPendingIds &&
+          Array.isArray(providerPendingIds) &&
+          providerPendingIds.length > 0
+        ) {
+          console.log(
+            "Fetching",
+            providerPendingIds.length,
+            "provider requests",
+          );
           for (const requestId of providerPendingIds as string[]) {
             try {
               // Fetch actual request details from contract
@@ -149,7 +172,12 @@ export function MyPendingWorksModal({
         }
 
         // Fetch client pending requests
-        if (clientPendingIds && Array.isArray(clientPendingIds)) {
+        if (
+          clientPendingIds &&
+          Array.isArray(clientPendingIds) &&
+          clientPendingIds.length > 0
+        ) {
+          console.log("Fetching", clientPendingIds.length, "client requests");
           for (const requestId of clientPendingIds as string[]) {
             try {
               // Fetch actual request details from contract
@@ -196,6 +224,7 @@ export function MyPendingWorksModal({
           }
         }
 
+        console.log("Total pending works fetched:", allWorks.length, allWorks);
         setWorks(allWorks);
       } finally {
         setLoading(false);
@@ -313,6 +342,34 @@ export function MyPendingWorksModal({
                       {tab.label}
                     </motion.button>
                   ))}
+                </div>
+
+                {/* DEBUG: Show current state */}
+                <div className="mt-4 text-xs text-black/50 dark:text-white/50 bg-black/5 dark:bg-white/5 p-2 rounded">
+                  <p>
+                    Address:{" "}
+                    {address
+                      ? address.substring(0, 10) + "..."
+                      : "Not connected"}
+                  </p>
+                  <p>
+                    Provider pending:{" "}
+                    {providerPendingIds
+                      ? Array.isArray(providerPendingIds)
+                        ? providerPendingIds.length
+                        : "invalid"
+                      : "loading"}
+                  </p>
+                  <p>
+                    Client pending:{" "}
+                    {clientPendingIds
+                      ? Array.isArray(clientPendingIds)
+                        ? clientPendingIds.length
+                        : "invalid"
+                      : "loading"}
+                  </p>
+                  <p>Works loaded: {works.length}</p>
+                  <p>Loading: {loading ? "yes" : "no"}</p>
                 </div>
               </div>
 
