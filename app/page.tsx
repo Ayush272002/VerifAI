@@ -13,17 +13,17 @@ import {
   Sparkles,
   Zap,
   Plus,
-  Package,
+  Grid3x3,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useState, useRef, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
+import { useTheme } from "@/hooks/useTheme";
 
 import WalletConnect from "@/components/WalletConnect";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { PublishServiceModal } from "@/components/PublishServiceModal";
 import { MyServicesModal } from "@/components/MyServicesModal";
 
@@ -60,6 +60,7 @@ const LandingPage = (): React.JSX.Element => {
   const [showMyServicesModal, setShowMyServicesModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { isConnected } = useAccount();
+  const { theme, setTheme } = useTheme();
   const router = useRouter();
   const heroRef = useRef(null);
   const { scrollYProgress } = useScroll({
@@ -131,52 +132,41 @@ const LandingPage = (): React.JSX.Element => {
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="max-w-[1800px] mx-auto px-6 lg:px-12 h-24 flex items-center justify-between">
-            <Link href="/" className="group">
-              <motion.span
-                whileHover={{ scale: 1.05 }}
-                transition={SPRING}
-                className="inline-block text-3xl font-bold tracking-tight text-black dark:text-white"
-              >
-                Verif<span className="font-serif italic text-cyan-600 dark:text-cyan-400">AI</span>
-              </motion.span>
-            </Link>
+            <div className="flex items-center gap-4">
+              <Link href="/" className="group">
+                <motion.span
+                  whileHover={{ scale: 1.05 }}
+                  transition={SPRING}
+                  className="inline-block text-3xl font-bold tracking-tight text-black dark:text-white"
+                >
+                  Verif<span className="font-serif italic text-cyan-600 dark:text-cyan-400">AI</span>
+                </motion.span>
+              </Link>
+            </div>
             <div className="flex items-center gap-4">
               <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
-                <Link href="#work" className="text-sm font-medium text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors">
-                  How it works
+                <Link href="/browse" className="text-sm font-medium text-black dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors flex items-center gap-2">
+                  <Grid3x3 className="w-4 h-4" />
+                  <span className="hidden md:inline">Browse All</span>
                 </Link>
               </motion.div>
-              <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
-                <Link href="#cases" className="text-sm font-medium text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors">
-                  Cases
-                </Link>
-              </motion.div>
-              <ThemeToggle />
               {mounted && isConnected && (
-                <>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={SPRING}
-                    onClick={() => setShowPublishModal(true)}
-                    className="btn-macos !py-2 !px-4 flex items-center gap-2"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span className="hidden md:inline">Publish Service</span>
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    transition={SPRING}
-                    onClick={() => setShowMyServicesModal(true)}
-                    className="btn-macos !py-2 !px-4 flex items-center gap-2"
-                  >
-                    <Package className="w-4 h-4" />
-                    <span className="hidden md:inline">My Services</span>
-                  </motion.button>
-                </>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={SPRING}
+                  onClick={() => setShowPublishModal(true)}
+                  className="btn-macos !py-2 !px-4 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span className="hidden md:inline">Publish Service</span>
+                </motion.button>
               )}
-              <WalletConnect />
+              <WalletConnect
+                onMyServicesClick={() => setShowMyServicesModal(true)}
+                theme={theme}
+                onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              />
             </div>
           </div>
         </motion.nav>
@@ -461,131 +451,6 @@ const LandingPage = (): React.JSX.Element => {
                 </div>
               </motion.div>
             </div>
-          </motion.div>
-        </section>
-
-        {/* Recent Cases */}
-        <section id="cases" className="py-32 px-6 lg:px-12 max-w-[1800px] mx-auto border-t border-black/5 dark:border-white/5">
-          <motion.div
-            initial="hidden"
-            whileInView="visible"
-            viewport={{ once: true }}
-            variants={STAGGER}
-          >
-            <motion.div variants={FADE_UP} className="flex items-end justify-between mb-16">
-              <div>
-                <h2 className="text-6xl font-serif font-bold text-black dark:text-white mb-4">
-                  Recent cases
-                </h2>
-                <p className="text-xl text-black/60 dark:text-white/60">
-                  Real disputes, real resolutions
-                </p>
-              </div>
-              <Button variant="outline" className="border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white rounded-full px-6 font-semibold">
-                View all cases
-              </Button>
-            </motion.div>
-
-            <motion.div variants={STAGGER} className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  id: "1247",
-                  type: "Website Development",
-                  amount: "$2,400",
-                  winner: "Client",
-                  time: "2m ago",
-                  gradient: "from-cyan-500/10 to-blue-500/10 dark:from-cyan-500/20 dark:to-blue-500/20",
-                  icon: Zap
-                },
-                {
-                  id: "1246",
-                  type: "Logo Design",
-                  amount: "$850",
-                  winner: "Freelancer",
-                  time: "18m ago",
-                  gradient: "from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20",
-                  icon: Sparkles
-                },
-                {
-                  id: "1245",
-                  type: "Content Writing",
-                  amount: "$320",
-                  winner: "Client",
-                  time: "1h ago",
-                  gradient: "from-emerald-500/10 to-teal-500/10 dark:from-emerald-500/20 dark:to-teal-500/20",
-                  icon: Database
-                },
-              ].map((item, index) => {
-                const Icon = item.icon;
-                return (
-                  <motion.div
-                    key={item.id}
-                    variants={FADE_UP}
-                    whileHover={{
-                      y: -8,
-                      scale: 1.02,
-                    }}
-                    transition={SPRING}
-                    className="group relative cursor-pointer"
-                  >
-                    {/* Glow effect on hover */}
-                    <div className={`absolute -inset-1 bg-gradient-to-br ${item.gradient} rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
-
-                    {/* Glass card */}
-                    <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-2xl rounded-3xl p-8 border border-white/20 dark:border-white/10 shadow-xl group-hover:shadow-2xl transition-all duration-300">
-                      {/* Shine effect */}
-                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 to-transparent dark:from-white/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-
-                      <div className="relative space-y-6">
-                        {/* Header with icon */}
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
-                              <Icon className="w-5 h-5 text-black dark:text-white" />
-                            </div>
-                            <div className="text-sm font-mono text-black/40 dark:text-white/40">#{item.id}</div>
-                          </div>
-                          <motion.div
-                            initial={{ scale: 0 }}
-                            whileInView={{ scale: 1 }}
-                            transition={{ delay: 0.2 + index * 0.1, ...SPRING }}
-                            className="px-3 py-1 rounded-full bg-emerald-500/10 backdrop-blur-xl border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold"
-                          >
-                            RESOLVED
-                          </motion.div>
-                        </div>
-
-                        {/* Content */}
-                        <div>
-                          <h3 className="text-2xl font-bold text-black dark:text-white mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-cyan-500 group-hover:to-blue-500 dark:group-hover:from-cyan-400 dark:group-hover:to-blue-400 transition-all duration-300">
-                            {item.type}
-                          </h3>
-                          <p className="text-lg text-black/60 dark:text-white/60 font-mono">{item.amount} in escrow</p>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="flex items-center justify-between text-sm pt-4 border-t border-black/5 dark:border-white/5">
-                          <span className="text-black/60 dark:text-white/60">
-                            Winner: <span className="text-black dark:text-white font-semibold">{item.winner}</span>
-                          </span>
-                          <span className="text-black/40 dark:text-white/40">{item.time}</span>
-                        </div>
-
-                        {/* Progress bar */}
-                        <div className="h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            whileInView={{ width: "100%" }}
-                            transition={{ delay: 0.5 + index * 0.2, duration: 1, ease: "easeOut" }}
-                            className={`h-full bg-gradient-to-r ${item.gradient.replace('/10', '/50').replace('/20', '/70')}`}
-                          ></motion.div>
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                );
-              })}
-            </motion.div>
           </motion.div>
         </section>
 
