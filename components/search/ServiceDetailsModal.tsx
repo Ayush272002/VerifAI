@@ -225,6 +225,10 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
           <BookServiceModal
             isOpen={showBookModal}
             onClose={() => setShowBookModal(false)}
+            onSuccess={() => {
+              setShowBookModal(false);
+              onClose();
+            }}
             service={service}
           />
         </>
