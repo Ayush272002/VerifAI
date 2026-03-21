@@ -11,6 +11,9 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Package,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,7 +37,13 @@ import {
   DialogTitle,
 } from './ui/dialog';
 
-export default function WalletConnect() {
+interface WalletConnectProps {
+  onMyServicesClick?: () => void;
+  theme?: string;
+  onThemeToggle?: () => void;
+}
+
+export default function WalletConnect({ onMyServicesClick, theme, onThemeToggle }: WalletConnectProps) {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
@@ -224,16 +233,10 @@ export default function WalletConnect() {
               <span className="text-black dark:text-white font-semibold text-sm">
                 {formatAddress(address)}
               </span>
-              <span className="font-mono text-cyan-600 dark:text-cyan-400 text-sm font-semibold">
-                {balance
-                  ? Number.parseFloat(formatUnits(balance.value, balance.decimals)).toFixed(4)
-                  : '0.0000'}{' '}
-                {balance?.symbol}
-              </span>
               <ChevronDown className="h-4 w-4 text-black dark:text-white" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 glass-macos rounded-2xl shadow-2xl border-0">
+          <DropdownMenuContent className="w-56 glass-macos rounded-2xl shadow-2xl border-0 backdrop-blur-3xl">
             <div className="px-2 py-1.5 text-xs text-cyan-600 dark:text-cyan-400 font-bold">
               Connected Wallet
             </div>
@@ -277,6 +280,53 @@ export default function WalletConnect() {
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
             <DropdownMenuItem
+              className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+              onClick={onMyServicesClick}
+            >
+              <Package className="mr-2 h-4 w-4" />
+              My Services
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
+            {onThemeToggle && (
+              <>
+                <DropdownMenuItem
+                  className="cursor-pointer flex items-center justify-between text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    onThemeToggle();
+                  }}
+                >
+                  <div className="flex items-center gap-2">
+                    <Sun className="h-4 w-4" />
+                    <span>Theme</span>
+                  </div>
+                  <button
+                    className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none"
+                    style={{
+                      background: theme === 'dark'
+                        ? 'rgba(6, 182, 212, 0.2)'
+                        : 'rgba(251, 146, 60, 0.2)',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <span
+                      className="inline-block h-4 w-4 transform rounded-full transition-transform"
+                      style={{
+                        background: theme === 'dark'
+                          ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
+                          : 'linear-gradient(135deg, #fb923c 0%, #f97316 100%)',
+                        transform: theme === 'dark' ? 'translateX(18px)' : 'translateX(2px)',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      }}
+                    />
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
+              </>
+            )}
+            <DropdownMenuItem
               className="cursor-pointer flex items-center text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-500/20 font-medium"
               onClick={() => disconnect()}
             >
@@ -287,13 +337,27 @@ export default function WalletConnect() {
         </DropdownMenu>
       ) : (
         <>
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <button
               onClick={() => setIsWalletModalOpen(true)}
-              className="btn-macos flex items-center gap-2"
+              className="relative group flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all overflow-hidden"
+              style={{
+                background: 'rgba(249, 115, 22, 0.15)',
+                backdropFilter: 'blur(40px)',
+                WebkitBackdropFilter: 'blur(40px)',
+                border: '1px solid rgba(249, 115, 22, 0.3)',
+                color: '#f97316',
+                boxShadow: '0 4px 20px rgba(249, 115, 22, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+              }}
             >
-              <Wallet className="h-4 w-4" />
-              Connect Wallet
+              {/* Animated gradient background on hover */}
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-amber-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+              {/* Pulse animation */}
+              <div className="absolute inset-0 rounded-full bg-orange-400/30 animate-pulse opacity-50"></div>
+
+              <Wallet className="h-4 w-4 relative z-10" />
+              <span className="relative z-10">Connect Wallet</span>
             </button>
           </motion.div>
 

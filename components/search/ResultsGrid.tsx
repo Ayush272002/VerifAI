@@ -175,18 +175,6 @@ export function ResultsGrid({ searchQuery = "" }: ResultsGridProps) {
           </motion.div>
         </div>
       )}
-
-      {/* Load More */}
-      <div className="flex justify-center pt-12">
-        <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          transition={SPRING}
-          className="btn-macos !px-8 !py-3"
-        >
-          Load More Results
-        </motion.button>
-      </div>
     </div>
   );
 }

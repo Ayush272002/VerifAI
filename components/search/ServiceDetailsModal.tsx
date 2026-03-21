@@ -8,6 +8,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { X, Star, MapPin, Clock, CheckCircle2, TrendingUp, Shield, Zap } from "lucide-react";
 import type { ResultData } from "./ResultCard";
+import { EthIcon } from "@/components/EthIcon";
 
 interface ServiceDetailsModalProps {
   isOpen: boolean;
@@ -162,16 +163,19 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
                 {/* Pricing */}
                 <div className="glass-macos rounded-2xl p-6">
                   <h3 className="text-sm font-semibold text-black dark:text-white mb-3">Pricing</h3>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-bold text-black dark:text-white">
-                      ${service.price.amount.toLocaleString()}
-                    </span>
-                    {service.price.type === "hourly" && (
-                      <span className="text-lg text-black/60 dark:text-white/60">/hour</span>
-                    )}
-                    {service.price.type === "fixed" && (
-                      <span className="text-lg text-black/60 dark:text-white/60">fixed price</span>
-                    )}
+                  <div className="flex items-center gap-3">
+                    <EthIcon className="w-10 h-10" />
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold text-black dark:text-white">
+                        {service.price.amount.toLocaleString()}
+                      </span>
+                      {service.price.type === "hourly" && (
+                        <span className="text-lg text-black/60 dark:text-white/60">/hour</span>
+                      )}
+                      {service.price.type === "fixed" && (
+                        <span className="text-lg text-black/60 dark:text-white/60">ETH fixed</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
