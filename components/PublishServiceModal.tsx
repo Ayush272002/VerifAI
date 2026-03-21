@@ -31,6 +31,8 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
   });
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [deliverables, setDeliverables] = useState<string[]>([]);
+  const [deliverableInput, setDeliverableInput] = useState("");
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [classificationError, setClassificationError] = useState("");
@@ -92,7 +94,8 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
     formData.priceAmount !== "" &&
     parseFloat(formData.priceAmount) > 0 &&
     formData.deliveryTime.trim() !== "" &&
-    tags.length > 0;
+    tags.length > 0 &&
+    deliverables.length > 0;
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,6 +122,20 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
+  const handleDeliverableKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && deliverableInput.trim()) {
+      e.preventDefault();
+      if (!deliverables.includes(deliverableInput.trim())) {
+        setDeliverables([...deliverables, deliverableInput.trim()]);
+      }
+      setDeliverableInput("");
+    }
+  };
+
+  const removeDeliverable = (deliverableToRemove: string) => {
+    setDeliverables(deliverables.filter(d => d !== deliverableToRemove));
+  };
+
   const { addService, isPending } = useAddService();
 
 const handleSubmit = async (e: React.FormEvent) => {
@@ -126,12 +143,15 @@ const handleSubmit = async (e: React.FormEvent) => {
     if (!isFormValid || isPending) return;
 
     try {
-    const resolvedBackgroundImage =
-      formData.backgroundImage || getRandomPlaceholderImage(formData.category);
 
-    const fullDescription = `${formData.description}\n\nCategory: ${formData.category}\nDelivery Time: ${formData.deliveryTime}\nTags: ${tags.join(", ")}`;
+      const resolvedBackgroundImage =
+      formData.backgroundImage || getRandomPlaceholderImage(formData.category);
+      
+    const deliverablesText = deliverables.map((d, i) => `${i + 1}. ${d}`).join('\n');
+    const fullDescription = `${formData.description}\n\nWhat You'll Get:\n${deliverablesText}\n\nCategory: ${formData.category}\nDelivery Time: ${formData.deliveryTime}\nTags: ${tags.join(", ")}`;
+
     await addService(formData.title, fullDescription, formData.priceAmount);
-    console.log("Service published:", {
+    console.log("Service published on-chain:", {
       ...formData,
       backgroundImage: resolvedBackgroundImage,
       tags,
@@ -287,6 +307,55 @@ const handleSubmit = async (e: React.FormEvent) => {
                       placeholder="Describe your service, what you offer, and what makes you stand out..."
                       className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all resize-none"
                     />
+                  </div>
+
+                  {/* What You'll Deliver */}
+                  <div>
+                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">
+                      What You'll Deliver *
+                    </label>
+                    <div className="space-y-3">
+                      <input
+                        type="text"
+                        value={deliverableInput}
+                        onChange={(e) => setDeliverableInput(e.target.value)}
+                        onKeyDown={handleDeliverableKeyDown}
+                        placeholder="Add a deliverable and press Enter... (e.g., 'Fully functional website')"
+                        className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                      />
+                      {deliverables.length > 0 && (
+                        <div className="glass-macos rounded-xl p-4 space-y-2">
+                          {deliverables.map((deliverable, idx) => (
+                            <motion.div
+                              key={idx}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: -10 }}
+                              className="flex items-start gap-3 group"
+                            >
+                              <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400">
+                                  {idx + 1}
+                                </span>
+                              </div>
+                              <p className="flex-1 text-sm text-black dark:text-white pt-0.5">
+                                {deliverable}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => removeDeliverable(deliverable)}
+                                className="opacity-0 group-hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-1 transition-all"
+                              >
+                                <X className="w-4 h-4 text-black/60 dark:text-white/60" />
+                              </button>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                      <p className="text-xs text-black/50 dark:text-white/50">
+                        List specific deliverables clients will receive (e.g., source code, documentation, design files)
+                      </p>
+                    </div>
                   </div>
 
                   {/* Price */}
