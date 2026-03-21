@@ -81,6 +81,52 @@ No additional text.
 
         return "Unknown" # Failsafe if parsing fails
 
+    def validate_gig_fields(self, title: str, description: str, tags: list[str] | None = None, category: str | None = None) -> str:
+        """Validate gig title and description fields for content policy compliance.
+
+        Args:
+            title: Gig title
+            description: Gig description
+            tags: Optional selected tags
+            category: Optional selected category
+
+        Returns:
+            Validation result message
+        """
+        tags_text = ", ".join(tags or []) or "(none)"
+        category_text = category or "(none)"
+
+        prompt = f"""
+You are a marketplace listing consistency reviewer.
+
+Evaluate whether the submitted listing data describes one coherent service.
+Use semantic reasoning, not exact keyword matching.
+
+Submitted data:
+- Item A (Title): {title}
+- Item B (Description): {description}
+- Item C (Tags): {tags_text}
+- Item D (Category): {category_text}
+
+Instructions:
+1. Infer the core service intent from all items together.
+2. Treat terms as relevant if they belong to the same practical domain, output type, or workflow.
+3. If one item belongs to a clearly different domain with no obvious connection, mark it as an outlier.
+4. The category should align with the title, description, and tags. If the category is completely unrelated to the service being offered, mark it as an outlier.
+5. Cross-domain mismatch rule:
+   - Physical capture/content terms (photo, camera, product shoot, portrait, image editing)
+   - Software/automation terms (bot, discord bot, API bot, script automation)
+   If mixed without an explicit bridge in the listing, treat as inconsistent.
+6. Prefer leniency for broad but related terms; be strict only on clear mismatch.
+7. Tags and category should be relevant to the core service described by title and description; irrelevant items can be outliers.
+8. Return exactly one line:
+   - complete
+   - or Outlier field: <Item A|Item B|Item C|Item D> - <short reason>
+
+No extra text.
+""".strip()
+
+        return self.text_query(prompt)
 
 def main() -> None:
     """Run local smoke test for chat query."""

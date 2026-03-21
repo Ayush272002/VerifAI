@@ -198,3 +198,39 @@ def stream_verify_image_delivery(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"},
     )
+
+
+
+@router.post("/verify/form/service")
+def verify_gig_form(payload: GigCategorizationRequest) -> dict[str, str]:
+    """Validate gig form fields for consistency and coherence.
+
+    Args:
+        payload: Gig categorization request with title, description, and tags
+
+    Returns:
+        Success message if valid
+
+    Raises:
+        HTTPException: 422 if fields are inconsistent or unrelated
+    """
+    from fastapi import HTTPException
+
+    print(payload)
+
+    validation_result = _ai_service.validate_gig_fields(
+        payload.title,
+        payload.description,
+        tags=payload.tags,
+        category=payload.category
+    )
+    print(f"Validation result: {validation_result}")
+
+    # Check if validation failed (contains "Outlier" or is not "complete")
+    if "outlier" in validation_result.lower() or validation_result.strip().lower() != "complete":
+        raise HTTPException(
+            status_code=422,
+            detail=validation_result
+        )
+
+    return {"msg": "Service fields validated successfully", "result": validation_result}
