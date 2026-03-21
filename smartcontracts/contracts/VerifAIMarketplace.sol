@@ -24,6 +24,10 @@ contract VerifAIMarketplace {
     // Core registry: provider address → list of services
     mapping(address => Service[]) public providerServices;
 
+    // Global registry for frontend search/discovery
+    address[] public allProviders;
+    mapping(address => bool) public isProviderKnown;
+
     event ServiceAdded(address indexed provider, uint256 indexed serviceIndex, string title, uint256 priceWei);
     event ServiceRemoved(address indexed provider, uint256 indexed serviceIndex);
 
@@ -34,6 +38,11 @@ contract VerifAIMarketplace {
     ) external returns (uint256 index) {
         require(bytes(title).length > 0, "Title required");
         require(priceWei > 0, "Price must be > 0");
+
+        if (!isProviderKnown[msg.sender]) {
+            isProviderKnown[msg.sender] = true;
+            allProviders.push(msg.sender);
+        }
 
         providerServices[msg.sender].push(Service({
             title: title,
@@ -55,6 +64,10 @@ contract VerifAIMarketplace {
 
     function getServices(address provider) external view returns (Service[] memory) {
         return providerServices[provider];
+    }
+
+    function getAllProviders() external view returns (address[] memory) {
+        return allProviders;
     }
 
     enum RequestStatus {
