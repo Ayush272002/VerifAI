@@ -11,6 +11,7 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Package,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,7 +35,11 @@ import {
   DialogTitle,
 } from './ui/dialog';
 
-export default function WalletConnect() {
+interface WalletConnectProps {
+  onMyServicesClick?: () => void;
+}
+
+export default function WalletConnect({ onMyServicesClick }: WalletConnectProps) {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
@@ -274,6 +279,14 @@ export default function WalletConnect() {
             >
               <ExternalLink className="mr-2 h-4 w-4" />
               View on Explorer
+            </DropdownMenuItem>
+            <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
+            <DropdownMenuItem
+              className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+              onClick={onMyServicesClick}
+            >
+              <Package className="mr-2 h-4 w-4" />
+              My Services
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
             <DropdownMenuItem
