@@ -1,33 +1,28 @@
 import type { Metadata } from "next";
-import { Inter, DM_Sans, DM_Serif_Text, JetBrains_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Instrument_Serif } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
 import Web3Provider from "@/components/Web3Provider";
 
-const dmSans = DM_Sans({
-  subsets: ['latin'],
-  variable: '--font-dm-sans',
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
 });
 
-const dmSerifText = DM_Serif_Text({
-  subsets: ['latin'],
-  weight: ['400'],
-  variable: '--font-dm-serif',
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
 });
 
-const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  variable: '--font-jetbrains-mono',
+const instrumentSerif = Instrument_Serif({
+  weight: "400",
+  variable: "--font-instrument-serif",
+  subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: 'Rightful | Intellectual Property Detection',
-  description:
-    'Secure blockchain-based platform for document similarity detection and intellectual property protection',
+  title: "VerifAI — Onchain Dispute Arbitration in Under 60 Seconds",
+  description: "Lock evidence on-chain. AI analyzes immutable facts. Smart contracts execute rulings automatically. Resolve disputes in under 60 seconds.",
 };
 
 export default function RootLayout({
@@ -38,10 +33,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${dmSans.variable} ${dmSerifText.variable} ${inter.variable} ${jetbrainsMono.variable} font-inter antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${instrumentSerif.variable} font-sans antialiased`}
       >
         <Web3Provider>
-          <div className="min-h-screen flex flex-col">{children}</div>
+          {children}
+          <Toaster richColors theme="system" />
         </Web3Provider>
       </body>
     </html>

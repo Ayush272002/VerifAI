@@ -1,575 +1,591 @@
+/**
+ * @fileoverview VerifAI Landing Page — Onchain Dispute Arbitration
+ */
+
 "use client";
 
 import {
   ArrowRight,
-  Scale,
-  Lock,
-  Zap,
-  Shield,
   Search,
-  FileText,
-  Users,
-  Briefcase,
-  Palette,
-  Video,
-  Code,
+  ChevronRight,
+  Lock,
+  Database,
   Sparkles,
-  Clock,
-  CheckCircle2,
-  TrendingUp,
+  Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { motion } from "motion/react";
-import { useState, useEffect } from "react";
+import { motion, useScroll, useTransform } from "motion/react";
+import { useState, useRef } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 
 import WalletConnect from "@/components/WalletConnect";
-
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-/** Service categories for the marketplace */
-const SERVICE_CATEGORIES = [
-  { label: "Design & Creative", icon: Palette, color: "bg-purple-100 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400" },
-  { label: "Development", icon: Code, color: "bg-blue-100 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400" },
-  { label: "Video & Animation", icon: Video, color: "bg-pink-100 text-pink-600 dark:bg-pink-950/30 dark:text-pink-400" },
-  { label: "Writing & Content", icon: FileText, color: "bg-emerald-100 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400" },
-  { label: "Business", icon: Briefcase, color: "bg-orange-100 text-orange-600 dark:bg-orange-950/30 dark:text-orange-400" },
-  { label: "Consulting", icon: Users, color: "bg-cyan-100 text-cyan-600 dark:bg-cyan-950/30 dark:text-cyan-400" },
-] as const;
-
-/** How it works steps */
-const HOW_IT_WORKS = [
-  {
-    step: "01",
-    title: "Browse & Hire",
-    description:
-      "Search for services, review portfolios, and hire talented freelancers with crypto payments.",
-    icon: Search,
-  },
-  {
-    step: "02",
-    title: "Protected Work",
-    description:
-      "Funds held in escrow. If disputes arise, evidence is locked on-chain automatically.",
-    icon: Shield,
-  },
-  {
-    step: "03",
-    title: "Instant Resolution",
-    description:
-      "AI analyzes evidence and resolves disputes in under 60 seconds. Fair, transparent, final.",
-    icon: Zap,
-  },
-] as const;
-
-/** Stats to display */
-const STATS = [
-  { value: "10k+", label: "Active Freelancers", icon: Users },
-  { value: "<60s", label: "Dispute Resolution", icon: Zap },
-  { value: "100%", label: "Funds Protected", icon: Shield },
-  { value: "$2M+", label: "Paid Out", icon: TrendingUp },
-] as const;
-
-/** Popular services */
-const POPULAR_SERVICES = [
-  { title: "Logo Design", price: "From $25", category: "Design" },
-  { title: "Website Development", price: "From $100", category: "Development" },
-  { title: "Content Writing", price: "From $15", category: "Writing" },
-  { title: "Video Editing", price: "From $50", category: "Video" },
-] as const;
-
-/** Animation variants */
 const FADE_UP = {
-  hidden: { opacity: 0, y: 24 },
-  visible: { opacity: 1, y: 0 },
+  hidden: { opacity: 0, y: 40 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: "spring",
+      damping: 25,
+      stiffness: 100,
+    }
+  },
 };
 
-const STAGGER_CONTAINER = {
+const STAGGER = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
-    transition: { staggerChildren: 0.08 },
+    transition: { staggerChildren: 0.12 },
   },
+};
+
+const SPRING = {
+  type: "spring",
+  damping: 20,
+  stiffness: 100,
 };
 
 const LandingPage = (): React.JSX.Element => {
   const [searchQuery, setSearchQuery] = useState("");
   const { isConnected } = useAccount();
   const router = useRouter();
-  const [isMounted, setIsMounted] = useState(false);
+  const heroRef = useRef(null);
+  const { scrollYProgress } = useScroll({
+    target: heroRef,
+    offset: ["start start", "end start"],
+  });
 
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
+  const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0.3]);
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-white via-gray-50 to-purple-50/30 dark:from-gray-950 dark:via-gray-900 dark:to-purple-950/20">
-      {/* Navigation */}
-      <motion.nav
-        className="fixed top-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800"
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.5 }}
-      >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-              <Scale className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-serif text-xl tracking-tight">VerifAI</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="#browse">Browse</Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link href="#disputes">My Disputes</Link>
-            </Button>
-            <ThemeToggle />
-            <WalletConnect />
-          </div>
-        </div>
-      </motion.nav>
+    <main className="min-h-screen bg-white dark:bg-[#0a0a0a] relative overflow-hidden">
+      {/* Animated Mesh Gradient Background */}
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(6,182,212,0.08),transparent_25%),radial-gradient(circle_at_70%_60%,rgba(59,130,246,0.08),transparent_25%),radial-gradient(circle_at_50%_80%,rgba(168,85,247,0.05),transparent_25%)] dark:bg-[radial-gradient(circle_at_30%_20%,rgba(6,182,212,0.12),transparent_25%),radial-gradient(circle_at_70%_60%,rgba(59,130,246,0.12),transparent_25%),radial-gradient(circle_at_50%_80%,rgba(168,85,247,0.08),transparent_25%)] animate-[gradient_15s_ease_infinite]"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#00000005_1px,transparent_1px),linear-gradient(to_bottom,#00000005_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#ffffff03_1px,transparent_1px),linear-gradient(to_bottom,#ffffff03_1px,transparent_1px)] bg-[size:80px_80px]"></div>
 
-      {/* Hero Section */}
-      <section className="pt-32 pb-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+        {/* Floating orbs */}
         <motion.div
-          className="text-center space-y-8 max-w-4xl mx-auto"
-          initial="hidden"
-          animate="visible"
-          variants={STAGGER_CONTAINER}
+          animate={{
+            x: [0, 100, 0],
+            y: [0, -100, 0],
+            scale: [1, 1.2, 1],
+          }}
+          transition={{
+            duration: 20,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-gradient-to-br from-cyan-400/10 to-blue-500/10 dark:from-cyan-400/20 dark:to-blue-500/20 blur-3xl"
+        ></motion.div>
+        <motion.div
+          animate={{
+            x: [0, -100, 0],
+            y: [0, 100, 0],
+            scale: [1, 1.3, 1],
+          }}
+          transition={{
+            duration: 25,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-purple-400/10 to-pink-500/10 dark:from-purple-400/20 dark:to-pink-500/20 blur-3xl"
+        ></motion.div>
+      </div>
+
+      <div className="relative z-10">
+        {/* Navigation */}
+        <motion.nav
+          className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-3xl border-b border-white/20 dark:border-white/10 shadow-lg shadow-black/5"
+          initial={{ y: -100 }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
-          {/* Badge */}
-          <motion.div variants={FADE_UP} className="flex justify-center">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-purple-100 to-blue-100 dark:from-purple-900/40 dark:to-blue-900/40 border border-purple-200 dark:border-purple-800/50 text-sm font-medium">
-              <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-              <span className="text-gray-900 dark:text-gray-100">Hire talent. Work protected. Disputes resolved instantly.</span>
-            </div>
-          </motion.div>
-
-          {/* Headline */}
-          <motion.h1
-            variants={FADE_UP}
-            className="text-4xl sm:text-5xl lg:text-6xl font-serif tracking-tight leading-[1.15] text-gray-900 dark:text-white"
-          >
-            Find the perfect freelancer
-            <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 dark:from-purple-400 dark:to-blue-400">
-              with built-in protection
-            </span>
-          </motion.h1>
-
-          <motion.p
-            variants={FADE_UP}
-            className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto mb-8"
-          >
-            Browse thousands of services. Pay with crypto. Every transaction
-            protected by onchain dispute resolution.
-          </motion.p>
-
-          <motion.div variants={FADE_UP} className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            {isMounted && isConnected ? (
-              <Button
-                size="lg"
-                className="gap-2 bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
-                onClick={() => router.push("/create-dispute")}
+          <div className="max-w-[1800px] mx-auto px-6 lg:px-12 h-24 flex items-center justify-between">
+            <Link href="/" className="group">
+              <motion.span
+                whileHover={{ scale: 1.05 }}
+                transition={SPRING}
+                className="inline-block text-3xl font-bold tracking-tight text-black dark:text-white"
               >
-                Enter App
-              </Button>
-            ) : (
+                Verif<span className="font-serif italic text-cyan-600 dark:text-cyan-400">AI</span>
+              </motion.span>
+            </Link>
+            <div className="flex items-center gap-8">
+              <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
+                <Link href="#work" className="text-sm font-medium text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors">
+                  How it works
+                </Link>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
+                <Link href="#cases" className="text-sm font-medium text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors">
+                  Cases
+                </Link>
+              </motion.div>
+              <ThemeToggle />
               <WalletConnect />
-            )}
-          </motion.div>
-
-          {/* Search Bar */}
-          <motion.div variants={FADE_UP} className="pt-4">
-            <div className="relative max-w-2xl mx-auto">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search for any service..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-14 pl-12 pr-32 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 text-base focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all shadow-sm"
-              />
-              <Button
-                size="sm"
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
-              >
-                Search
-              </Button>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
-              <span className="text-sm text-gray-500 dark:text-gray-400">Popular:</span>
-              {POPULAR_SERVICES.map((service) => (
-                <button
-                  key={service.title}
-                  className="text-sm px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 transition-colors"
+          </div>
+        </motion.nav>
+
+        {/* Hero */}
+        <section ref={heroRef} className="pt-48 pb-32 px-6 lg:px-12 max-w-[1800px] mx-auto">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={STAGGER}
+            style={{ y: heroY, opacity: heroOpacity }}
+            className="grid lg:grid-cols-2 gap-20 items-center"
+          >
+            {/* Left */}
+            <div className="space-y-12">
+              <motion.div variants={FADE_UP} className="space-y-6">
+                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-black/10 dark:border-white/10">
+                  <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></div>
+                  <span className="text-sm font-mono text-black/70 dark:text-white/70">Live on Base</span>
+                </div>
+                <h1 className="text-7xl lg:text-8xl xl:text-9xl font-serif font-bold tracking-tight leading-[0.9] text-black dark:text-white">
+                  Trustless
+                  <br />
+                  <span className="italic text-cyan-600 dark:text-cyan-400">arbitration</span>
+                </h1>
+                <p className="text-2xl text-black/60 dark:text-white/60 max-w-xl leading-relaxed">
+                  Blockchain-secured dispute resolution powered by AI. Immutable evidence, transparent rulings, automatic execution.
+                </p>
+              </motion.div>
+
+              <motion.div variants={FADE_UP} className="space-y-6">
+                {/* Search bar */}
+                <div className="relative max-w-2xl">
+                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 dark:from-cyan-500/30 dark:to-blue-500/30 rounded-full blur-xl"></div>
+                  <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-2xl rounded-full border border-white/20 dark:border-white/10 shadow-xl flex items-center pl-6 pr-2 py-2">
+                    <Search className="w-5 h-5 text-black/40 dark:text-white/40 mr-3" />
+                    <input
+                      type="text"
+                      placeholder="Search for freelancers, services, or disputes..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="flex-1 bg-transparent text-black dark:text-white placeholder:text-black/40 dark:placeholder:text-white/40 outline-none text-sm"
+                    />
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      transition={SPRING}
+                      className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-6 py-2.5 rounded-full font-semibold text-sm shadow-lg"
+                    >
+                      Search
+                    </motion.button>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            {/* Right - Blockchain Flow */}
+            <motion.div
+              variants={FADE_UP}
+              className="relative h-[600px] flex items-center justify-center"
+            >
+              {/* Connected nodes showing dispute flow */}
+              <div className="relative w-full max-w-md flex flex-col justify-center gap-6">
+                {/* Node 1: Escrow */}
+                <motion.div
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3, ...SPRING }}
+                  className="relative ml-auto w-64"
                 >
-                  {service.title}
-                </button>
-              ))}
-            </div>
-          </motion.div>
-        </motion.div>
-      </section>
+                  <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-3xl blur-xl opacity-40"></div>
+                  <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-2xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
+                        <Lock className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-black dark:text-white">Funds Locked</div>
+                        <div className="text-xs text-black/60 dark:text-white/60">Secure escrow</div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
 
-      {/* Stats Bar */}
-      <motion.section
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        variants={STAGGER_CONTAINER}
-        className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
-      >
-        <motion.div
-          variants={FADE_UP}
-          className="grid grid-cols-2 lg:grid-cols-4 gap-6 p-8 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 shadow-lg"
-        >
-          {STATS.map((stat) => (
-            <div key={stat.label} className="text-center space-y-2">
-              <div className="flex items-center justify-center">
-                <stat.icon className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                {/* Connection line */}
+                <motion.div
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ delay: 0.5, duration: 0.5 }}
+                  className="w-0.5 h-8 bg-gradient-to-b from-cyan-400 to-purple-500 mx-auto origin-top"
+                ></motion.div>
+
+                {/* Node 2: Evidence */}
+                <motion.div
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.7, ...SPRING }}
+                  className="relative mr-auto w-64"
+                >
+                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-400 to-pink-500 rounded-3xl blur-xl opacity-40"></div>
+                  <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-2xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                        <Database className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-black dark:text-white">Evidence Frozen</div>
+                        <div className="text-xs text-black/60 dark:text-white/60">Immutable IPFS</div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Connection line */}
+                <motion.div
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ delay: 0.9, duration: 0.5 }}
+                  className="w-0.5 h-8 bg-gradient-to-b from-purple-400 to-emerald-500 mx-auto origin-top"
+                ></motion.div>
+
+                {/* Node 3: AI Ruling */}
+                <motion.div
+                  initial={{ opacity: 0, x: 50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 1.1, ...SPRING }}
+                  className="relative ml-auto w-64"
+                >
+                  <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-3xl blur-xl opacity-40"></div>
+                  <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-2xl">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                        <Sparkles className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-black dark:text-white">AI Ruling</div>
+                        <div className="text-xs text-black/60 dark:text-white/60">Transparent verdict</div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: "100%" }}
+                          transition={{ delay: 1.3, duration: 1.5 }}
+                          className="h-full bg-gradient-to-r from-emerald-400 to-teal-500"
+                        ></motion.div>
+                      </div>
+                      <div className="text-xs font-mono text-black/60 dark:text-white/60">98%</div>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
-              <div className="text-2xl sm:text-3xl font-serif text-gray-900 dark:text-white">{stat.value}</div>
-              <div className="text-sm text-gray-600 dark:text-gray-400">{stat.label}</div>
-            </div>
-          ))}
-        </motion.div>
-      </motion.section>
-
-      {/* Categories Section */}
-      <section id="browse" className="py-16 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={STAGGER_CONTAINER}
-          className="space-y-8"
-        >
-          <motion.div variants={FADE_UP} className="text-center space-y-3">
-            <h2 className="text-3xl sm:text-4xl font-serif tracking-tight text-gray-900 dark:text-white">
-              Browse by category
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Thousands of talented freelancers ready to bring your projects to life
-            </p>
+            </motion.div>
           </motion.div>
+        </section>
 
+        {/* How It Works - Compact with Liquid Glass */}
+        <section id="work" className="py-32 px-6 lg:px-12 max-w-[1400px] mx-auto border-t border-black/5 dark:border-white/5">
           <motion.div
-            variants={STAGGER_CONTAINER}
-            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={STAGGER}
           >
-            {SERVICE_CATEGORIES.map((category) => (
-              <motion.div key={category.label} variants={FADE_UP}>
-                <button className="w-full p-6 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-purple-400 dark:hover:border-purple-600 hover:shadow-lg transition-all group">
-                  <div className={`w-12 h-12 mx-auto mb-3 rounded-lg ${category.color} flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                    <category.icon className="w-6 h-6" />
-                  </div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">{category.label}</p>
-                </button>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* How It Works Section */}
-      <section
-        id="how-it-works"
-        className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
-      >
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={STAGGER_CONTAINER}
-          className="space-y-12 p-12 rounded-3xl bg-gradient-to-br from-purple-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-purple-950/30 dark:to-gray-900 border border-purple-100 dark:border-purple-900/30"
-        >
-          <motion.div variants={FADE_UP} className="text-center space-y-3">
-            <h2 className="text-3xl sm:text-4xl font-serif tracking-tight text-gray-900 dark:text-white">
-              Work with confidence
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Every transaction is protected. If something goes wrong, AI resolves it instantly.
-            </p>
-          </motion.div>
-
-          <motion.div
-            variants={STAGGER_CONTAINER}
-            className="grid md:grid-cols-3 gap-8"
-          >
-            {HOW_IT_WORKS.map((item, index) => (
-              <motion.div
-                key={item.step}
-                variants={FADE_UP}
-                className="relative"
-              >
-                <div className="p-8 rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-4 h-full shadow-sm">
-                  {/* Icon */}
-                  <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center shadow-lg">
-                    <item.icon className="w-7 h-7 text-white" />
-                  </div>
-
-                  <h3 className="text-xl font-serif text-gray-900 dark:text-white">{item.title}</h3>
-
-                  {/* Description */}
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                    {item.description}
-                  </p>
-                </div>
-
-                {/* Connector Arrow */}
-                {index < HOW_IT_WORKS.length - 1 && (
-                  <div className="hidden md:flex absolute top-1/2 -right-4 items-center justify-center">
-                    <ArrowRight className="w-6 h-6 text-purple-400" />
-                  </div>
-                )}
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-      </section>
-
-      {/* Recent Disputes / Activity Section */}
-      <section id="disputes" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={STAGGER_CONTAINER}
-          className="space-y-8"
-        >
-          <motion.div variants={FADE_UP} className="flex items-center justify-between">
-            <div className="space-y-2">
-              <h2 className="text-3xl sm:text-4xl font-serif tracking-tight text-gray-900 dark:text-white">
-                Recent activity
+            <motion.div variants={FADE_UP} className="mb-16 text-center">
+              <h2 className="text-6xl lg:text-7xl font-serif font-bold text-black dark:text-white mb-6">
+                How it works
               </h2>
-              <p className="text-gray-600 dark:text-gray-300">
-                Disputes resolved in real-time on-chain
+              <p className="text-xl text-black/60 dark:text-white/60 max-w-2xl mx-auto">
+                Three steps to trustless, instant arbitration
               </p>
-            </div>
-            <Button variant="outline" className="border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800" asChild>
-              <Link href="/disputes">View All</Link>
-            </Button>
-          </motion.div>
+            </motion.div>
 
-          <motion.div variants={STAGGER_CONTAINER} className="grid md:grid-cols-3 gap-4">
-            {[
-              { id: "#1247", type: "Website Development", status: "Resolved", time: "2 min ago", winner: "Client" },
-              { id: "#1246", type: "Logo Design", status: "Resolved", time: "15 min ago", winner: "Freelancer" },
-              { id: "#1245", type: "Content Writing", status: "Resolved", time: "1 hour ago", winner: "Client" },
-            ].map((dispute) => (
-              <motion.div key={dispute.id} variants={FADE_UP}>
-                <div className="p-6 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 hover:border-purple-400 dark:hover:border-purple-600 hover:shadow-md transition-all space-y-3">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className="text-sm font-mono text-gray-500 dark:text-gray-400">{dispute.id}</p>
-                      <h4 className="font-medium mt-1 text-gray-900 dark:text-white">{dispute.type}</h4>
-                    </div>
-                    <div className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                      <CheckCircle2 className="w-3 h-3" />
-                      {dispute.status}
-                    </div>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Winner: {dispute.winner}</span>
-                    <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
-                      <Clock className="w-3.5 h-3.5" />
-                      {dispute.time}
-                    </div>
+            {/* Compact Steps Grid */}
+            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {/* Step 1 */}
+              <motion.div
+                variants={FADE_UP}
+                whileHover={{ y: -4, scale: 1.02 }}
+                transition={SPRING}
+                className="relative group"
+              >
+                <div className="absolute -inset-1 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative bg-white/60 dark:bg-black/60 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-xl">
+                  <div className="text-xs font-mono text-black/40 dark:text-white/40 mb-3">01</div>
+                  <h3 className="text-2xl font-serif font-bold text-black dark:text-white mb-3">
+                    Lock funds
+                  </h3>
+                  <p className="text-sm text-black/60 dark:text-white/60 leading-relaxed mb-4">
+                    Both parties deposit funds into a smart contract. Money held securely until resolved.
+                  </p>
+                  <div className="aspect-square rounded-2xl bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-cyan-950/30 dark:to-blue-950/30 border border-cyan-200/50 dark:border-cyan-800/30 flex items-center justify-center">
+                    <motion.div
+                      whileHover={{ rotate: 10, scale: 1.1 }}
+                      transition={SPRING}
+                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-xl"
+                    >
+                      <Lock className="w-8 h-8 text-white" />
+                    </motion.div>
                   </div>
                 </div>
               </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-      </section>
 
-      {/* Why Choose VerifAI Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={STAGGER_CONTAINER}
-          className="space-y-12"
-        >
-          <motion.div variants={FADE_UP} className="text-center space-y-3">
-            <h2 className="text-3xl sm:text-4xl font-serif tracking-tight text-gray-900 dark:text-white">
-              Fair protection for everyone
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Traditional dispute resolution is slow and expensive. We built something better.
-            </p>
-          </motion.div>
+              {/* Step 2 */}
+              <motion.div
+                variants={FADE_UP}
+                whileHover={{ y: -4, scale: 1.02 }}
+                transition={SPRING}
+                className="relative group"
+              >
+                <div className="absolute -inset-1 bg-gradient-to-br from-purple-400/20 to-pink-500/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative bg-white/60 dark:bg-black/60 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-xl">
+                  <div className="text-xs font-mono text-black/40 dark:text-white/40 mb-3">02</div>
+                  <h3 className="text-2xl font-serif font-bold text-black dark:text-white mb-3">
+                    Freeze evidence
+                  </h3>
+                  <p className="text-sm text-black/60 dark:text-white/60 leading-relaxed mb-4">
+                    Submit proof to IPFS. Hash written to blockchain. Cryptographically immutable.
+                  </p>
+                  <div className="aspect-square rounded-2xl bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-950/30 dark:to-pink-950/30 border border-purple-200/50 dark:border-purple-800/30 flex items-center justify-center relative overflow-hidden">
+                    <motion.div
+                      whileHover={{ rotate: -10, scale: 1.1 }}
+                      transition={SPRING}
+                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center shadow-xl"
+                    >
+                      <Database className="w-8 h-8 text-white" />
+                    </motion.div>
+                  </div>
+                </div>
+              </motion.div>
 
-          <motion.div variants={FADE_UP} className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {/* Benefits */}
-            <div className="p-8 rounded-2xl bg-gradient-to-br from-emerald-50 to-cyan-50 dark:from-emerald-900/20 dark:to-cyan-900/20 border border-emerald-200 dark:border-emerald-800/50 space-y-4 shadow-sm">
-              <h3 className="text-2xl font-serif flex items-center gap-2 text-gray-900 dark:text-white">
-                <CheckCircle2 className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
-                VerifAI Protection
-              </h3>
-              <ul className="space-y-3">
-                <li className="flex items-start gap-3">
-                  <span className="text-emerald-600 dark:text-emerald-400 mt-0.5">✓</span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Disputes resolved in under 60 seconds</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-emerald-600 dark:text-emerald-400 mt-0.5">✓</span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Evidence locked on-chain before AI review</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-emerald-600 dark:text-emerald-400 mt-0.5">✓</span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Transparent reasoning, visible to both parties</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-emerald-600 dark:text-emerald-400 mt-0.5">✓</span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">Automatic payout via smart contract</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="text-emerald-600 dark:text-emerald-400 mt-0.5">✓</span>
-                  <span className="text-sm text-gray-700 dark:text-gray-300">No legal fees, just network costs</span>
-                </li>
-              </ul>
-            </div>
-
-            {/* Traditional Way */}
-            <div className="p-8 rounded-2xl bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 space-y-4 shadow-sm">
-              <h3 className="text-2xl font-serif text-gray-600 dark:text-gray-400">
-                Traditional Process
-              </h3>
-              <ul className="space-y-3 text-gray-600 dark:text-gray-400">
-                <li className="flex items-start gap-3">
-                  <span className="mt-0.5 opacity-50">×</span>
-                  <span className="text-sm">3–18 months to resolve</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-0.5 opacity-50">×</span>
-                  <span className="text-sm">$5k–$50k in legal fees</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-0.5 opacity-50">×</span>
-                  <span className="text-sm">Evidence can be altered</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-0.5 opacity-50">×</span>
-                  <span className="text-sm">Opaque decision-making</span>
-                </li>
-                <li className="flex items-start gap-3">
-                  <span className="mt-0.5 opacity-50">×</span>
-                  <span className="text-sm">Manual enforcement</span>
-                </li>
-              </ul>
+              {/* Step 3 */}
+              <motion.div
+                variants={FADE_UP}
+                whileHover={{ y: -4, scale: 1.02 }}
+                transition={SPRING}
+                className="relative group"
+              >
+                <div className="absolute -inset-1 bg-gradient-to-br from-emerald-400/20 to-teal-500/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                <div className="relative bg-white/60 dark:bg-black/60 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-xl">
+                  <div className="text-xs font-mono text-black/40 dark:text-white/40 mb-3">03</div>
+                  <h3 className="text-2xl font-serif font-bold text-black dark:text-white mb-3">
+                    AI delivers
+                  </h3>
+                  <p className="text-sm text-black/60 dark:text-white/60 leading-relaxed mb-4">
+                    Claude analyzes both sides. Issues binding decision. Smart contract executes automatically.
+                  </p>
+                  <div className="aspect-square rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200/50 dark:border-emerald-800/30 flex items-center justify-center relative">
+                    <motion.div
+                      whileHover={{ rotate: 10, scale: 1.1 }}
+                      transition={SPRING}
+                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-xl"
+                    >
+                      <Sparkles className="w-8 h-8 text-white" />
+                    </motion.div>
+                    {/* Floating particles */}
+                    {[...Array(4)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{
+                          scale: [0, 1, 0],
+                          opacity: [0, 1, 0],
+                          y: [0, -20],
+                        }}
+                        transition={{
+                          delay: i * 0.3,
+                          duration: 2,
+                          repeat: Infinity,
+                          repeatDelay: 0.5,
+                        }}
+                        className="absolute w-2 h-2 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500"
+                        style={{
+                          left: `${30 + i * 15}%`,
+                          top: "20%",
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
             </div>
           </motion.div>
-        </motion.div>
-      </section>
+        </section>
 
-      {/* Final CTA Section */}
-      <section
-        id="get-started"
-        className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto"
-      >
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-100px" }}
-          variants={STAGGER_CONTAINER}
-          className="max-w-4xl mx-auto"
-        >
+        {/* Recent Cases */}
+        <section id="cases" className="py-32 px-6 lg:px-12 max-w-[1800px] mx-auto border-t border-black/5 dark:border-white/5">
           <motion.div
-            variants={FADE_UP}
-            className="p-12 rounded-3xl bg-gradient-to-br from-purple-500 to-blue-500 text-white text-center space-y-6"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={STAGGER}
           >
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-serif tracking-tight leading-[1.15]">
-              Ready to hire with confidence?
-            </h2>
-
-            <p className="text-lg text-purple-100 max-w-2xl mx-auto">
-              Join thousands of clients and freelancers working together on the most protected marketplace.
-            </p>
-
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4">
-              <Button size="lg" variant="secondary" className="gap-2 px-8 h-12 bg-white hover:bg-gray-100 text-purple-600" asChild>
-                <Link href="/browse">
-                  Browse Services
-                  <Search className="w-4 h-4" />
-                </Link>
+            <motion.div variants={FADE_UP} className="flex items-end justify-between mb-16">
+              <div>
+                <h2 className="text-6xl font-serif font-bold text-black dark:text-white mb-4">
+                  Recent cases
+                </h2>
+                <p className="text-xl text-black/60 dark:text-white/60">
+                  Real disputes, real resolutions
+                </p>
+              </div>
+              <Button variant="outline" className="border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white rounded-full px-6 font-semibold">
+                View all cases
               </Button>
-              <Button size="lg" variant="outline" className="gap-2 px-8 h-12 border-white/30 hover:bg-white/10 text-white" asChild>
-                <Link href="/sell">
-                  Start Selling
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-              </Button>
+            </motion.div>
+
+            <motion.div variants={STAGGER} className="grid md:grid-cols-3 gap-8">
+              {[
+                {
+                  id: "1247",
+                  type: "Website Development",
+                  amount: "$2,400",
+                  winner: "Client",
+                  time: "2m ago",
+                  gradient: "from-cyan-500/10 to-blue-500/10 dark:from-cyan-500/20 dark:to-blue-500/20",
+                  icon: Zap
+                },
+                {
+                  id: "1246",
+                  type: "Logo Design",
+                  amount: "$850",
+                  winner: "Freelancer",
+                  time: "18m ago",
+                  gradient: "from-purple-500/10 to-pink-500/10 dark:from-purple-500/20 dark:to-pink-500/20",
+                  icon: Sparkles
+                },
+                {
+                  id: "1245",
+                  type: "Content Writing",
+                  amount: "$320",
+                  winner: "Client",
+                  time: "1h ago",
+                  gradient: "from-emerald-500/10 to-teal-500/10 dark:from-emerald-500/20 dark:to-teal-500/20",
+                  icon: Database
+                },
+              ].map((item, index) => {
+                const Icon = item.icon;
+                return (
+                  <motion.div
+                    key={item.id}
+                    variants={FADE_UP}
+                    whileHover={{
+                      y: -8,
+                      scale: 1.02,
+                    }}
+                    transition={SPRING}
+                    className="group relative cursor-pointer"
+                  >
+                    {/* Glow effect on hover */}
+                    <div className={`absolute -inset-1 bg-gradient-to-br ${item.gradient} rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+
+                    {/* Glass card */}
+                    <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-2xl rounded-3xl p-8 border border-white/20 dark:border-white/10 shadow-xl group-hover:shadow-2xl transition-all duration-300">
+                      {/* Shine effect */}
+                      <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 to-transparent dark:from-white/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                      <div className="relative space-y-6">
+                        {/* Header with icon */}
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${item.gradient} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                              <Icon className="w-5 h-5 text-black dark:text-white" />
+                            </div>
+                            <div className="text-sm font-mono text-black/40 dark:text-white/40">#{item.id}</div>
+                          </div>
+                          <motion.div
+                            initial={{ scale: 0 }}
+                            whileInView={{ scale: 1 }}
+                            transition={{ delay: 0.2 + index * 0.1, ...SPRING }}
+                            className="px-3 py-1 rounded-full bg-emerald-500/10 backdrop-blur-xl border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold"
+                          >
+                            RESOLVED
+                          </motion.div>
+                        </div>
+
+                        {/* Content */}
+                        <div>
+                          <h3 className="text-2xl font-bold text-black dark:text-white mb-2 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-cyan-500 group-hover:to-blue-500 dark:group-hover:from-cyan-400 dark:group-hover:to-blue-400 transition-all duration-300">
+                            {item.type}
+                          </h3>
+                          <p className="text-lg text-black/60 dark:text-white/60 font-mono">{item.amount} in escrow</p>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="flex items-center justify-between text-sm pt-4 border-t border-black/5 dark:border-white/5">
+                          <span className="text-black/60 dark:text-white/60">
+                            Winner: <span className="text-black dark:text-white font-semibold">{item.winner}</span>
+                          </span>
+                          <span className="text-black/40 dark:text-white/40">{item.time}</span>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="h-1 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+                          <motion.div
+                            initial={{ width: 0 }}
+                            whileInView={{ width: "100%" }}
+                            transition={{ delay: 0.5 + index * 0.2, duration: 1, ease: "easeOut" }}
+                            className={`h-full bg-gradient-to-r ${item.gradient.replace('/10', '/50').replace('/20', '/70')}`}
+                          ></motion.div>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          </motion.div>
+        </section>
+
+        {/* Footer */}
+        <footer className="py-16 px-6 lg:px-12 max-w-[1800px] mx-auto mt-32">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="relative bg-white/50 dark:bg-black/50 backdrop-blur-2xl rounded-3xl p-12 border border-white/20 dark:border-white/10 shadow-xl"
+          >
+            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+              <div className="flex items-center gap-3">
+                <div className="text-sm text-black/50 dark:text-white/50">
+                  © 2026 Verif<span className="font-serif italic">AI</span>
+                </div>
+                <div className="w-px h-4 bg-black/10 dark:bg-white/10"></div>
+                <div className="text-xs text-black/30 dark:text-white/30">
+                  Built with love on Base
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  transition={SPRING}
+                  className="px-4 py-2 rounded-full bg-cyan-500/10 dark:bg-cyan-400/10 border border-cyan-500/20 dark:border-cyan-400/20 backdrop-blur-xl"
+                >
+                  <span className="text-xs font-semibold text-cyan-600 dark:text-cyan-400">Base Sepolia</span>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  transition={SPRING}
+                  className="px-4 py-2 rounded-full bg-purple-500/10 dark:bg-purple-400/10 border border-purple-500/20 dark:border-purple-400/20 backdrop-blur-xl"
+                >
+                  <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">Claude AI</span>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  transition={SPRING}
+                  className="px-4 py-2 rounded-full bg-emerald-500/10 dark:bg-emerald-400/10 border border-emerald-500/20 dark:border-emerald-400/20 backdrop-blur-xl"
+                >
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">IPFS</span>
+                </motion.div>
+              </div>
             </div>
           </motion.div>
-
-          <motion.p
-            variants={FADE_UP}
-            className="text-center text-sm text-muted-foreground font-mono pt-8"
-          >
-            Built on Base • Powered by Claude AI • Secured by IPFS
-          </motion.p>
-        </motion.div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 dark:border-gray-800 py-12 px-4 sm:px-6 lg:px-8 bg-gray-50 dark:bg-gray-950">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <h4 className="font-serif text-sm mb-3 text-gray-900 dark:text-white">Marketplace</h4>
-              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">Browse Services</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">Become a Seller</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">How It Works</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-serif text-sm mb-3 text-gray-900 dark:text-white">Disputes</h4>
-              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">Recent Cases</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">File a Dispute</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">Resolution Process</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-serif text-sm mb-3 text-gray-900 dark:text-white">Resources</h4>
-              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">Documentation</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">API</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">Smart Contracts</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-serif text-sm mb-3 text-gray-900 dark:text-white">Company</h4>
-              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">About</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">GitHub</Link></li>
-                <li><Link href="#" className="hover:text-gray-900 dark:hover:text-white transition-colors">Base Sepolia</Link></li>
-              </ul>
-            </div>
-          </div>
-          <div className="pt-8 border-t border-gray-200 dark:border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-gray-600 dark:text-gray-400">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-purple-500 to-blue-500 flex items-center justify-center">
-                <Scale className="w-4 h-4 text-white" />
-              </div>
-              <span className="font-serif">VerifAI</span>
-              <span>© 2026</span>
-            </div>
-            <div className="text-xs text-gray-500 dark:text-gray-500">
-              AI London 2026 • Built at Encode Hub
-            </div>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </main>
   );
 };

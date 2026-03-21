@@ -17,6 +17,8 @@ INFURA_PROJECT_ID = os.getenv("INFURA_PROJECT_ID", "")
 CONTRACT_ADDRESS = os.getenv(
     "CONTRACT_ADDRESS", "0xD4Fc541236927E2EAf8F27606bD7309C1Fc2cbee"
 )
+
+ORACLE_PRIVATE_KEY = os.getenv("ORACLE_PRIVATE_KEY", "")
 PINATA_JWT = os.getenv("PINATA_JWT", "")
 PINATA_GATEWAY_BASE_URL = os.getenv(
     "PINATA_GATEWAY_BASE_URL", "https://gateway.pinata.cloud/ipfs"
@@ -25,14 +27,21 @@ PINATA_FILE_UPLOAD_URL = "https://api.pinata.cloud/pinning/pinFileToIPFS"
 PINATA_JSON_UPLOAD_URL = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
 
 # Agent Configuration
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
+OLLAMA_MODEL_CHOICES = {
+    "text": "gemma3:4b",
+    "image": "gemma3:4b",
+    "reasoning": "gemma3:4b",
+    "code": "gemma3:4b",
+}
+OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", OLLAMA_MODEL_CHOICES["text"])
 
 RPC_ENDPOINTS = [
     f"https://sepolia.infura.io/v3/{INFURA_PROJECT_ID}"
     if INFURA_PROJECT_ID
-    else "https://rpc.sepolia.org",
-    "https://rpc.sepolia.org",  # Public Sepolia testnet RPC
-    "https://ethereum-sepolia-rpc.publicnode.com",
+    else "https://sepolia.base.org",
+    "https://sepolia.base.org",          # Official Base Sepolia public RPC
+    "https://base-sepolia-rpc.publicnode.com",
 ]
 
 # Load Contract ABI from file
