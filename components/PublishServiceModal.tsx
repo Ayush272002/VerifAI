@@ -1,15 +1,11 @@
-/**
- * @fileoverview Publish Service Modal Component
- * Allows service providers to publish their services
- */
-
 "use client";
 
 import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Plus, Clock, Upload, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-
+import { X, Plus, Clock, Upload, CheckCircle2, Loader2 } from "lucide-react";
+import { useAddService } from "@/lib/marketplace";
+import { EthIcon } from "@/components/EthIcon";
 import { GIG_CATEGORIES, getRandomPlaceholderImage } from "@/lib/gigCategories";
 
 interface PublishServiceModalProps {
@@ -110,7 +106,7 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
   };
 
   const handleTagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && tagInput.trim()) {
+    if (e.key === "Enter" && tagInput.trim()) {
       e.preventDefault();
       if (!tags.includes(tagInput.trim())) {
         setTags([...tags, tagInput.trim()]);
@@ -120,16 +116,21 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
   };
 
   const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter(tag => tag !== tagToRemove));
+    setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid) return;
+  const { addService, isPending } = useAddService();
 
+const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isFormValid || isPending) return;
+
+    try {
     const resolvedBackgroundImage =
       formData.backgroundImage || getRandomPlaceholderImage(formData.category);
 
+    const fullDescription = `${formData.description}\n\nCategory: ${formData.category}\nDelivery Time: ${formData.deliveryTime}\nTags: ${tags.join(", ")}`;
+    await addService(formData.title, fullDescription, formData.priceAmount);
     console.log("Service published:", {
       ...formData,
       backgroundImage: resolvedBackgroundImage,
@@ -153,6 +154,18 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
       setTags([]);
       setTagInput("");
     }, 2500);
+    } catch (err: any) {
+      // Handle user-rejected transaction
+      if (
+        err?.message?.includes("User rejected the request") ||
+        err?.code === 4001
+      ) {
+        toast.error("Transaction cancelled by user.");
+      } else {
+        console.error("Failed to publish service to blockchain:", err);
+        toast.error("Failed to publish service: " + (err?.message || err));
+      }
+    }
   };
 
   return (
@@ -165,11 +178,11 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-[100]"
+            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-100"
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-101 flex items-center justify-center p-4 pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -201,7 +214,10 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
               </div>
 
               {/* Form */}
-              <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar">
+              <form
+                onSubmit={handleSubmit}
+                className="flex-1 overflow-y-auto custom-scrollbar"
+              >
                 <div className="p-6 space-y-6">
                   {/* Service Title */}
                   <div>
@@ -212,7 +228,9 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                       type="text"
                       required
                       value={formData.title}
-                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({ ...formData, title: e.target.value })
+                      }
                       placeholder="e.g., Full-Stack Web Development - React, Node.js"
                       className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
                     />
@@ -260,7 +278,12 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                       required
                       rows={4}
                       value={formData.description}
-                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          description: e.target.value,
+                        })
+                      }
                       placeholder="Describe your service, what you offer, and what makes you stand out..."
                       className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all resize-none"
                     />
@@ -277,7 +300,9 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                           type="button"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          onClick={() => setFormData({ ...formData, priceType: "fixed" })}
+                          onClick={() =>
+                            setFormData({ ...formData, priceType: "fixed" })
+                          }
                           className={`flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
                             formData.priceType === "fixed"
                               ? "glass-macos ring-2 ring-cyan-500/50 text-cyan-600 dark:text-cyan-400"
@@ -290,7 +315,9 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                           type="button"
                           whileHover={{ scale: 1.02 }}
                           whileTap={{ scale: 0.98 }}
-                          onClick={() => setFormData({ ...formData, priceType: "hourly" })}
+                          onClick={() =>
+                            setFormData({ ...formData, priceType: "hourly" })
+                          }
                           className={`flex-1 px-4 py-3 rounded-xl font-semibold text-sm transition-all ${
                             formData.priceType === "hourly"
                               ? "glass-macos ring-2 ring-cyan-500/50 text-cyan-600 dark:text-cyan-400"
@@ -307,7 +334,9 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                         Price (ETH) *
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-black/50 dark:text-white/50">Ξ</span>
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                          <EthIcon className="w-5 h-5" />
+                        </div>
                         <input
                           type="number"
                           required
@@ -317,13 +346,13 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                           onChange={(e) => {
                             const value = e.target.value;
                             // Only allow numbers and decimal point
-                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                            if (value === "" || /^\d*\.?\d*$/.test(value)) {
                               setFormData({ ...formData, priceAmount: value });
                             }
                           }}
                           onKeyDown={(e) => {
                             // Prevent 'e', 'E', '+', '-' which are valid in number inputs but we don't want
-                            if (['e', 'E', '+', '-'].includes(e.key)) {
+                            if (["e", "E", "+", "-"].includes(e.key)) {
                               e.preventDefault();
                             }
                           }}
@@ -345,7 +374,12 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                         type="text"
                         required
                         value={formData.deliveryTime}
-                        onChange={(e) => setFormData({ ...formData, deliveryTime: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            deliveryTime: e.target.value,
+                          })
+                        }
                         placeholder="e.g., 7 days, 2 weeks, Flexible"
                         className="w-full glass-search pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
                       />
@@ -425,7 +459,12 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                             animate={{ scale: 1 }}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            onClick={() => setFormData({ ...formData, backgroundImage: null })}
+                            onClick={() =>
+                              setFormData({
+                                ...formData,
+                                backgroundImage: null,
+                              })
+                            }
                             className="glass-macos glass-macos-hover px-4 py-3 rounded-xl text-red-600 dark:text-red-400 font-semibold"
                           >
                             <X className="w-5 h-5" />
@@ -457,7 +496,8 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                       )}
                       {!formData.backgroundImage && (
                         <p className="text-xs text-black/50 dark:text-white/50">
-                          Upload a widescreen image (recommended: 800x450px or larger)
+                          Upload a widescreen image (recommended: 800x450px or
+                          larger)
                         </p>
                       )}
                     </div>
@@ -469,7 +509,7 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                       Preview
                     </label>
                     <div className="glass-macos rounded-2xl p-4">
-                      <div className="aspect-video rounded-xl bg-gradient-to-br from-slate-700 via-gray-800 to-zinc-900 flex items-center justify-center mb-3 overflow-hidden relative">
+                      <div className="aspect-video rounded-xl bg-linear-to-br from-slate-700 via-gray-800 to-zinc-900 flex items-center justify-center mb-3 overflow-hidden relative">
                         {formData.backgroundImage ? (
                           <img
                             src={formData.backgroundImage}
@@ -477,7 +517,9 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          <div className="text-white/20 text-sm font-medium">No background image</div>
+                          <div className="text-white/20 text-sm font-medium">
+                            No background image
+                          </div>
                         )}
                       </div>
                       <h3 className="font-bold text-black dark:text-white text-sm mb-1">
@@ -489,7 +531,10 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                       {tags.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-2">
                           {tags.slice(0, 3).map((tag) => (
-                            <span key={tag} className="px-2 py-0.5 rounded-lg bg-black/5 dark:bg-white/5 text-xs font-medium text-black/70 dark:text-white/70">
+                            <span
+                              key={tag}
+                              className="px-2 py-0.5 rounded-lg bg-black/5 dark:bg-white/5 text-xs font-medium text-black/70 dark:text-white/70"
+                            >
                               {tag}
                             </span>
                           ))}
@@ -499,7 +544,7 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                   </div>
                 </div>
 
-                  {/* Footer */}
+                {/* Footer */}
                 <div className="border-t border-black/5 dark:border-white/5 p-6 flex justify-end gap-3 bg-white/50 dark:bg-black/50">
                   <motion.button
                     type="button"
@@ -512,18 +557,23 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                   </motion.button>
                   <motion.button
                     type="submit"
-                    onClick={handleSubmit}
-                    disabled={!isFormValid}
-                    whileHover={isFormValid ? { scale: 1.02 } : {}}
-                    whileTap={isFormValid ? { scale: 0.98 } : {}}
+                    disabled={!isFormValid || isPending}
+                    whileHover={
+                      isFormValid && !isPending ? { scale: 1.02 } : {}
+                    }
+                    whileTap={isFormValid && !isPending ? { scale: 0.98 } : {}}
                     className={`px-8 py-2.5 rounded-2xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                      isFormValid
+                      isFormValid && !isPending
                         ? "btn-macos"
                         : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
                     }`}
                   >
-                    <Plus className="w-4 h-4" />
-                    Publish Service
+                    {isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Plus className="w-4 h-4" />
+                    )}
+                    {isPending ? "Confirming..." : "Publish Service"}
                   </motion.button>
                 </div>
               </form>
@@ -538,9 +588,9 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 transition={SPRING}
-                className="absolute bottom-8 left-1/2 -translate-x-1/2 glass-macos rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3 min-w-[300px]"
+                className="absolute bottom-8 left-1/2 -translate-x-1/2 glass-macos rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3 min-w-75"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
                   <CheckCircle2 className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">

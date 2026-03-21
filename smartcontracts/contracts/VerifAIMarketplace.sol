@@ -70,6 +70,48 @@ contract VerifAIMarketplace {
         return allProviders;
     }
 
+    struct GlobalServiceView {
+        address provider;
+        uint256 serviceIndex;
+        string title;
+        string description;
+        uint256 priceWei;
+        bool active;
+    }
+
+    function getAllActiveServices() external view returns (GlobalServiceView[] memory) {
+        uint256 totalActive = 0;
+        for (uint256 i = 0; i < allProviders.length; i++) {
+            address p = allProviders[i];
+            for (uint256 j = 0; j < providerServices[p].length; j++) {
+                if (providerServices[p][j].active) {
+                    totalActive++;
+                }
+            }
+        }
+        
+        GlobalServiceView[] memory result = new GlobalServiceView[](totalActive);
+        uint256 count = 0;
+        
+        for (uint256 i = 0; i < allProviders.length; i++) {
+            address p = allProviders[i];
+            for (uint256 j = 0; j < providerServices[p].length; j++) {
+                if (providerServices[p][j].active) {
+                    result[count] = GlobalServiceView({
+                        provider: p,
+                        serviceIndex: j,
+                        title: providerServices[p][j].title,
+                        description: providerServices[p][j].description,
+                        priceWei: providerServices[p][j].priceWei,
+                        active: true
+                    });
+                    count++;
+                }
+            }
+        }
+        return result;
+    }
+
     enum RequestStatus {
         Pending,       // B requested; A hasn't decided
         Accepted,      // A accepted; work in progress

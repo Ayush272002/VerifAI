@@ -7,8 +7,9 @@
 
 import { motion } from "motion/react";
 import { useState } from "react";
-import { ChevronDown, X, DollarSign, Clock, Star, Check } from "lucide-react";
+import { ChevronDown, X, Clock, Star, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { EthIcon } from "@/components/EthIcon";
 
 const SPRING = {
   type: "spring",
@@ -30,10 +31,10 @@ const CATEGORIES: FilterOption[] = [
 ];
 
 const PRICE_RANGES: FilterOption[] = [
-  { id: "any", label: "Any Price", icon: <DollarSign className="w-4 h-4" /> },
-  { id: "budget", label: "Budget ($0-$500)", icon: <DollarSign className="w-4 h-4" /> },
-  { id: "standard", label: "Standard ($500-$2000)", icon: <DollarSign className="w-4 h-4" /> },
-  { id: "premium", label: "Premium ($2000+)", icon: <DollarSign className="w-4 h-4" /> },
+  { id: "any", label: "Any Price", icon: <EthIcon className="w-4 h-4" /> },
+  { id: "budget", label: "Budget (0-2 ETH)", icon: <EthIcon className="w-4 h-4" /> },
+  { id: "standard", label: "Standard (2-5 ETH)", icon: <EthIcon className="w-4 h-4" /> },
+  { id: "premium", label: "Premium (5+ ETH)", icon: <EthIcon className="w-4 h-4" /> },
 ];
 
 const DELIVERY_TIMES: FilterOption[] = [

@@ -1,13 +1,13 @@
 /**
- * @fileoverview VerifAI Search Results Page
- * Marketplace-style search with functional filtering
+ * @fileoverview Browse All Services Page
+ * Shows all available services from the marketplace
  */
 
 "use client";
 
 import { motion } from "motion/react";
 import { useState, useEffect, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { useTheme } from "@/hooks/useTheme";
 import Link from "next/link";
@@ -45,13 +45,12 @@ const SPRING = {
   stiffness: 100,
 } as const;
 
-function SearchPageContent() {
-  const searchParams = useSearchParams();
+function BrowsePageContent() {
   const router = useRouter();
   const { isConnected } = useAccount();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || "");
+  const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showMyServicesModal, setShowMyServicesModal] = useState(false);
@@ -59,14 +58,6 @@ function SearchPageContent() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  // Update search query when URL changes
-  useEffect(() => {
-    const query = searchParams.get('q');
-    if (query) {
-      setSearchQuery(query);
-    }
-  }, [searchParams]);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -110,7 +101,7 @@ function SearchPageContent() {
             </div>
             <div className="flex items-center gap-4">
               <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
-                <Link href="/browse" className="text-sm font-medium text-black dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors flex items-center gap-2">
+                <Link href="/browse" className="text-sm font-medium text-cyan-600 dark:text-cyan-400 transition-colors flex items-center gap-2">
                   <Grid3x3 className="w-4 h-4" />
                   <span className="hidden md:inline">Browse All</span>
                 </Link>
@@ -144,7 +135,7 @@ function SearchPageContent() {
             variants={STAGGER}
             className="space-y-8"
           >
-            {/* Search Header */}
+            {/* Header */}
             <motion.div variants={FADE_UP} className="space-y-6">
               {/* Enhanced Search Bar */}
               <div className="relative max-w-4xl">
@@ -152,7 +143,7 @@ function SearchPageContent() {
                   <Search className="w-5 h-5 text-black/50 dark:text-white/50 mr-3 flex-shrink-0" />
                   <input
                     type="text"
-                    placeholder="Search for freelancers, services, or disputes..."
+                    placeholder="Search for services..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -170,16 +161,14 @@ function SearchPageContent() {
                 </div>
               </div>
 
-              {/* Results Info & Controls */}
+              {/* Page Info & Controls */}
               <div className="flex items-center justify-between flex-wrap gap-4">
                 <div className="space-y-1">
                   <h1 className="text-4xl lg:text-5xl font-serif font-bold text-black dark:text-white">
-                    Search results
+                    Browse All Services
                   </h1>
                   <p className="text-base text-black/60 dark:text-white/60">
-                    {searchQuery && (
-                      <>Showing results for <span className="font-semibold text-black dark:text-white">&quot;{searchQuery}&quot;</span></>
-                    )}
+                    Discover services from verified providers on the blockchain
                   </p>
                 </div>
 
@@ -215,7 +204,7 @@ function SearchPageContent() {
               {showFilters && <FilterBar />}
             </motion.div>
 
-            {/* Results Grid */}
+            {/* Results Grid - Show all services (empty query) */}
             <motion.div variants={FADE_UP}>
               <ResultsGrid searchQuery={searchQuery} />
             </motion.div>
@@ -238,10 +227,10 @@ function SearchPageContent() {
   );
 }
 
-export default function SearchPage() {
+export default function BrowsePage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <SearchPageContent />
+      <BrowsePageContent />
     </Suspense>
   );
 }

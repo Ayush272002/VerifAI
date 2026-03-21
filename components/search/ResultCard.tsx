@@ -10,6 +10,7 @@ import { motion } from "motion/react";
 import { Star, MapPin, Clock, CheckCircle2, TrendingUp, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ServiceDetailsModal } from "./ServiceDetailsModal";
+import { EthIcon } from "@/components/EthIcon";
 
 const SPRING = {
   type: "spring",
@@ -210,10 +211,13 @@ export function ResultCard({ data, index }: ResultCardProps) {
           <div className="flex items-center justify-between pt-4 border-t border-black/5 dark:border-white/5">
             <div>
               <p className="text-xs text-black/60 dark:text-white/60">Starting at</p>
-              <p className="text-2xl font-bold text-black dark:text-white">
-                ${data.price.amount.toLocaleString()}
-                {data.price.type === "hourly" && <span className="text-sm font-normal text-black/60 dark:text-white/60">/hr</span>}
-              </p>
+              <div className="flex items-center gap-2">
+                <EthIcon className="w-6 h-6" />
+                <p className="text-2xl font-bold text-black dark:text-white">
+                  {data.price.amount.toLocaleString()}
+                  {data.price.type === "hourly" && <span className="text-sm font-normal text-black/60 dark:text-white/60">/hr</span>}
+                </p>
+              </div>
             </div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={SPRING}>
               <button
