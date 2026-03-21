@@ -1,5 +1,6 @@
 """FastAPI backend application."""
 
+import logging
 import dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +10,12 @@ from .routers.contract_router import router as contract_router
 from .routers.ipfs_router import router as ipfs_router
 from .routers.marketplace_router import router as marketplace_router
 from .routers.test_router import router as test_router
+
+# Configure logging to show DEBUG and INFO level messages
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 dotenv.load_dotenv()
 
