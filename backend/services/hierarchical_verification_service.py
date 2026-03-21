@@ -96,20 +96,17 @@ class HierarchicalVerificationService:
             content = file_payload.get("content", "")
             content_type = file_payload.get("content_type", "")
             try:
-                # We exhaust the generator here to collect the final analysis payload
-                # In a pure async setup, we'd use astream(), but for sync, this works.
                 gen = self.base_service._analyse_file(
                     file_name=file_name,
                     content=content,
                     content_type=content_type,
                 )
                 analysis = None
-                for chunk in gen:
-                    # Tokens are discarded here because we are tracking at the State level
-                    pass
-                analysis = gen.send(None)
-            except StopIteration as exc:
-                analysis = exc.value
+                try:
+                    while True:
+                        next(gen)
+                except StopIteration as exc:
+                    analysis = exc.value
             except Exception as exc:  # pylint: disable=broad-exception-caught
                 logging.warning("Analysis failed for sum: %s", exc)
                 analysis = {
