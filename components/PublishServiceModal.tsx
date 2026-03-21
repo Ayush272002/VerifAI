@@ -4,6 +4,7 @@ import { useState, useRef, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Plus, Clock, Upload, CheckCircle2, Loader2 } from "lucide-react";
 import { useAddService } from "@/lib/marketplace";
+import { EthIcon } from "@/components/EthIcon";
 
 interface PublishServiceModalProps {
   isOpen: boolean;
@@ -250,7 +251,9 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                         Price (ETH) *
                       </label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-black/50 dark:text-white/50">Ξ</span>
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2">
+                          <EthIcon className="w-5 h-5" />
+                        </div>
                         <input
                           type="number"
                           required

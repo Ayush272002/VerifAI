@@ -13,10 +13,11 @@ import {
   Sparkles,
   Zap,
   Plus,
+  Package,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
 
@@ -24,6 +25,7 @@ import WalletConnect from "@/components/WalletConnect";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { PublishServiceModal } from "@/components/PublishServiceModal";
+import { MyServicesModal } from "@/components/MyServicesModal";
 
 const FADE_UP = {
   hidden: { opacity: 0, y: 40 },
@@ -55,6 +57,8 @@ const SPRING = {
 const LandingPage = (): React.JSX.Element => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showMyServicesModal, setShowMyServicesModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const { isConnected } = useAccount();
   const router = useRouter();
   const heroRef = useRef(null);
@@ -65,6 +69,10 @@ const LandingPage = (): React.JSX.Element => {
 
   const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0.3]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleSearch = () => {
     if (searchQuery.trim()) {
@@ -144,16 +152,30 @@ const LandingPage = (): React.JSX.Element => {
                 </Link>
               </motion.div>
               <ThemeToggle />
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                transition={SPRING}
-                onClick={() => setShowPublishModal(true)}
-                className="btn-macos !py-2 !px-4 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden md:inline">Publish Service</span>
-              </motion.button>
+              {mounted && isConnected && (
+                <>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={SPRING}
+                    onClick={() => setShowPublishModal(true)}
+                    className="btn-macos !py-2 !px-4 flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden md:inline">Publish Service</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={SPRING}
+                    onClick={() => setShowMyServicesModal(true)}
+                    className="btn-macos !py-2 !px-4 flex items-center gap-2"
+                  >
+                    <Package className="w-4 h-4" />
+                    <span className="hidden md:inline">My Services</span>
+                  </motion.button>
+                </>
+              )}
               <WalletConnect />
             </div>
           </div>
@@ -617,6 +639,12 @@ const LandingPage = (): React.JSX.Element => {
       <PublishServiceModal
         isOpen={showPublishModal}
         onClose={() => setShowPublishModal(false)}
+      />
+
+      {/* My Services Modal */}
+      <MyServicesModal
+        isOpen={showMyServicesModal}
+        onClose={() => setShowMyServicesModal(false)}
       />
     </main>
   );

@@ -8,13 +8,15 @@
 import { motion } from "motion/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useAccount } from "wagmi";
 import Link from "next/link";
-import { Search, SlidersHorizontal, Plus } from "lucide-react";
+import { Search, SlidersHorizontal, Plus, Package } from "lucide-react";
 import { FilterBar } from "@/components/search/FilterBar";
 import { ResultsGrid } from "@/components/search/ResultsGrid";
 import { ThemeToggle } from "@/components/theme-toggle";
 import WalletConnect from "@/components/WalletConnect";
 import { PublishServiceModal } from "@/components/PublishServiceModal";
+import { MyServicesModal } from "@/components/MyServicesModal";
 
 const FADE_UP = {
   hidden: { opacity: 0, y: 20 },
@@ -46,9 +48,16 @@ const SPRING = {
 function SearchPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { isConnected } = useAccount();
+  const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || "");
   const [showFilters, setShowFilters] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
+  const [showMyServicesModal, setShowMyServicesModal] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Update search query when URL changes
   useEffect(() => {
@@ -108,16 +117,30 @@ function SearchPageContent() {
                 </Link>
               </motion.div>
               <ThemeToggle />
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                transition={SPRING}
-                onClick={() => setShowPublishModal(true)}
-                className="btn-macos !py-2 !px-4 flex items-center gap-2"
-              >
-                <Plus className="w-4 h-4" />
-                <span className="hidden md:inline">Publish Service</span>
-              </motion.button>
+              {mounted && isConnected && (
+                <>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={SPRING}
+                    onClick={() => setShowPublishModal(true)}
+                    className="btn-macos !py-2 !px-4 flex items-center gap-2"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="hidden md:inline">Publish Service</span>
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    transition={SPRING}
+                    onClick={() => setShowMyServicesModal(true)}
+                    className="btn-macos !py-2 !px-4 flex items-center gap-2"
+                  >
+                    <Package className="w-4 h-4" />
+                    <span className="hidden md:inline">My Services</span>
+                  </motion.button>
+                </>
+              )}
               <WalletConnect />
             </div>
           </div>
@@ -214,6 +237,12 @@ function SearchPageContent() {
       <PublishServiceModal
         isOpen={showPublishModal}
         onClose={() => setShowPublishModal(false)}
+      />
+
+      {/* My Services Modal */}
+      <MyServicesModal
+        isOpen={showMyServicesModal}
+        onClose={() => setShowMyServicesModal(false)}
       />
     </main>
   );

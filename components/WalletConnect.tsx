@@ -287,13 +287,27 @@ export default function WalletConnect() {
         </DropdownMenu>
       ) : (
         <>
-          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <button
               onClick={() => setIsWalletModalOpen(true)}
-              className="btn-macos flex items-center gap-2"
+              className="relative group flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all overflow-hidden"
+              style={{
+                background: 'rgba(249, 115, 22, 0.15)',
+                backdropFilter: 'blur(40px)',
+                WebkitBackdropFilter: 'blur(40px)',
+                border: '1px solid rgba(249, 115, 22, 0.3)',
+                color: '#f97316',
+                boxShadow: '0 4px 20px rgba(249, 115, 22, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+              }}
             >
-              <Wallet className="h-4 w-4" />
-              Connect Wallet
+              {/* Animated gradient background on hover */}
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-amber-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+              {/* Pulse animation */}
+              <div className="absolute inset-0 rounded-full bg-orange-400/30 animate-pulse opacity-50"></div>
+
+              <Wallet className="h-4 w-4 relative z-10" />
+              <span className="relative z-10">Connect Wallet</span>
             </button>
           </motion.div>
 
