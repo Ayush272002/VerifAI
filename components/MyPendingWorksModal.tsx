@@ -126,6 +126,7 @@ interface PendingWork {
   deadline: string;
   taskDetails: string;
   createdAt: string;
+  completionProofCid?: string;
   messages: {
     sender: "me" | "them";
     text: string;
@@ -231,9 +232,12 @@ export function MyPendingWorksModal({
       timestamp: new Date(parseInt(msg.timestamp) * 1000).toLocaleTimeString(),
     }));
 
-    setSelectedWork({
-      ...selectedWork,
-      messages: formattedMessages,
+    setSelectedWork(prev => {
+      if (!prev) return null;
+      return {
+        ...prev,
+        messages: formattedMessages,
+      };
     });
   }, [messagesData, selectedWork?.id, address]);
 
@@ -286,6 +290,7 @@ export function MyPendingWorksModal({
                 const escrowAmount = (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
                 const clientNote = (requestDataArray as any).clientNote ?? requestDataArray[3] ?? "";
                 const contractStatus = (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
+                const completionProofCid = (requestDataArray as any).completionProofCid ?? requestDataArray[6] ?? "";
 
                 // Fetch the service title using provider and serviceIndex
                 let serviceTitle = "Service Request";
@@ -338,6 +343,7 @@ export function MyPendingWorksModal({
                   deadline: "7 days",
                   taskDetails: clientNote || "Service request",
                   createdAt: "Recently",
+                  completionProofCid,
                   messages: [],
                 });
               } else {
@@ -383,6 +389,7 @@ export function MyPendingWorksModal({
                 const escrowAmount = (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
                 const clientNote = (requestDataArray as any).clientNote ?? requestDataArray[3] ?? "";
                 const contractStatus = (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
+                const completionProofCid = (requestDataArray as any).completionProofCid ?? requestDataArray[6] ?? "";
 
                 // Fetch the service title using provider and serviceIndex
                 let serviceTitle = "My Service Request";
@@ -435,6 +442,7 @@ export function MyPendingWorksModal({
                   deadline: "7 days",
                   taskDetails: clientNote || "Service request",
                   createdAt: "Recently",
+                  completionProofCid,
                   messages: [],
                 });
               } else {
@@ -672,10 +680,14 @@ export function MyPendingWorksModal({
 
       const oracleData = await res.json();
       if (!oracleData.success) {
-        throw new Error(oracleData.error);
+        if (oracleData.error && oracleData.error.includes("Not pending oracle review")) {
+          toast.success("Already evaluated and resolved on-chain!", { id: "oracle-ruling" });
+        } else {
+          throw new Error(oracleData.error);
+        }
+      } else {
+        toast.success("Transaction Resolved On-Chain!", { id: "oracle-ruling" });
       }
-
-      toast.success("Transaction Resolved On-Chain!", { id: "oracle-ruling" });
       
       const newStatus = "completed";
       setSelectedWork({ ...selectedWork, status: newStatus as any });
@@ -697,21 +709,23 @@ export function MyPendingWorksModal({
     setIsVerifying(true);
     try {
       toast.info("Uploading evidence securely to decentralised storage...");
-      const fileNames = uploadedFiles.map(f => f.name);
+      const formData = new FormData();
+      formData.append("file", uploadedFiles[0]);
+      formData.append("upload_analysis", "false");
 
-      const res = await fetch(`${BACKEND_BASE_URL}/ipfs/upload-json`, {
+      const res = await fetch(`${BACKEND_BASE_URL}/ipfs/upload-file`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ names: fileNames }),
+        body: formData,
       });
 
       if (!res.ok) throw new Error("Decentralised storage cluster unavailable");
       const uploadData = await res.json();
+      const ipfsHash = uploadData.file_pin?.IpfsHash || uploadData.IpfsHash;
       
       toast.info("Locking Evidence on-chain...");
       const txHash = await completeRequest(
         selectedWork.id as `0x${string}`,
-        uploadData.IpfsHash,
+        ipfsHash,
       );
       
       const receipt = await publicClient.waitForTransactionReceipt({
@@ -737,12 +751,20 @@ export function MyPendingWorksModal({
     }
   };
 
+  // Autonomously trigger AI Evaluation
+  useEffect(() => {
+    if (
+      selectedWork?.status === "pending_review" &&
+      !isStreaming &&
+      !verificationResult &&
+      !isVerifying
+    ) {
+      handleVerifySubmit();
+    }
+  }, [selectedWork?.status, isStreaming, verificationResult, isVerifying]);
+
   const handleVerifySubmit = async (): Promise<void> => {
     if (!selectedWork) return;
-    if (uploadedFiles.length === 0) {
-      setErrorMessage("Please upload at least one proof file.");
-      return;
-    }
 
     try {
       setIsVerifying(true);
@@ -760,20 +782,55 @@ export function MyPendingWorksModal({
         .filter((line) => line.length > 0)
         .map((item) => ({ requirement: item }));
 
-      const filePayloads = await Promise.all(
-        uploadedFiles.map(async (file) => {
-          const contentType = file.type || inferContentType(file.name);
-          const content = isBinaryType(contentType)
-            ? await fileToBase64(file)
-            : await file.text();
+      let filePayloads = [];
+      if (uploadedFiles.length === 0) {
+        // On a page reload, the local files are gone but the transaction is active.
+        // Download directly from the locked IPFS CID!
+        try {
+          const ipfsUrl = `https://gateway.pinata.cloud/ipfs/${selectedWork.completionProofCid}`;
+          const response = await fetch(ipfsUrl);
+          const blob = await response.blob();
+          
+          let fileData: string;
+          if (!blob.type.includes("text/")) {
+             fileData = await new Promise<string>((resolve) => {
+               const reader = new FileReader();
+               reader.onloadend = () => resolve(reader.result as string);
+               reader.readAsDataURL(blob);
+             });
+          } else {
+             fileData = await blob.text();
+          }
 
-          return {
-            file_name: file.name,
-            content,
-            content_type: contentType,
-          };
-        }),
-      );
+          filePayloads = [{
+             file_name: `evidence_recovered_${selectedWork.completionProofCid}`,
+             content: fileData,
+             content_type: blob.type || "application/octet-stream",
+          }];
+        } catch (e) {
+          console.error("IPFS Fetch Failed:", e);
+          filePayloads = [{
+            file_name: `evidence_recovered_${selectedWork.id}.txt`,
+            content: "The provider locked the evidence securely on IPFS but the retrieval failed due to CORS or gateway delay.",
+            content_type: "text/plain",
+          }];
+        }
+      } else {
+        filePayloads = await Promise.all(
+          uploadedFiles.map(async (file) => {
+            const contentType = file.type || inferContentType(file.name);
+            const content = isBinaryType(contentType)
+              ? await fileToBase64(file)
+              : await file.text();
+
+            return {
+              file_name: file.name,
+              content,
+              content_type: contentType,
+            };
+          }),
+        );
+      }
 
       const body = {
         requirements_list: reqList,
@@ -931,7 +988,7 @@ export function MyPendingWorksModal({
                                       : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
                               }`}
                             >
-                              {work.status.replace("_", " ")}
+                              {work.status === "completed" ? "resolved" : work.status.replace("_", " ")}
                             </div>
                           </div>
                           <div className="flex items-center justify-between mt-3 pt-3 border-t border-black/5 dark:border-white/5">
@@ -1049,7 +1106,7 @@ export function MyPendingWorksModal({
                       </div>
 
                       {/* Verification & Proof Upload Section */}
-                      {selectedWork.role === "provider" && (selectedWork.status === "in_progress" || selectedWork.status === "pending_review") && (
+                      {selectedWork.role === "provider" && (selectedWork.status === "in_progress" || selectedWork.status === "pending_review" || selectedWork.status === "completed") && (
                         <div className="p-6 border-b border-black/5 dark:border-white/5 bg-white/30 dark:bg-black/30">
                           {selectedWork.status === "in_progress" ? (
                             <>
@@ -1132,20 +1189,13 @@ export function MyPendingWorksModal({
                               )}
 
                               {(!isStreaming && !verificationResult) ? (
-                                <motion.button
-                                  whileHover={{ scale: isVerifying ? 1 : 1.02 }}
-                                  whileTap={{ scale: isVerifying ? 1 : 0.98 }}
-                                  onClick={handleVerifySubmit}
-                                  disabled={isVerifying || isCompleting || uploadedFiles.length === 0}
-                                  className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 ${
-                                    isVerifying || isCompleting || uploadedFiles.length === 0
-                                      ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
-                                      : "btn-macos"
-                                  }`}
-                                >
-                                  {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                                  {uploadedFiles.length === 0 ? "Re-Select Files to Evaluate" : "Evaluate with AI Agents"}
-                                </motion.button>
+                                <div className="flex flex-col items-center justify-center py-8 glass-macos rounded-xl border border-cyan-500/20 text-cyan-600 dark:text-cyan-400 gap-4">
+                                  <Loader2 className="w-8 h-8 animate-spin" />
+                                  <p className="text-sm font-semibold text-black dark:text-white">Agents Analyzing Evidence...</p>
+                                  <p className="text-xs text-black/60 dark:text-white/60 text-center px-4">
+                                    The Oracle network is processing the payload autonomously. Please wait.
+                                  </p>
+                                </div>
                               ) : (
                                 <div className="space-y-4">
                                   {/* Streaming Text Output */}
@@ -1250,27 +1300,35 @@ export function MyPendingWorksModal({
                                   className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
                                 >
                                   <div
-                                    className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
-                                      msg.sender === "me"
-                                        ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
-                                        : "glass-macos text-black dark:text-white"
-                                    }`}
-                                  >
-                                    <p className="text-sm">{msg.text}</p>
-                                    <p
-                                      className={`text-xs mt-1 ${
-                                        msg.sender === "me"
-                                          ? "text-white/70"
-                                          : "text-black/50 dark:text-white/50"
+                                    className={`max-w-[85%] px-4 py-3 rounded-2xl ${
+                                        msg.text.includes("[ORACLE VERIFICATION RULING]")
+                                          ? "bg-purple-500/10 border border-purple-500/30 text-purple-900 dark:text-purple-100 font-mono text-xs w-full"
+                                          : msg.sender === "me"
+                                            ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
+                                            : "glass-macos text-black dark:text-white"
                                       }`}
                                     >
-                                      {msg.timestamp}
-                                    </p>
+                                      {msg.text.includes("[ORACLE VERIFICATION RULING]") && (
+                                        <div className="flex items-center gap-2 mb-2 font-sans font-bold text-purple-600 dark:text-purple-400 border-b border-purple-500/20 pb-2">
+                                          <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+                                          Autonomous Agent Verification Log (Stored on-chain)
+                                        </div>
+                                      )}
+                                      <p className="whitespace-pre-wrap">{msg.text.replace("[ORACLE VERIFICATION RULING]\\n", "").replace("[ORACLE VERIFICATION RULING]\n", "")}</p>
+                                      <p
+                                        className={`text-[10px] mt-2 font-sans ${
+                                          msg.sender === "me"
+                                            ? "text-white/70"
+                                            : "text-black/50 dark:text-white/50"
+                                        }`}
+                                      >
+                                        {msg.timestamp}
+                                      </p>
+                                    </div>
                                   </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
+                                ))
+                              )}
+                            </div>
 
                           {/* Message Input */}
                           <div className="border-t border-black/5 dark:border-white/5 p-4">

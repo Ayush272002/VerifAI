@@ -326,7 +326,7 @@ contract VerifAIMarketplace {
     ) external returns (uint256 messageIndex) {
         ServiceRequest storage req = requests[requestId];
         require(
-            msg.sender == req.client || msg.sender == req.provider,
+            msg.sender == req.client || msg.sender == req.provider || msg.sender == oracle,
             "Not a party to this request"
         );
         require(

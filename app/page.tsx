@@ -61,6 +61,7 @@ const LandingPage = (): React.JSX.Element => {
   const [showMyServicesModal, setShowMyServicesModal] = useState(false);
   const [showMyPendingWorksModal, setShowMyPendingWorksModal] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [progress, setProgress] = useState(0);
   const { isConnected } = useAccount();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
@@ -75,6 +76,28 @@ const LandingPage = (): React.JSX.Element => {
 
   useEffect(() => {
     setMounted(true);
+
+    const timeout1 = setTimeout(() => {
+      let val = 0;
+      const int = setInterval(() => {
+        val += 5;
+        if(val >= 98) {
+          setProgress(98);
+          clearInterval(int);
+        } else {
+          setProgress(val);
+        }
+      }, 40);
+    }, 1300);
+
+    const timeout2 = setTimeout(() => setProgress(99), 3100);
+    const timeout3 = setTimeout(() => setProgress(100), 3500);
+
+    return () => {
+      clearTimeout(timeout1);
+      clearTimeout(timeout2);
+      clearTimeout(timeout3);
+    };
   }, []);
 
   const handleSearch = () => {
@@ -227,7 +250,7 @@ const LandingPage = (): React.JSX.Element => {
             {/* Right - Blockchain Flow */}
             <motion.div
               variants={FADE_UP}
-              className="relative h-[600px] flex items-center justify-center"
+              className="relative h-[780px] flex items-center justify-center"
             >
               {/* Connected nodes showing dispute flow */}
               <div className="relative w-full max-w-md flex flex-col justify-center gap-6">
@@ -240,7 +263,7 @@ const LandingPage = (): React.JSX.Element => {
                 >
                   <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-3xl blur-xl opacity-40"></div>
                   <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-2xl">
-                    <div className="flex items-center gap-3 mb-3">
+                    <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
                         <Lock className="w-5 h-5 text-white" />
                       </div>
@@ -269,7 +292,7 @@ const LandingPage = (): React.JSX.Element => {
                 >
                   <div className="absolute -inset-1 bg-gradient-to-r from-purple-400 to-pink-500 rounded-3xl blur-xl opacity-40"></div>
                   <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-2xl">
-                    <div className="flex items-center gap-3 mb-3">
+                    <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
                         <Database className="w-5 h-5 text-white" />
                       </div>
@@ -311,12 +334,41 @@ const LandingPage = (): React.JSX.Element => {
                       <div className="flex-1 h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                         <motion.div
                           initial={{ width: 0 }}
-                          animate={{ width: "100%" }}
-                          transition={{ delay: 1.3, duration: 1.5 }}
+                          animate={{ width: ["0%", "98%", "98%", "99%", "100%"] }}
+                          transition={{ delay: 1.3, duration: 2.2, times: [0, 0.4, 0.8, 0.9, 1], ease: "easeInOut" }}
                           className="h-full bg-gradient-to-r from-emerald-400 to-teal-500"
                         ></motion.div>
                       </div>
-                      <div className="text-xs font-mono text-black/60 dark:text-white/60">98%</div>
+                      <div className="text-xs font-mono text-black/60 dark:text-white/60">{progress}%</div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Connection line */}
+                <motion.div
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ delay: 3.6, duration: 0.5 }}
+                  className="w-0.5 h-8 bg-gradient-to-b from-teal-500 to-amber-500 mx-auto origin-top"
+                ></motion.div>
+
+                {/* Node 4: Payout */}
+                <motion.div
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 3.9, ...SPRING }}
+                  className="relative mr-auto w-64"
+                >
+                  <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 to-orange-500 rounded-3xl blur-xl opacity-40"></div>
+                  <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-2xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-black dark:text-white">Payout Released</div>
+                        <div className="text-xs text-black/60 dark:text-white/60">Smart contract executed</div>
+                      </div>
                     </div>
                   </div>
                 </motion.div>

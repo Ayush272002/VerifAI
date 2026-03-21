@@ -38,7 +38,6 @@ export function PublishServiceModal({
   const [deliverables, setDeliverables] = useState<
     { id: string; text: string }[]
   >([{ id: Math.random().toString(), text: "" }]);
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [classificationError, setClassificationError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -232,24 +231,23 @@ export function PublishServiceModal({
         tags,
         receipt,
       });
-      setShowConfirmation(true);
-      setTimeout(() => {
-        setShowConfirmation(false);
-        onClose();
-        // Reset form
-        setFormData({
-          title: "",
-          category: "",
-          description: "",
-          priceType: "fixed",
-          priceAmount: "",
-          deliveryTime: "",
-          backgroundImage: null,
-        });
-        setTags([]);
-        setTagInput("");
-        setDeliverables([{ id: Math.random().toString(), text: "" }]);
-      }, 2500);
+      toast.success("Service Published!", {
+        description: "Your service is now live",
+      });
+      onClose();
+      // Reset form
+      setFormData({
+        title: "",
+        category: "",
+        description: "",
+        priceType: "fixed",
+        priceAmount: "",
+        deliveryTime: "",
+        backgroundImage: null,
+      });
+      setTags([]);
+      setTagInput("");
+      setDeliverables([{ id: Math.random().toString(), text: "" }]);
     } catch (err: any) {
       // Handle user-rejected transaction
       if (
@@ -763,30 +761,6 @@ export function PublishServiceModal({
             </motion.div>
           </div>
 
-          {/* Confirmation Toast */}
-          <AnimatePresence>
-            {showConfirmation && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                transition={SPRING}
-                className="absolute bottom-8 left-1/2 -translate-x-1/2 glass-macos rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3 min-w-75"
-              >
-                <div className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-black dark:text-white text-sm">
-                    Service Published!
-                  </p>
-                  <p className="text-xs text-black/60 dark:text-white/60">
-                    Your service is now live
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </>
       )}
     </AnimatePresence>

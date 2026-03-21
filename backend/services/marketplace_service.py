@@ -54,15 +54,32 @@ class MarketplaceService:
         if not self.oracle_account:
             return {"success": False, "error": "ORACLE_PRIVATE_KEY not configured"}
         try:
-            tx = fn.build_transaction(
-                {
-                    "from": self.oracle_account.address,
-                    "nonce": self.w3.eth.get_transaction_count(
-                        self.oracle_account.address
-                    ),
-                    "gasPrice": self.w3.eth.gas_price,
-                }
-            )
+            # Prepare base transaction params
+            tx_params = {
+                "from": self.oracle_account.address,
+                "nonce": self.w3.eth.get_transaction_count(self.oracle_account.address),
+            }
+
+            # Attempt to estimate gas
+            try:
+                gas_estimate = fn.estimate_gas(tx_params)
+                tx_params["gas"] = int(gas_estimate * 1.2)  # 20% margin
+            except Exception as e:
+                logger.warning("Gas estimation failed, using fallback: %s", e)
+                tx_params["gas"] = 500000  # Conservative fallback
+
+            # Handle gas pricing (EIP-1559 vs Legacy)
+            try:
+                base_fee = self.w3.eth.get_block("latest").get("baseFeePerGas")
+                if base_fee:
+                    tx_params["maxFeePerGas"] = base_fee * 2 + self.w3.to_wei(2, "gwei")
+                    tx_params["maxPriorityFeePerGas"] = self.w3.to_wei(2, "gwei")
+                else:
+                    tx_params["gasPrice"] = self.w3.eth.gas_price
+            except Exception:
+                tx_params["gasPrice"] = self.w3.eth.gas_price
+
+            tx = fn.build_transaction(tx_params)
             signed = self.w3.eth.account.sign_transaction(tx, self.oracle_account.key)
             tx_hash = self.w3.eth.send_raw_transaction(signed.raw_transaction)
             receipt = self.w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
@@ -121,27 +138,51 @@ class MarketplaceService:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
+    def post_oracle_log(self, request_id: str, ruling_text: str) -> dict[str, Any]:
+        """Oracle posts the full AI log explicitly on-chain using postMessage."""
+        try:
+            fn = self.contract.functions.postMessage(
+                self._to_bytes32(request_id), ruling_text
+            )
+            return self._send_oracle_tx(fn)
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
     def submit_ruling(
         self, request_id: str, ruling_text: str, winner: str
     ) -> dict[str, Any]:
         """Oracle submits ruling and pays the winner in one tx.
-
-        Args:
-            request_id: The 0x-prefixed bytes32 request ID.
-            ruling_text: The full AI ruling text (will be SHA-256 hashed on-chain).
-            winner: Checksum address of the winning party.
+        We also ensure the Oracle pays to post the full text log beforehand.
         """
         try:
+            # 1. Post the log permanently onto the blockchain first
+            oracle_message = f"[ORACLE VERIFICATION RULING]\n{ruling_text}"
+            log_res = self.post_oracle_log(request_id, oracle_message)
+            if not log_res.get("success"):
+                logger.error("Failed to post oracle text log: %s", log_res.get("error"))
+
+            # 2. Submit the actual ruling & release funds
             ruling_hash = self._ruling_hash(ruling_text)
+            winner_checksum = self.w3.to_checksum_address(winner)
+            
+            # Fetch request state for validation and logging
+            try:
+                req = self.get_request(request_id)
+                logger.info("Submitting ruling for Request %s: Winner=%s, Escrow=%s", 
+                            request_id, winner_checksum, req.get('escrow_amount_wei'))
+            except Exception as e:
+                logger.warning("Could not fetch request details for logging: %s", e)
+
             fn = self.contract.functions.submitRuling(
                 self._to_bytes32(request_id),
                 ruling_hash,
-                self.w3.to_checksum_address(winner),
+                winner_checksum,
             )
             result = self._send_oracle_tx(fn)
             if result["success"]:
                 result["ruling_hash"] = ruling_hash.hex()
                 result["winner"] = winner
+                result["log_tx"] = log_res.get("tx_hash")
             return result
         except Exception as e:
             return {"success": False, "error": str(e)}
