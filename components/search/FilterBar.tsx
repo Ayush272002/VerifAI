@@ -75,7 +75,7 @@ export function FilterBar() {
       {/* Main Filters */}
       <div className="relative">
         <div className="glass-macos rounded-3xl p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 relative">
             {/* Category Filter */}
             <FilterDropdown
               label="Category"
@@ -212,9 +212,12 @@ function FilterDropdown({ label, options, selected, onSelect, showIcon }: Filter
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="absolute top-full left-0 right-0 mt-2 z-[100] glass-macos rounded-xl overflow-hidden max-h-[280px] overflow-y-auto"
+            className="fixed z-40 glass-macos rounded-xl overflow-hidden max-h-[280px] overflow-y-auto custom-scrollbar"
             style={{
               boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)',
+              top: `${(document.activeElement as HTMLElement)?.getBoundingClientRect().bottom + 8}px`,
+              left: `${(document.activeElement as HTMLElement)?.getBoundingClientRect().left}px`,
+              width: `${(document.activeElement as HTMLElement)?.getBoundingClientRect().width}px`,
             }}
           >
             {options.map((option) => (
