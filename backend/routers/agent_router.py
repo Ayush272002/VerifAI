@@ -9,11 +9,13 @@ from ..core.data_models import ImageReviewRequest
 from ..core.data_models import PythonFilesReviewRequest
 from ..core.data_models import UnifiedVerifyRequest
 from ..services.agent_service import OllamaAgentService
+from ..services.hierarchical_verification_service import HierarchicalVerificationService
 from ..services.verification_service import VerificationService
 
 router = APIRouter(prefix="/agent", tags=["agent"])
 _ai_service = OllamaAgentService()
 _verification_service = VerificationService()
+_moa_service = HierarchicalVerificationService()
 
 
 @router.get("/health")
@@ -63,12 +65,7 @@ def stream_unified_verify(
     """
 
     def _generator() -> Generator[str, None, None]:
-        yield from _verification_service.stream_unified_verify(
-            requirements_list=[item.requirement for item in payload.requirements_list],
-            seller_profile=payload.seller_profile,
-            what_they_offer=payload.what_they_offer,
-            files=[f.model_dump() for f in payload.files],
-        )
+        yield from _moa_service.stream_hierarchical_verify(payload.model_dump())
 
     return StreamingResponse(
         _generator(),
