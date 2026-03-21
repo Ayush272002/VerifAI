@@ -5,10 +5,12 @@
 
 "use client";
 
+import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Star, MapPin, Clock, CheckCircle2, TrendingUp, Shield, Zap } from "lucide-react";
 import type { ResultData } from "./ResultCard";
 import { EthIcon } from "@/components/EthIcon";
+import { BookServiceModal } from "@/components/BookServiceModal";
 
 interface ServiceDetailsModalProps {
   isOpen: boolean;
@@ -30,6 +32,8 @@ const LEVEL_ICONS = {
 };
 
 export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetailsModalProps) {
+  const [showBookModal, setShowBookModal] = useState(false);
+
   if (!service) return null;
 
   const LevelIcon = LEVEL_ICONS[service.provider.level];
@@ -195,13 +199,21 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
                   type="button"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
+                  onClick={() => setShowBookModal(true)}
                   className="px-8 py-2.5 rounded-2xl btn-macos font-semibold text-sm"
                 >
-                  Contact Provider
+                  Book Service
                 </motion.button>
               </div>
             </motion.div>
           </div>
+
+          {/* Book Service Modal */}
+          <BookServiceModal
+            isOpen={showBookModal}
+            onClose={() => setShowBookModal(false)}
+            service={service}
+          />
         </>
       )}
     </AnimatePresence>

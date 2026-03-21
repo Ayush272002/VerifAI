@@ -26,6 +26,7 @@ import WalletConnect from "@/components/WalletConnect";
 import { Button } from "@/components/ui/button";
 import { PublishServiceModal } from "@/components/PublishServiceModal";
 import { MyServicesModal } from "@/components/MyServicesModal";
+import { MyPendingWorksModal } from "@/components/MyPendingWorksModal";
 
 const FADE_UP = {
   hidden: { opacity: 0, y: 40 },
@@ -58,6 +59,7 @@ const LandingPage = (): React.JSX.Element => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showMyServicesModal, setShowMyServicesModal] = useState(false);
+  const [showMyPendingWorksModal, setShowMyPendingWorksModal] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { isConnected } = useAccount();
   const { theme, setTheme } = useTheme();
@@ -164,6 +166,7 @@ const LandingPage = (): React.JSX.Element => {
               )}
               <WalletConnect
                 onMyServicesClick={() => setShowMyServicesModal(true)}
+                onMyPendingWorksClick={() => setShowMyPendingWorksModal(true)}
                 theme={theme}
                 onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               />
@@ -510,6 +513,12 @@ const LandingPage = (): React.JSX.Element => {
       <MyServicesModal
         isOpen={showMyServicesModal}
         onClose={() => setShowMyServicesModal(false)}
+      />
+
+      {/* My Pending Works Modal */}
+      <MyPendingWorksModal
+        isOpen={showMyPendingWorksModal}
+        onClose={() => setShowMyPendingWorksModal(false)}
       />
     </main>
   );
