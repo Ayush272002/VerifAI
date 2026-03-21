@@ -1,10 +1,11 @@
 """Service layer for conversational agent interactions."""
 
 import logging
+import re
 
 from langchain_ollama import ChatOllama
 
-from ..core.constants import OLLAMA_BASE_URL, OLLAMA_MODEL_NAME
+from ..core.constants import GIG_CATEGORIES, OLLAMA_BASE_URL, OLLAMA_MODEL_NAME
 
 
 class OllamaAgentService:
@@ -37,6 +38,48 @@ class OllamaAgentService:
             return content
 
         return str(content)
+
+    def classify_gig_category(self, title: str, description: str, tags: list[str] | None = None) -> str:
+        """Classify gig content into one of the predefined categories using Ollama.
+
+        Args:
+            title: Gig title
+            description: Gig description
+            tags: Optional selected tags
+
+        Returns:
+            One of GIG_CATEGORIES values (default fallback if parsing fails)
+        """
+        tags_text = ", ".join(tags or []) or "(none)"
+        prompt = f"""
+You are an expert marketplace categorization assistant. Stick to exactly one category from this list (case-sensitive please):
+{''.join([f'- {c}\n' for c in GIG_CATEGORIES])}
+
+Gig title: {title}
+Gig description: {description}
+Gig tags: {tags_text}
+
+Respond with a single line in the exact format:
+CATEGORY: <one-of-the-above-categories>
+
+No additional text.
+""".strip()
+        model_response = self.text_query(prompt)
+
+        # Parse a clear category value and validate against known categories.
+        match = re.search(r"CATEGORY\s*:\s*(.+)$", model_response, re.IGNORECASE | re.MULTILINE)
+        if match:
+            candidate = match.group(1).strip()
+            for cat in GIG_CATEGORIES:
+                if cat.lower() == candidate.lower():
+                    return cat
+
+        # Fallback: attempt a loose match by keyword.
+        for cat in GIG_CATEGORIES:
+            if cat.lower() in model_response.lower():
+                return cat
+
+        return "Unknown" # Failsafe if parsing fails
 
 
 def main() -> None:

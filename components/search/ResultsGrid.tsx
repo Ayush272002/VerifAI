@@ -8,6 +8,7 @@
 import { motion } from "motion/react";
 import { useMemo } from "react";
 import { ResultCard, ResultData } from "./ResultCard";
+import { GIG_CATEGORIES, getRandomPlaceholderImage } from "@/lib/gigCategories";
 
 const STAGGER = {
   hidden: { opacity: 0 },
@@ -371,13 +372,18 @@ interface ResultsGridProps {
   searchQuery?: string;
 }
 
+const RESULTS_WITH_IMAGES = MOCK_RESULTS.map((service) => ({
+  ...service,
+  thumbnail: getRandomPlaceholderImage(service.category),
+}));
+
 export function ResultsGrid({ searchQuery = "" }: ResultsGridProps) {
   // Filter results based on search query
   const filteredResults = useMemo(() => {
-    if (!searchQuery) return MOCK_RESULTS;
+    if (!searchQuery) return RESULTS_WITH_IMAGES;
 
     const query = searchQuery.toLowerCase().trim();
-    return MOCK_RESULTS.filter(result => {
+    return RESULTS_WITH_IMAGES.filter(result => {
       // Search in title, category, tags, and provider name
       return (
         result.title.toLowerCase().includes(query) ||

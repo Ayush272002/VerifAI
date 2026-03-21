@@ -10,6 +10,8 @@ import { motion, AnimatePresence } from "motion/react";
 import { X, Plus, Clock, Upload, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import { GIG_CATEGORIES, getRandomPlaceholderImage } from "@/lib/gigCategories";
+
 interface PublishServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,18 +22,6 @@ const SPRING = {
   damping: 20,
   stiffness: 100,
 } as const;
-
-const CATEGORIES = [
-  "Web Development",
-  "Design & Creative",
-  "Content Writing",
-  "Marketing",
-  "Consulting",
-  "Blockchain Development",
-  "Mobile Development",
-  "Video & Animation",
-  "Data Science & AI",
-];
 
 export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProps) {
   const [formData, setFormData] = useState({
@@ -46,7 +36,48 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [isCategorizing, setIsCategorizing] = useState(false);
+  const [classificationError, setClassificationError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAutoCategorize = async () => {
+    if (!formData.title.trim() || !formData.description.trim()) {
+      setClassificationError("Title and description are required for classification.");
+      return;
+    }
+
+    setIsCategorizing(true);
+    setClassificationError("");
+
+    try {
+      const res = await fetch("http://localhost:8000/agent/classify-gig", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: formData.title,
+          description: formData.description,
+          tags,
+        }),
+      });
+
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`Classification failed: ${res.status} ${text}`);
+      }
+
+      const data = await res.json();
+      if (data.category) {
+        setFormData({ ...formData, category: data.category });
+      } else {
+        throw new Error("No category returned from classification endpoint.");
+      }
+    } catch (err) {
+      setClassificationError(`Auto-categorization failed: ${err}`);
+      console.error(err);
+    } finally {
+      setIsCategorizing(false);
+    }
+  };
 
   const isFormValid =
     formData.title.trim() !== "" &&
@@ -86,8 +117,15 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
     e.preventDefault();
     if (!isFormValid) return;
 
-    console.log("Service published:", { ...formData, tags });
-    // TODO: Add actual submission logic here
+    const resolvedBackgroundImage =
+      formData.backgroundImage || getRandomPlaceholderImage(formData.category);
+
+    console.log("Service published:", {
+      ...formData,
+      backgroundImage: resolvedBackgroundImage,
+      tags,
+    });
+    // TODO: Add actual submission logic here (save to backend/contract)
     setShowConfirmation(true);
     setTimeout(() => {
       setShowConfirmation(false);
@@ -175,19 +213,32 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">
                       Category *
                     </label>
-                    <select
-                      required
-                      value={formData.category}
-                      onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                      className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
-                    >
-                      <option value="">Select a category</option>
-                      {CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="flex gap-2 flex-wrap">
+                      <select
+                        required
+                        value={formData.category}
+                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                        className="flex-1 glass-search px-4 py-3 rounded-xl text-black dark:text-white outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                      >
+                        <option value="">Select a category</option>
+                        {GIG_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleAutoCategorize}
+                        disabled={isCategorizing}
+                        className="btn-macos min-w-[170px] px-3 py-2 text-sm"
+                      >
+                        {isCategorizing ? "Classifying..." : "Auto categorize"}
+                      </button>
+                    </div>
+                    {classificationError && (
+                      <p className="text-xs mt-2 text-red-600 dark:text-red-400">{classificationError}</p>
+                    )}
                   </div>
 
                   {/* Description */}

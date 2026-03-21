@@ -93,7 +93,16 @@ export function ResultCard({ data, index }: ResultCardProps) {
         <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 to-transparent dark:from-white/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 
         {/* Thumbnail */}
-        <div className={`relative aspect-video overflow-hidden ${data.thumbnail}`}>
+        <div className="relative aspect-video overflow-hidden">
+          {(data.thumbnail || "").startsWith("http") ? (
+            <img
+              src={data.thumbnail}
+              alt={`${data.category} placeholder`}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className={`absolute inset-0 ${data.thumbnail}`}></div>
+          )}
           <div className="w-full h-full flex items-center justify-center relative">
             {/* Animated gradient mesh */}
             <div className="absolute inset-0 opacity-70">

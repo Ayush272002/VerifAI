@@ -22,13 +22,11 @@ interface FilterOption {
   icon?: React.ReactNode;
 }
 
+import { GIG_CATEGORIES } from "@/lib/gigCategories";
+
 const CATEGORIES: FilterOption[] = [
   { id: "all", label: "All Services" },
-  { id: "web", label: "Web Development" },
-  { id: "design", label: "Design & Creative" },
-  { id: "writing", label: "Content Writing" },
-  { id: "marketing", label: "Marketing" },
-  { id: "consulting", label: "Consulting" },
+  ...GIG_CATEGORIES.map(cat => ({ id: cat.toLowerCase().replace(/\s+/g, "-"), label: cat })),
 ];
 
 const PRICE_RANGES: FilterOption[] = [
