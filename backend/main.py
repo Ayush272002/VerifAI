@@ -30,6 +30,7 @@ async def civic_guardrails_middleware(prompt: str):
     payload = {
         "prompt": prompt
     }
+    print("Sending prompt to Civic Guardrails for validation...")
 
     response = requests.post("https://nexus.civic.com/bodyguard/check", json=payload, headers=headers)
 
