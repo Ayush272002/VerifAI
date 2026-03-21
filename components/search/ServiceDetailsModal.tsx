@@ -199,14 +199,6 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
                   type="button"
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
-                  className="px-6 py-2.5 rounded-2xl glass-macos text-black dark:text-white font-semibold text-sm"
-                >
-                  Contact Provider
-                </motion.button>
-                <motion.button
-                  type="button"
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
                   onClick={() => setShowBookModal(true)}
                   className="px-8 py-2.5 rounded-2xl btn-macos font-semibold text-sm"
                 >
