@@ -39,12 +39,20 @@ export function BookServiceModal({
     e.preventDefault();
     if (!taskDetails.trim() || !service || !address) return;
 
+    // Validate provider address
+    if (!service.provider.address || service.provider.address === "undefined") {
+      toast.error(
+        "Provider address not available. Service may not be properly loaded.",
+      );
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      // Parse service index from id (format: "provider-serviceIndex")
+      // Parse service index from id (format: "onchain-providerAddress-serviceIndex")
       const parts = service.id.split("-");
-      const serviceIndex = BigInt(parts[1] || "0");
+      const serviceIndex = BigInt(parts[parts.length - 1] || "0");
 
       // Call requestService with provider address, service index, and client note
       await requestService(
