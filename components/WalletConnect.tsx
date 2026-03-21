@@ -12,6 +12,8 @@ import {
   Copy,
   Check,
   Package,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -37,9 +39,11 @@ import {
 
 interface WalletConnectProps {
   onMyServicesClick?: () => void;
+  theme?: string;
+  onThemeToggle?: () => void;
 }
 
-export default function WalletConnect({ onMyServicesClick }: WalletConnectProps) {
+export default function WalletConnect({ onMyServicesClick, theme, onThemeToggle }: WalletConnectProps) {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
@@ -229,16 +233,10 @@ export default function WalletConnect({ onMyServicesClick }: WalletConnectProps)
               <span className="text-black dark:text-white font-semibold text-sm">
                 {formatAddress(address)}
               </span>
-              <span className="font-mono text-cyan-600 dark:text-cyan-400 text-sm font-semibold">
-                {balance
-                  ? Number.parseFloat(formatUnits(balance.value, balance.decimals)).toFixed(4)
-                  : '0.0000'}{' '}
-                {balance?.symbol}
-              </span>
               <ChevronDown className="h-4 w-4 text-black dark:text-white" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 glass-macos rounded-2xl shadow-2xl border-0">
+          <DropdownMenuContent className="w-56 glass-macos rounded-2xl shadow-2xl border-0 backdrop-blur-3xl">
             <div className="px-2 py-1.5 text-xs text-cyan-600 dark:text-cyan-400 font-bold">
               Connected Wallet
             </div>
@@ -289,6 +287,27 @@ export default function WalletConnect({ onMyServicesClick }: WalletConnectProps)
               My Services
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
+            {onThemeToggle && (
+              <>
+                <DropdownMenuItem
+                  className="cursor-pointer flex items-center justify-between text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+                  onClick={onThemeToggle}
+                >
+                  <div className="flex items-center">
+                    {theme === 'dark' ? (
+                      <Moon className="mr-2 h-4 w-4" />
+                    ) : (
+                      <Sun className="mr-2 h-4 w-4" />
+                    )}
+                    Theme
+                  </div>
+                  <span className="text-xs text-black/60 dark:text-white/60">
+                    {theme === 'dark' ? 'Dark' : 'Light'}
+                  </span>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
+              </>
+            )}
             <DropdownMenuItem
               className="cursor-pointer flex items-center text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-500/20 font-medium"
               onClick={() => disconnect()}

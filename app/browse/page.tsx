@@ -9,6 +9,7 @@ import { motion } from "motion/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
+import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Search, SlidersHorizontal, Plus, Grid3x3 } from "lucide-react";
 import { FilterBar } from "@/components/search/FilterBar";
@@ -48,6 +49,7 @@ const SPRING = {
 function BrowsePageContent() {
   const router = useRouter();
   const { isConnected } = useAccount();
+  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -87,22 +89,19 @@ function BrowsePageContent() {
           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
         >
           <div className="max-w-[1800px] mx-auto px-6 lg:px-12 h-24 flex items-center justify-between">
-            <Link href="/" className="group">
-              <motion.span
-                whileHover={{ scale: 1.05 }}
-                transition={SPRING}
-                className="inline-block text-3xl font-bold tracking-tight text-black dark:text-white"
-              >
-                Verif<span className="font-serif italic text-cyan-600 dark:text-cyan-400">AI</span>
-              </motion.span>
-            </Link>
             <div className="flex items-center gap-4">
-              <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
-                <Link href="/#work" className="text-sm font-medium text-black dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
-                  How it works
-                </Link>
-              </motion.div>
               <ThemeToggle />
+              <Link href="/" className="group">
+                <motion.span
+                  whileHover={{ scale: 1.05 }}
+                  transition={SPRING}
+                  className="inline-block text-3xl font-bold tracking-tight text-black dark:text-white"
+                >
+                  Verif<span className="font-serif italic text-cyan-600 dark:text-cyan-400">AI</span>
+                </motion.span>
+              </Link>
+            </div>
+            <div className="flex items-center gap-4">
               <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
                 <Link href="/browse" className="text-sm font-medium text-cyan-600 dark:text-cyan-400 transition-colors flex items-center gap-2">
                   <Grid3x3 className="w-4 h-4" />
@@ -121,7 +120,11 @@ function BrowsePageContent() {
                   <span className="hidden md:inline">Publish Service</span>
                 </motion.button>
               )}
-              <WalletConnect onMyServicesClick={() => setShowMyServicesModal(true)} />
+              <WalletConnect
+                onMyServicesClick={() => setShowMyServicesModal(true)}
+                theme={theme}
+                onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+              />
             </div>
           </div>
         </motion.nav>
