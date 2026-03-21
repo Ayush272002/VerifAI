@@ -1,9 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, MessageCircle, CheckCircle2, XCircle, Clock, Send } from "lucide-react";
+import {
+  X,
+  MessageCircle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Send,
+} from "lucide-react";
 import { EthIcon } from "@/components/EthIcon";
+import { useAccount } from "wagmi";
+import {
+  useGetPendingRequests,
+  useRequestDetails,
+  useRequestMessages,
+  useAcceptRequest,
+  useRejectRequest,
+  usePostMessage,
+} from "@/lib/marketplace";
+import { formatEther } from "viem";
+import { toast } from "sonner";
 
 interface PendingWork {
   id: string;
@@ -33,76 +51,143 @@ const SPRING = {
   stiffness: 100,
 } as const;
 
-// Mock data
-const MOCK_WORKS: PendingWork[] = [
-  {
-    id: "1",
-    serviceTitle: "Custom React Dashboard Development",
-    otherParty: "0x742d...3a9c",
-    amount: 0.5,
-    status: "pending",
-    role: "provider",
-    deadline: "7 days",
-    taskDetails: "Build a responsive admin dashboard with charts and data tables. Include dark mode support.",
-    createdAt: "2 hours ago",
-    messages: [
-      { sender: "them", text: "Hey! Looking forward to working with you.", timestamp: "1 hour ago" },
-    ],
-  },
-  {
-    id: "2",
-    serviceTitle: "UI/UX Design for Mobile App",
-    otherParty: "0x8a3f...1b2e",
-    amount: 0.3,
-    status: "in_progress",
-    role: "client",
-    deadline: "5 days",
-    taskDetails: "Design a modern mobile app interface for a fitness tracking application.",
-    createdAt: "1 day ago",
-    messages: [
-      { sender: "me", text: "Can you send me the initial mockups?", timestamp: "5 hours ago" },
-      { sender: "them", text: "Sure, I'll have them ready by tomorrow.", timestamp: "3 hours ago" },
-    ],
-  },
-  {
-    id: "3",
-    serviceTitle: "Smart Contract Audit",
-    otherParty: "0x5c7d...8f4a",
-    amount: 1.2,
-    status: "pending",
-    role: "client",
-    deadline: "14 days",
-    taskDetails: "Comprehensive security audit of ERC-20 token contract with detailed report.",
-    createdAt: "3 days ago",
-    messages: [],
-  },
-];
-
-export function MyPendingWorksModal({ isOpen, onClose }: MyPendingWorksModalProps) {
-  const [activeTab, setActiveTab] = useState<"all" | "client" | "provider">("all");
+export function MyPendingWorksModal({
+  isOpen,
+  onClose,
+}: MyPendingWorksModalProps) {
+  const [activeTab, setActiveTab] = useState<"all" | "client" | "provider">(
+    "provider",
+  );
   const [selectedWork, setSelectedWork] = useState<PendingWork | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [works, setWorks] = useState<PendingWork[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const filteredWorks = MOCK_WORKS.filter(work => {
+  const { address } = useAccount();
+  const { data: providerPendingIds } = useGetPendingRequests(
+    address as `0x${string}`,
+    false,
+  );
+  const { data: clientPendingIds } = useGetPendingRequests(
+    address as `0x${string}`,
+    true,
+  );
+  const { acceptRequest, isPending: isAccepting } = useAcceptRequest();
+  const { rejectRequest, isPending: isRejecting } = useRejectRequest();
+  const { postMessage, isPending: isSendingMessage } = usePostMessage();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fetch pending requests data
+  useEffect(() => {
+    const fetchPendingWorks = async () => {
+      if (!address) return;
+
+      setLoading(true);
+      try {
+        const allWorks: PendingWork[] = [];
+
+        // Fetch provider pending requests
+        if (providerPendingIds && Array.isArray(providerPendingIds)) {
+          for (const requestId of providerPendingIds as string[]) {
+            try {
+              const requestData = await fetch(
+                `/api/requests/${requestId}`,
+              ).catch(() => null);
+              // Fallback: for now we'll show mock data, in production fetch from blockchain
+              allWorks.push({
+                id: requestId,
+                serviceTitle: "Blockchain Service Request",
+                otherParty: requestId.substring(0, 8),
+                amount: 0.5,
+                status: "pending",
+                role: "provider",
+                deadline: "7 days",
+                taskDetails: "Pending service request from client",
+                createdAt: "Recently",
+                messages: [],
+              });
+            } catch (e) {
+              console.error("Error fetching request:", e);
+            }
+          }
+        }
+
+        // Fetch client pending requests
+        if (clientPendingIds && Array.isArray(clientPendingIds)) {
+          for (const requestId of clientPendingIds as string[]) {
+            try {
+              allWorks.push({
+                id: requestId,
+                serviceTitle: "My Service Request",
+                otherParty: requestId.substring(0, 8),
+                amount: 0.3,
+                status: "pending",
+                role: "client",
+                deadline: "7 days",
+                taskDetails: "Waiting for provider response",
+                createdAt: "Recently",
+                messages: [],
+              });
+            } catch (e) {
+              console.error("Error fetching request:", e);
+            }
+          }
+        }
+
+        setWorks(allWorks);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      fetchPendingWorks();
+    }
+  }, [address, providerPendingIds, clientPendingIds, isOpen]);
+
+  const filteredWorks = works.filter((work) => {
     if (activeTab === "all") return true;
     return work.role === activeTab;
   });
 
-  const handleAccept = (workId: string) => {
-    console.log("Accepting work:", workId);
-    // Blockchain integration will go here
+  const handleAccept = async (workId: string) => {
+    try {
+      await acceptRequest(workId as `0x${string}`);
+      toast.success("Request accepted!");
+      setWorks((prev) =>
+        prev.map((w) =>
+          w.id === workId ? { ...w, status: "in_progress" } : w,
+        ),
+      );
+    } catch (err) {
+      toast.error("Failed to accept request");
+    }
   };
 
-  const handleReject = (workId: string) => {
-    console.log("Rejecting work:", workId);
-    // Blockchain integration will go here
+  const handleReject = async (workId: string) => {
+    try {
+      await rejectRequest(workId as `0x${string}`);
+      toast.success("Request rejected and refunded");
+      setWorks((prev) => prev.filter((w) => w.id !== workId));
+    } catch (err) {
+      toast.error("Failed to reject request");
+    }
   };
 
-  const handleSendMessage = (workId: string) => {
+  const handleSendMessage = async (workId: string) => {
     if (!messageInput.trim()) return;
-    console.log("Sending message to work:", workId, messageInput);
-    setMessageInput("");
+    try {
+      await postMessage(workId as `0x${string}`, messageInput);
+      toast.success("Message sent!");
+      setMessageInput("");
+      // In real app, refetch messages
+    } catch (err) {
+      toast.error("Failed to send message");
+    }
   };
 
   return (
@@ -204,16 +289,19 @@ export function MyPendingWorksModal({ isOpen, onClose }: MyPendingWorksModalProp
                                 {work.serviceTitle}
                               </h3>
                               <p className="text-xs text-black/60 dark:text-white/60">
-                                {work.role === "client" ? "Provider" : "Client"}: {work.otherParty}
+                                {work.role === "client" ? "Provider" : "Client"}
+                                : {work.otherParty}
                               </p>
                             </div>
-                            <div className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                              work.status === "pending"
-                                ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
-                                : work.status === "in_progress"
-                                ? "bg-cyan-500/20 text-cyan-700 dark:text-cyan-400"
-                                : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                            }`}>
+                            <div
+                              className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                                work.status === "pending"
+                                  ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                                  : work.status === "in_progress"
+                                    ? "bg-cyan-500/20 text-cyan-700 dark:text-cyan-400"
+                                    : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                              }`}
+                            >
                               {work.status.replace("_", " ")}
                             </div>
                           </div>
@@ -261,28 +349,29 @@ export function MyPendingWorksModal({ isOpen, onClose }: MyPendingWorksModalProp
                         </div>
 
                         {/* Action Buttons */}
-                        {selectedWork.role === "provider" && selectedWork.status === "pending" && (
-                          <div className="flex gap-3 mt-4">
-                            <motion.button
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => handleAccept(selectedWork.id)}
-                              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-sm flex items-center justify-center gap-2"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                              Accept Project
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => handleReject(selectedWork.id)}
-                              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 text-white font-semibold text-sm flex items-center justify-center gap-2"
-                            >
-                              <XCircle className="w-4 h-4" />
-                              Decline
-                            </motion.button>
-                          </div>
-                        )}
+                        {selectedWork.role === "provider" &&
+                          selectedWork.status === "pending" && (
+                            <div className="flex gap-3 mt-4">
+                              <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleAccept(selectedWork.id)}
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-sm flex items-center justify-center gap-2"
+                              >
+                                <CheckCircle2 className="w-4 h-4" />
+                                Accept Project
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleReject(selectedWork.id)}
+                                className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 text-white font-semibold text-sm flex items-center justify-center gap-2"
+                              >
+                                <XCircle className="w-4 h-4" />
+                                Decline
+                              </motion.button>
+                            </div>
+                          )}
                       </div>
 
                       {/* Chat */}

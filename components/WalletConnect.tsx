@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi';
-import { formatUnits } from 'viem';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from "react";
+import { useAccount, useConnect, useDisconnect, useBalance } from "wagmi";
+import { formatUnits } from "viem";
+import { motion } from "framer-motion";
 import {
   Wallet,
   LogOut,
@@ -15,28 +15,30 @@ import {
   Sun,
   Moon,
   Briefcase,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+  Loader2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useGetPendingRequests } from "@/lib/marketplace";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from './ui/dialog';
+} from "./ui/dialog";
 
 interface WalletConnectProps {
   onMyServicesClick?: () => void;
@@ -45,17 +47,37 @@ interface WalletConnectProps {
   onThemeToggle?: () => void;
 }
 
-export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick, theme, onThemeToggle }: WalletConnectProps) {
+export default function WalletConnect({
+  onMyServicesClick,
+  onMyPendingWorksClick,
+  theme,
+  onThemeToggle,
+}: WalletConnectProps) {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
   const [copied, setCopied] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [providerPendingCount, setProviderPendingCount] = useState(0);
+
+  const { data: pendingRequestIds } = useGetPendingRequests(
+    address as `0x${string}`,
+    false,
+  );
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Update pending count whenever requests data changes
+  useEffect(() => {
+    if (pendingRequestIds && Array.isArray(pendingRequestIds)) {
+      setProviderPendingCount(pendingRequestIds.length);
+    } else {
+      setProviderPendingCount(0);
+    }
+  }, [pendingRequestIds]);
 
   const { data: balance } = useBalance({
     address,
@@ -80,7 +102,7 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
 
   // @ts-ignore
   const formatAddress = (address) => {
-    if (!address) return '';
+    if (!address) return "";
     return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
   };
 
@@ -95,7 +117,7 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
   const openExplorer = () => {
     if (address) {
       // explorer URL for Sepolia
-      window.open(`https://sepolia.etherscan.io/address/${address}`, '_blank');
+      window.open(`https://sepolia.etherscan.io/address/${address}`, "_blank");
     }
   };
 
@@ -108,7 +130,7 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
   // @ts-ignore
   const getWalletIcon = (name) => {
     switch (name.toLowerCase()) {
-      case 'metamask':
+      case "metamask":
         return (
           <svg
             width="24"
@@ -183,7 +205,7 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
             />
           </svg>
         );
-      case 'coinbase wallet':
+      case "coinbase wallet":
         return (
           <svg
             width="24"
@@ -199,7 +221,7 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
             />
           </svg>
         );
-      case 'walletconnect':
+      case "walletconnect":
         return (
           <svg
             width="24"
@@ -229,7 +251,10 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
     <div>
       {isConnected && address ? (
         <DropdownMenu>
-          <DropdownMenuTrigger className="glass-macos glass-macos-hover font-medium rounded-full px-4 py-2.5 transition-all border-0 outline-none" suppressHydrationWarning>
+          <DropdownMenuTrigger
+            className="glass-macos glass-macos-hover font-medium rounded-full px-4 py-2.5 transition-all border-0 outline-none"
+            suppressHydrationWarning
+          >
             <div className="flex items-center gap-2">
               <div className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></div>
               <span className="text-black dark:text-white font-semibold text-sm">
@@ -244,11 +269,15 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
             </div>
             <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
             <div className="px-2 py-2">
-              <p className="text-sm font-semibold text-black dark:text-white mb-1">Balance</p>
+              <p className="text-sm font-semibold text-black dark:text-white mb-1">
+                Balance
+              </p>
               <p className="text-lg font-mono font-bold text-cyan-600 dark:text-cyan-400">
                 {balance
-                  ? Number.parseFloat(formatUnits(balance.value, balance.decimals)).toFixed(4)
-                  : '0.0000'}{' '}
+                  ? Number.parseFloat(
+                      formatUnits(balance.value, balance.decimals),
+                    ).toFixed(4)
+                  : "0.0000"}{" "}
                 {balance?.symbol}
               </p>
             </div>
@@ -265,7 +294,7 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
                     ) : (
                       <Copy className="mr-2 h-4 w-4" />
                     )}
-                    {copied ? 'Copied!' : 'Copy Address'}
+                    {copied ? "Copied!" : "Copy Address"}
                   </DropdownMenuItem>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -281,19 +310,27 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
               View on Explorer
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
+            <div className="px-2 py-1.5 text-xs text-cyan-600 dark:text-cyan-400 font-bold">
+              My Services
+            </div>
+            <DropdownMenuItem
+              className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+              onClick={onMyPendingWorksClick}
+            >
+              <Loader2 className="mr-2 h-4 w-4" />
+              Pending Works
+              {providerPendingCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                  {providerPendingCount}
+                </span>
+              )}
+            </DropdownMenuItem>
             <DropdownMenuItem
               className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
               onClick={onMyServicesClick}
             >
               <Package className="mr-2 h-4 w-4" />
               My Services
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
-              onClick={onMyPendingWorksClick}
-            >
-              <Briefcase className="mr-2 h-4 w-4" />
-              My Pending Works
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
             {onThemeToggle && (
@@ -312,9 +349,10 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
                   <button
                     className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none"
                     style={{
-                      background: theme === 'dark'
-                        ? 'rgba(6, 182, 212, 0.2)'
-                        : 'rgba(251, 146, 60, 0.2)',
+                      background:
+                        theme === "dark"
+                          ? "rgba(6, 182, 212, 0.2)"
+                          : "rgba(251, 146, 60, 0.2)",
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -323,11 +361,15 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
                     <span
                       className="inline-block h-4 w-4 transform rounded-full transition-transform"
                       style={{
-                        background: theme === 'dark'
-                          ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
-                          : 'linear-gradient(135deg, #fb923c 0%, #f97316 100%)',
-                        transform: theme === 'dark' ? 'translateX(18px)' : 'translateX(2px)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                        background:
+                          theme === "dark"
+                            ? "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)"
+                            : "linear-gradient(135deg, #fb923c 0%, #f97316 100%)",
+                        transform:
+                          theme === "dark"
+                            ? "translateX(18px)"
+                            : "translateX(2px)",
+                        boxShadow: "0 2px 4px rgba(0,0,0,0.2)",
                       }}
                     />
                   </button>
@@ -351,12 +393,13 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
               onClick={() => setIsWalletModalOpen(true)}
               className="relative group flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all overflow-hidden"
               style={{
-                background: 'rgba(249, 115, 22, 0.15)',
-                backdropFilter: 'blur(40px)',
-                WebkitBackdropFilter: 'blur(40px)',
-                border: '1px solid rgba(249, 115, 22, 0.3)',
-                color: '#f97316',
-                boxShadow: '0 4px 20px rgba(249, 115, 22, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
+                background: "rgba(249, 115, 22, 0.15)",
+                backdropFilter: "blur(40px)",
+                WebkitBackdropFilter: "blur(40px)",
+                border: "1px solid rgba(249, 115, 22, 0.3)",
+                color: "#f97316",
+                boxShadow:
+                  "0 4px 20px rgba(249, 115, 22, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
               }}
             >
               {/* Animated gradient background on hover */}
@@ -404,11 +447,11 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
               </div>
 
               <div className="text-xs text-black/60 dark:text-white/60 text-center px-4">
-                By connecting your wallet, you agree to our{' '}
+                By connecting your wallet, you agree to our{" "}
                 <span className="underline cursor-pointer hover:text-black dark:hover:text-white">
                   Terms of Service
-                </span>{' '}
-                and{' '}
+                </span>{" "}
+                and{" "}
                 <span className="underline cursor-pointer hover:text-black dark:hover:text-white">
                   Privacy Policy
                 </span>
