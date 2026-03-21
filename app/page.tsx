@@ -63,6 +63,18 @@ const LandingPage = (): React.JSX.Element => {
   const heroY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const heroOpacity = useTransform(scrollYProgress, [0, 0.8], [1, 0.3]);
 
+  const handleSearch = () => {
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleSearch();
+    }
+  };
+
   return (
     <main className="min-h-screen bg-white dark:bg-[#0a0a0a] relative overflow-hidden">
       {/* Animated Mesh Gradient Background */}
@@ -163,21 +175,22 @@ const LandingPage = (): React.JSX.Element => {
               <motion.div variants={FADE_UP} className="space-y-6">
                 {/* Search bar */}
                 <div className="relative max-w-2xl">
-                  <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/20 to-blue-500/20 dark:from-cyan-500/30 dark:to-blue-500/30 rounded-full blur-xl"></div>
-                  <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-2xl rounded-full border border-white/20 dark:border-white/10 shadow-xl flex items-center pl-6 pr-2 py-2">
-                    <Search className="w-5 h-5 text-black/40 dark:text-white/40 mr-3" />
+                  <div className="glass-search flex items-center pl-6 pr-2 py-3 rounded-full">
+                    <Search className="w-5 h-5 text-black/50 dark:text-white/50 mr-3 flex-shrink-0" />
                     <input
                       type="text"
                       placeholder="Search for freelancers, services, or disputes..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="flex-1 bg-transparent text-black dark:text-white placeholder:text-black/40 dark:placeholder:text-white/40 outline-none text-sm"
+                      onKeyDown={handleKeyDown}
+                      className="flex-1 bg-transparent text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none text-sm font-medium"
                     />
                     <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      onClick={handleSearch}
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
                       transition={SPRING}
-                      className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white px-6 py-2.5 rounded-full font-semibold text-sm shadow-lg"
+                      className="btn-macos ml-2 !py-2 !px-5"
                     >
                       Search
                     </motion.button>

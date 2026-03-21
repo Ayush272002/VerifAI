@@ -45,5 +45,5 @@ RPC_ENDPOINTS = [
 ]
 
 # Load Contract ABI from file
-with open(BACKEND_DIR / "ABI.json", "r", encoding="utf-8") as f:
+with open(PROJECT_ROOT / "ABI.json", "r", encoding="utf-8") as f:
     CONTRACT_ABI = json.load(f)
