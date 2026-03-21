@@ -1,4 +1,4 @@
-"""Service layer for agents."""
+"""Service layer for conversational agent interactions."""
 
 import logging
 
@@ -8,7 +8,7 @@ from ..core.constants import OLLAMA_BASE_URL, OLLAMA_MODEL_NAME
 
 
 class OllamaAgentService:
-    """Service wrapper around the Ollama chat model."""
+    """Service wrapper around Ollama chat model."""
 
     def __init__(self) -> None:
         """Initialise Ollama chat model."""
@@ -22,7 +22,7 @@ class OllamaAgentService:
         """Send text query to Ollama model.
 
         Args:
-            query: Prompt text sent to the model
+            query: Prompt text sent to model
 
         Returns:
             Model response text
@@ -37,3 +37,13 @@ class OllamaAgentService:
             return content
 
         return str(content)
+
+
+def main() -> None:
+    """Run local smoke test for chat query."""
+    service = OllamaAgentService()
+    print(service.text_query("Give a one-line greeting for the project"))
+
+
+if __name__ == "__main__":
+    main()
