@@ -20,7 +20,7 @@ import { motion, useScroll, useTransform } from "motion/react";
 import { useState, useRef, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/hooks/useTheme";
 
 import WalletConnect from "@/components/WalletConnect";
 import { Button } from "@/components/ui/button";

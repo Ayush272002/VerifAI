@@ -9,7 +9,7 @@ import { motion } from "motion/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
-import { useTheme } from "next-themes";
+import { useTheme } from "@/hooks/useTheme";
 import Link from "next/link";
 import { Search, SlidersHorizontal, Plus, Grid3x3 } from "lucide-react";
 import { FilterBar } from "@/components/search/FilterBar";
