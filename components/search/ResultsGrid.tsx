@@ -35,7 +35,7 @@ const MOCK_RESULTS: ResultData[] = [
       level: "Top Rated",
       verified: true,
     },
-    category: "Web Development",
+    category: "Programming & Tech",
     price: {
       amount: 2500,
       type: "fixed",
@@ -59,7 +59,7 @@ const MOCK_RESULTS: ResultData[] = [
       level: "Expert",
       verified: true,
     },
-    category: "Design & Creative",
+    category: "Art & Design",
     price: {
       amount: 850,
       type: "fixed",
@@ -82,7 +82,7 @@ const MOCK_RESULTS: ResultData[] = [
       level: "Expert",
       verified: true,
     },
-    category: "Content Writing",
+    category: "Writing & Translation",
     price: {
       amount: 120,
       type: "hourly",
@@ -104,7 +104,7 @@ const MOCK_RESULTS: ResultData[] = [
       level: "Top Rated",
       verified: true,
     },
-    category: "Blockchain Development",
+    category: "Programming & Tech",
     price: {
       amount: 3200,
       type: "fixed",
@@ -128,7 +128,7 @@ const MOCK_RESULTS: ResultData[] = [
       level: "Intermediate",
       verified: true,
     },
-    category: "Design & Creative",
+    category: "Art & Design",
     price: {
       amount: 1200,
       type: "fixed",
@@ -173,7 +173,7 @@ const MOCK_RESULTS: ResultData[] = [
       level: "Intermediate",
       verified: false,
     },
-    category: "Web Development",
+    category: "Programming & Tech",
     price: {
       amount: 950,
       type: "fixed",
@@ -241,7 +241,7 @@ const MOCK_RESULTS: ResultData[] = [
       level: "Expert",
       verified: true,
     },
-    category: "Consulting",
+    category: "Business",
     price: {
       amount: 250,
       type: "hourly",
@@ -263,7 +263,7 @@ const MOCK_RESULTS: ResultData[] = [
       level: "Intermediate",
       verified: true,
     },
-    category: "Web Development",
+    category: "Programming & Tech",
     price: {
       amount: 780,
       type: "fixed",
@@ -285,7 +285,7 @@ const MOCK_RESULTS: ResultData[] = [
       level: "Expert",
       verified: true,
     },
-    category: "Design & Creative",
+    category: "Art & Design",
     price: {
       amount: 1400,
       type: "fixed",
@@ -330,7 +330,7 @@ const MOCK_RESULTS: ResultData[] = [
       level: "Expert",
       verified: true,
     },
-    category: "Mobile Development",
+    category: "Programming & Tech",
     price: {
       amount: 3800,
       type: "fixed",

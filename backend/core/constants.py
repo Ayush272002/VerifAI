@@ -38,15 +38,17 @@ OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", OLLAMA_MODEL_CHOICES["text"])
 
 # Marketplace categories used for gig classification and placeholder selection
 GIG_CATEGORIES = [
-    "Web Development",
-    "Design & Creative",
-    "Content Writing",
+    "Art & Design",
+    "Business",
+    "Programming & Tech",
     "Marketing",
-    "Consulting",
-    "Blockchain Development",
-    "Mobile Development",
+    "Writing & Translation",
     "Video & Animation",
+    "Photography",
+    "Music & Audio",
     "Data Science & AI",
+    "Education & Tutoring",
+    "Lifestyle & Hobbies",
 ]
 
 RPC_ENDPOINTS = [

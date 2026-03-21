@@ -40,7 +40,6 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
   const [classificationError, setClassificationError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-assign random placeholder image when category is selected
   useEffect(() => {
     if (formData.category) {
       const placeholderImage = getRandomPlaceholderImage(formData.category);

@@ -486,7 +486,7 @@ const LandingPage = (): React.JSX.Element => {
                 },
                 {
                   id: "1245",
-                  type: "Content Writing",
+                  type: "Writing & Translation",
                   amount: "$320",
                   winner: "Client",
                   time: "1h ago",
