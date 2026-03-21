@@ -311,9 +311,9 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
                 >
                   <div className="flex items-center">
                     {theme === 'dark' ? (
-                      <Moon className="mr-2 h-4 w-4" />
+                      <Moon className="mr-4 h-4 w-4" />
                     ) : (
-                      <Sun className="mr-2 h-4 w-4" />
+                      <Sun className="mr-4 h-4 w-4" />
                     )}
                     <span>Theme</span>
                   </div>
