@@ -20,8 +20,18 @@ import {
   useRejectRequest,
   usePostMessage,
 } from "@/lib/marketplace";
-import { formatEther } from "viem";
+import { formatEther, createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
 import { toast } from "sonner";
+import ABI from "../ABI.json";
+
+const CONTRACT_ADDRESS = process.env
+  .NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
+
+const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http(),
+});
 
 interface PendingWork {
   id: string;
@@ -94,24 +104,40 @@ export function MyPendingWorksModal({
         if (providerPendingIds && Array.isArray(providerPendingIds)) {
           for (const requestId of providerPendingIds as string[]) {
             try {
-              const requestData = await fetch(
-                `/api/requests/${requestId}`,
-              ).catch(() => null);
-              // Fallback: for now we'll show mock data, in production fetch from blockchain
-              allWorks.push({
-                id: requestId,
-                serviceTitle: "Blockchain Service Request",
-                otherParty: requestId.substring(0, 8),
-                amount: 0.5,
-                status: "pending",
-                role: "provider",
-                deadline: "7 days",
-                taskDetails: "Pending service request from client",
-                createdAt: "Recently",
-                messages: [],
-              });
+              // Fetch actual request details from contract
+              const requestData = (await publicClient.readContract({
+                address: CONTRACT_ADDRESS,
+                abi: ABI,
+                functionName: "requests",
+                args: [requestId],
+              })) as any;
+
+              if (requestData) {
+                const escrowAmountEth = formatEther(requestData.escrowAmount);
+                const clientAddr =
+                  typeof requestData.client === "string"
+                    ? requestData.client
+                    : requestData.client?.toString() || "Unknown";
+
+                allWorks.push({
+                  id: requestId,
+                  serviceTitle: requestData.clientNote || "Service Request",
+                  otherParty:
+                    clientAddr.substring(0, 6) +
+                    "..." +
+                    clientAddr.substring(clientAddr.length - 4),
+                  amount: parseFloat(escrowAmountEth),
+                  status: "pending",
+                  role: "provider",
+                  deadline: "7 days",
+                  taskDetails:
+                    requestData.clientNote || "Pending service request",
+                  createdAt: "Recently",
+                  messages: [],
+                });
+              }
             } catch (e) {
-              console.error("Error fetching request:", e);
+              console.error("Error fetching provider request:", e);
             }
           }
         }
@@ -120,20 +146,40 @@ export function MyPendingWorksModal({
         if (clientPendingIds && Array.isArray(clientPendingIds)) {
           for (const requestId of clientPendingIds as string[]) {
             try {
-              allWorks.push({
-                id: requestId,
-                serviceTitle: "My Service Request",
-                otherParty: requestId.substring(0, 8),
-                amount: 0.3,
-                status: "pending",
-                role: "client",
-                deadline: "7 days",
-                taskDetails: "Waiting for provider response",
-                createdAt: "Recently",
-                messages: [],
-              });
+              // Fetch actual request details from contract
+              const requestData = (await publicClient.readContract({
+                address: CONTRACT_ADDRESS,
+                abi: ABI,
+                functionName: "requests",
+                args: [requestId],
+              })) as any;
+
+              if (requestData) {
+                const escrowAmountEth = formatEther(requestData.escrowAmount);
+                const providerAddr =
+                  typeof requestData.provider === "string"
+                    ? requestData.provider
+                    : requestData.provider?.toString() || "Unknown";
+
+                allWorks.push({
+                  id: requestId,
+                  serviceTitle: requestData.clientNote || "My Service Request",
+                  otherParty:
+                    providerAddr.substring(0, 6) +
+                    "..." +
+                    providerAddr.substring(providerAddr.length - 4),
+                  amount: parseFloat(escrowAmountEth),
+                  status: "pending",
+                  role: "client",
+                  deadline: "7 days",
+                  taskDetails:
+                    requestData.clientNote || "Waiting for provider response",
+                  createdAt: "Recently",
+                  messages: [],
+                });
+              }
             } catch (e) {
-              console.error("Error fetching request:", e);
+              console.error("Error fetching client request:", e);
             }
           }
         }
