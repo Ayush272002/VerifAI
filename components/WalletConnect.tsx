@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAccount, useConnect, useDisconnect, useBalance } from 'wagmi';
 import { formatUnits } from 'viem';
 import { motion } from 'framer-motion';
@@ -40,6 +40,11 @@ export default function WalletConnect() {
   const { disconnect } = useDisconnect();
   const [copied, setCopied] = useState(false);
   const [isWalletModalOpen, setIsWalletModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const { data: balance } = useBalance({
     address,
@@ -203,26 +208,30 @@ export default function WalletConnect() {
     }
   };
 
+  if (!mounted) {
+    return (
+      <div className="glass-macos glass-macos-hover font-medium rounded-full px-4 py-2.5 transition-all w-[200px] h-[42px]" />
+    );
+  }
+
   return (
     <div>
       {isConnected && address ? (
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="glass-macos glass-macos-hover font-medium rounded-full px-4 py-2.5 transition-all">
-              <div className="flex items-center gap-2">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></div>
-                <span className="text-black dark:text-white font-semibold text-sm">
-                  {formatAddress(address)}
-                </span>
-                <span className="font-mono text-cyan-600 dark:text-cyan-400 text-sm font-semibold">
-                  {balance
-                    ? Number.parseFloat(formatUnits(balance.value, balance.decimals)).toFixed(4)
-                    : '0.0000'}{' '}
-                  {balance?.symbol}
-                </span>
-                <ChevronDown className="h-4 w-4 text-black dark:text-white" />
-              </div>
-            </button>
+          <DropdownMenuTrigger className="glass-macos glass-macos-hover font-medium rounded-full px-4 py-2.5 transition-all border-0 outline-none" suppressHydrationWarning>
+            <div className="flex items-center gap-2">
+              <div className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></div>
+              <span className="text-black dark:text-white font-semibold text-sm">
+                {formatAddress(address)}
+              </span>
+              <span className="font-mono text-cyan-600 dark:text-cyan-400 text-sm font-semibold">
+                {balance
+                  ? Number.parseFloat(formatUnits(balance.value, balance.decimals)).toFixed(4)
+                  : '0.0000'}{' '}
+                {balance?.symbol}
+              </span>
+              <ChevronDown className="h-4 w-4 text-black dark:text-white" />
+            </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56 glass-macos rounded-2xl shadow-2xl border-0">
             <div className="px-2 py-1.5 text-xs text-cyan-600 dark:text-cyan-400 font-bold">

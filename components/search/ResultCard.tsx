@@ -5,9 +5,11 @@
 
 "use client";
 
+import { useState } from "react";
 import { motion } from "motion/react";
 import { Star, MapPin, Clock, CheckCircle2, TrendingUp, Shield, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ServiceDetailsModal } from "./ServiceDetailsModal";
 
 const SPRING = {
   type: "spring",
@@ -37,6 +39,7 @@ export interface ResultData {
   tags: string[];
   featured?: boolean;
   successRate?: number;
+  icon?: string;
 }
 
 interface ResultCardProps {
@@ -53,8 +56,15 @@ const LEVEL_ICONS = {
 
 export function ResultCard({ data, index }: ResultCardProps) {
   const LevelIcon = LEVEL_ICONS[data.provider.level];
+  const [showDetails, setShowDetails] = useState(false);
 
   return (
+    <>
+      <ServiceDetailsModal
+        isOpen={showDetails}
+        onClose={() => setShowDetails(false)}
+        service={data}
+      />
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -83,14 +93,25 @@ export function ResultCard({ data, index }: ResultCardProps) {
         <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 to-transparent dark:from-white/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 
         {/* Thumbnail */}
-        <div className="relative aspect-video overflow-hidden bg-gradient-to-br from-cyan-100 to-blue-100 dark:from-cyan-950/30 dark:to-blue-950/30">
-          {data.thumbnail ? (
-            <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${data.thumbnail})` }}></div>
-          ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400/20 to-blue-500/20 dark:from-cyan-400/30 dark:to-blue-500/30 backdrop-blur-xl border border-white/20 dark:border-white/10"></div>
+        <div className={`relative aspect-video overflow-hidden ${data.thumbnail}`}>
+          <div className="w-full h-full flex items-center justify-center relative">
+            {/* Animated gradient mesh */}
+            <div className="absolute inset-0 opacity-70">
+              <div className="absolute top-0 left-0 w-32 h-32 bg-white/30 dark:bg-white/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '3s' }}></div>
+              <div className="absolute bottom-0 right-0 w-40 h-40 bg-black/20 dark:bg-white/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s', animationDelay: '0.5s' }}></div>
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-white/25 dark:bg-white/18 rounded-full blur-2xl animate-pulse" style={{ animationDuration: '5s', animationDelay: '1s' }}></div>
             </div>
-          )}
+            {/* Icon overlay */}
+            {data.icon && (
+              <div className="relative z-10 w-20 h-20 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-xl border border-white/30 dark:border-white/20 flex items-center justify-center shadow-xl overflow-hidden">
+                {data.icon.startsWith('data:') || data.icon.startsWith('http') ? (
+                  <img src={data.icon} alt="Service icon" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="text-4xl">{data.icon}</div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Featured Badge */}
           {data.featured && (
@@ -186,7 +207,10 @@ export function ResultCard({ data, index }: ResultCardProps) {
               </p>
             </div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={SPRING}>
-              <button className="btn-macos !py-2 !px-4 !text-xs">
+              <button
+                onClick={() => setShowDetails(true)}
+                className="btn-macos !py-2 !px-4 !text-xs"
+              >
                 View Details
               </button>
             </motion.div>
@@ -194,5 +218,6 @@ export function ResultCard({ data, index }: ResultCardProps) {
         </div>
       </div>
     </motion.div>
+    </>
   );
 }

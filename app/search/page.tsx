@@ -9,11 +9,12 @@ import { motion } from "motion/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, Plus } from "lucide-react";
 import { FilterBar } from "@/components/search/FilterBar";
 import { ResultsGrid } from "@/components/search/ResultsGrid";
 import { ThemeToggle } from "@/components/theme-toggle";
 import WalletConnect from "@/components/WalletConnect";
+import { PublishServiceModal } from "@/components/PublishServiceModal";
 
 const FADE_UP = {
   hidden: { opacity: 0, y: 20 },
@@ -47,6 +48,7 @@ function SearchPageContent() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || "");
   const [showFilters, setShowFilters] = useState(false);
+  const [showPublishModal, setShowPublishModal] = useState(false);
 
   // Update search query when URL changes
   useEffect(() => {
@@ -94,8 +96,28 @@ function SearchPageContent() {
                 Verif<span className="font-serif italic text-cyan-600 dark:text-cyan-400">AI</span>
               </motion.span>
             </Link>
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-4">
+              <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
+                <Link href="/#work" className="text-sm font-medium text-black dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
+                  How it works
+                </Link>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
+                <Link href="/#cases" className="text-sm font-medium text-black dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
+                  Cases
+                </Link>
+              </motion.div>
               <ThemeToggle />
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={SPRING}
+                onClick={() => setShowPublishModal(true)}
+                className="btn-macos !py-2 !px-4 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden md:inline">Publish Service</span>
+              </motion.button>
               <WalletConnect />
             </div>
           </div>
@@ -187,6 +209,12 @@ function SearchPageContent() {
           </motion.div>
         </div>
       </div>
+
+      {/* Publish Service Modal */}
+      <PublishServiceModal
+        isOpen={showPublishModal}
+        onClose={() => setShowPublishModal(false)}
+      />
     </main>
   );
 }

@@ -12,6 +12,7 @@ import {
   Database,
   Sparkles,
   Zap,
+  Plus,
 } from "lucide-react";
 import Link from "next/link";
 import { motion, useScroll, useTransform } from "motion/react";
@@ -22,6 +23,7 @@ import { useRouter } from "next/navigation";
 import WalletConnect from "@/components/WalletConnect";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { PublishServiceModal } from "@/components/PublishServiceModal";
 
 const FADE_UP = {
   hidden: { opacity: 0, y: 40 },
@@ -52,6 +54,7 @@ const SPRING = {
 
 const LandingPage = (): React.JSX.Element => {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showPublishModal, setShowPublishModal] = useState(false);
   const { isConnected } = useAccount();
   const router = useRouter();
   const heroRef = useRef(null);
@@ -129,7 +132,7 @@ const LandingPage = (): React.JSX.Element => {
                 Verif<span className="font-serif italic text-cyan-600 dark:text-cyan-400">AI</span>
               </motion.span>
             </Link>
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-4">
               <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
                 <Link href="#work" className="text-sm font-medium text-black/60 dark:text-white/60 hover:text-black dark:hover:text-white transition-colors">
                   How it works
@@ -141,6 +144,16 @@ const LandingPage = (): React.JSX.Element => {
                 </Link>
               </motion.div>
               <ThemeToggle />
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                transition={SPRING}
+                onClick={() => setShowPublishModal(true)}
+                className="btn-macos !py-2 !px-4 flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="hidden md:inline">Publish Service</span>
+              </motion.button>
               <WalletConnect />
             </div>
           </div>
@@ -599,6 +612,12 @@ const LandingPage = (): React.JSX.Element => {
           </motion.div>
         </footer>
       </div>
+
+      {/* Publish Service Modal */}
+      <PublishServiceModal
+        isOpen={showPublishModal}
+        onClose={() => setShowPublishModal(false)}
+      />
     </main>
   );
 };
