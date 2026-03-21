@@ -17,6 +17,7 @@ import { ResultsGrid } from "@/components/search/ResultsGrid";
 import WalletConnect from "@/components/WalletConnect";
 import { PublishServiceModal } from "@/components/PublishServiceModal";
 import { MyServicesModal } from "@/components/MyServicesModal";
+import { MyPendingWorksModal } from "@/components/MyPendingWorksModal";
 
 const FADE_UP = {
   hidden: { opacity: 0, y: 20 },
@@ -55,6 +56,7 @@ function SearchPageContent() {
   const [showFilters, setShowFilters] = useState(false);
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showMyServicesModal, setShowMyServicesModal] = useState(false);
+  const [showMyPendingWorksModal, setShowMyPendingWorksModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -129,6 +131,7 @@ function SearchPageContent() {
               )}
               <WalletConnect
                 onMyServicesClick={() => setShowMyServicesModal(true)}
+                onMyPendingWorksClick={() => setShowMyPendingWorksModal(true)}
                 theme={theme}
                 onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               />
@@ -233,6 +236,12 @@ function SearchPageContent() {
       <MyServicesModal
         isOpen={showMyServicesModal}
         onClose={() => setShowMyServicesModal(false)}
+      />
+
+      {/* My Pending Works Modal */}
+      <MyPendingWorksModal
+        isOpen={showMyPendingWorksModal}
+        onClose={() => setShowMyPendingWorksModal(false)}
       />
     </main>
   );

@@ -14,6 +14,7 @@ import {
   Package,
   Sun,
   Moon,
+  Briefcase,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -39,11 +40,12 @@ import {
 
 interface WalletConnectProps {
   onMyServicesClick?: () => void;
+  onMyPendingWorksClick?: () => void;
   theme?: string;
   onThemeToggle?: () => void;
 }
 
-export default function WalletConnect({ onMyServicesClick, theme, onThemeToggle }: WalletConnectProps) {
+export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick, theme, onThemeToggle }: WalletConnectProps) {
   const { address, isConnected } = useAccount();
   const { connectors, connect } = useConnect();
   const { disconnect } = useDisconnect();
@@ -285,6 +287,13 @@ export default function WalletConnect({ onMyServicesClick, theme, onThemeToggle 
             >
               <Package className="mr-2 h-4 w-4" />
               My Services
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+              onClick={onMyPendingWorksClick}
+            >
+              <Briefcase className="mr-2 h-4 w-4" />
+              My Pending Works
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
             {onThemeToggle && (
