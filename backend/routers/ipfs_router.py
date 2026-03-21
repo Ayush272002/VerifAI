@@ -1,5 +1,10 @@
 """Router for IPFS storage and analysis endpoints."""
 
+# TODO: smart_contracts - Once smart contract work is complete,
+# store analysis JSON hashes on-chain separately from IPFS.
+# The analysis CID from upload_file_to_ipfs should be recorded
+# on the verification smart contract for immutable audit trail.
+
 import json
 from typing import Any
 

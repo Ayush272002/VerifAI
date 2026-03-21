@@ -28,7 +28,13 @@ PINATA_JSON_UPLOAD_URL = "https://api.pinata.cloud/pinning/pinJSONToIPFS"
 
 # Agent Configuration
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_MODEL_NAME = "gemma3:4b"
+OLLAMA_MODEL_CHOICES = {
+    "text": "gemma3:4b",
+    "image": "gemma3:4b",
+    "reasoning": "gemma3:4b",
+    "code": "gemma3:4b",
+}
+OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", OLLAMA_MODEL_CHOICES["text"])
 
 RPC_ENDPOINTS = [
     f"https://sepolia.infura.io/v3/{INFURA_PROJECT_ID}"
