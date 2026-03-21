@@ -6,6 +6,7 @@
 "use client";
 
 import { motion } from "motion/react";
+import { GIG_CATEGORIES, getRandomPlaceholderImage } from "@/lib/gigCategories";
 import { useMemo, useEffect, useRef, useState, useCallback } from "react";
 import { formatEther } from "viem";
 import { Loader2, Sparkles } from "lucide-react";
@@ -24,6 +25,327 @@ const STAGGER = {
 };
 
 const SPRING = { type: "spring", damping: 20, stiffness: 100 } as const;
+
+// Mock Data - Comprehensive service listings
+const MOCK_RESULTS: ResultData[] = [
+  {
+    id: "1",
+    title: "Full-Stack Web Development - React, Node.js, TypeScript",
+    provider: {
+      name: "Alex Thompson",
+      avatar: "",
+      level: "Top Rated",
+      verified: true,
+    },
+    category: "Programming & Tech",
+    price: {
+      amount: 2500,
+      type: "fixed",
+    },
+    rating: 4.9,
+    reviewCount: 127,
+    deliveryTime: "7 days",
+    location: "San Francisco, CA",
+    thumbnail: "bg-gradient-to-br from-blue-600 via-indigo-700 to-violet-800",
+    icon: "",
+    tags: ["React", "Node.js", "TypeScript", "Next.js"],
+    featured: true,
+    successRate: 98,
+  },
+  {
+    id: "3",
+    title: "SEO-Optimized Content Writing for Tech & SaaS",
+    provider: {
+      name: "Michael Rodriguez",
+      avatar: "",
+      level: "Expert",
+      verified: true,
+    },
+    category: "Writing & Translation",
+    price: {
+      amount: 120,
+      type: "hourly",
+    },
+    rating: 4.8,
+    reviewCount: 156,
+    deliveryTime: "2 days",
+    location: "Austin, TX",
+    thumbnail: "bg-gradient-to-br from-green-600 via-teal-700 to-cyan-800",
+    icon: "",
+    tags: ["SEO Writing", "Technical Content", "Blog Posts"],
+  },
+  {
+    id: "4",
+    title: "Smart Contract Development - Solidity & Web3",
+    provider: {
+      name: "Elena Volkov",
+      avatar: "",
+      level: "Top Rated",
+      verified: true,
+    },
+    category: "Programming & Tech",
+    price: {
+      amount: 3200,
+      type: "fixed",
+    },
+    rating: 4.9,
+    reviewCount: 67,
+    deliveryTime: "10 days",
+    location: "London, UK",
+    thumbnail: "bg-gradient-to-br from-amber-600 via-orange-700 to-red-800",
+    icon: "",
+    tags: ["Solidity", "Web3", "Smart Contracts", "Ethereum"],
+    featured: true,
+    successRate: 96,
+  },
+  {
+    id: "5",
+    title: "Mobile App UI/UX Design - iOS & Android",
+    provider: {
+      name: "David Park",
+      avatar: "",
+      level: "Intermediate",
+      verified: true,
+    },
+    category: "Art & Design",
+    price: {
+      amount: 1200,
+      type: "fixed",
+    },
+    rating: 4.7,
+    reviewCount: 43,
+    deliveryTime: "5 days",
+    location: "Seoul, South Korea",
+    thumbnail: "bg-gradient-to-br from-purple-300 via-blue-400 to-slate-600",
+    icon: "",
+    tags: ["UI/UX", "Mobile Design", "Figma", "Prototyping"],
+  },
+  {
+    id: "6",
+    title: "Digital Marketing Strategy & Campaign Management",
+    provider: {
+      name: "Jessica Williams",
+      avatar: "",
+      level: "Expert",
+      verified: true,
+    },
+    category: "Marketing",
+    price: {
+      amount: 150,
+      type: "hourly",
+    },
+    rating: 4.9,
+    reviewCount: 201,
+    deliveryTime: "Ongoing",
+    location: "Los Angeles, CA",
+    thumbnail: "bg-gradient-to-br from-red-500 via-orange-600 to-amber-700",
+    icon: "",
+    tags: ["Digital Marketing", "SEO", "Social Media", "Analytics"],
+    successRate: 97,
+  },
+  {
+    id: "7",
+    title: "E-commerce Store Setup - Shopify & WooCommerce",
+    provider: {
+      name: "Raj Patel",
+      avatar: "",
+      level: "Intermediate",
+      verified: false,
+    },
+    category: "Programming & Tech",
+    price: {
+      amount: 950,
+      type: "fixed",
+    },
+    rating: 4.6,
+    reviewCount: 38,
+    deliveryTime: "4 days",
+    location: "Mumbai, India",
+    thumbnail: "bg-gradient-to-br from-teal-300 via-cyan-500 to-blue-700",
+    icon: "",
+    tags: ["Shopify", "WooCommerce", "E-commerce", "WordPress"],
+  },
+  {
+    id: "8",
+    title: "Professional Video Editing & Motion Graphics",
+    provider: {
+      name: "Lucas Martinez",
+      avatar: "",
+      level: "Expert",
+      verified: true,
+    },
+    category: "Video & Animation",
+    price: {
+      amount: 180,
+      type: "hourly",
+    },
+    rating: 4.8,
+    reviewCount: 89,
+    deliveryTime: "3 days",
+    location: "Barcelona, Spain",
+    thumbnail: "bg-gradient-to-br from-pink-400 via-rose-500 to-red-700",
+    icon: "",
+    tags: ["Video Editing", "After Effects", "Motion Graphics"],
+  },
+  {
+    id: "9",
+    title: "AI/ML Model Development - Python & TensorFlow",
+    provider: {
+      name: "Dr. Amelia Foster",
+      avatar: "",
+      level: "Top Rated",
+      verified: true,
+    },
+    category: "Data Science & AI",
+    price: {
+      amount: 4500,
+      type: "fixed",
+    },
+    rating: 5.0,
+    reviewCount: 52,
+    deliveryTime: "14 days",
+    location: "Boston, MA",
+    thumbnail: "bg-gradient-to-br from-slate-500 via-gray-700 to-zinc-900",
+    icon: "",
+    tags: ["Machine Learning", "Python", "TensorFlow", "AI"],
+    featured: true,
+    successRate: 100,
+  },
+  {
+    id: "10",
+    title: "Business Consulting - Strategy & Growth Planning",
+    provider: {
+      name: "Robert Chen",
+      avatar: "",
+      level: "Expert",
+      verified: true,
+    },
+    category: "Business",
+    price: {
+      amount: 250,
+      type: "hourly",
+    },
+    rating: 4.9,
+    reviewCount: 118,
+    deliveryTime: "Flexible",
+    location: "Singapore",
+    thumbnail: "bg-gradient-to-br from-yellow-600 via-amber-700 to-orange-800",
+    icon: "",
+    tags: ["Business Strategy", "Growth", "Consulting", "Planning"],
+  },
+  {
+    id: "11",
+    title: "WordPress Custom Theme Development",
+    provider: {
+      name: "Emma Wilson",
+      avatar: "",
+      level: "Intermediate",
+      verified: true,
+    },
+    category: "Programming & Tech",
+    price: {
+      amount: 780,
+      type: "fixed",
+    },
+    rating: 4.7,
+    reviewCount: 65,
+    deliveryTime: "6 days",
+    location: "Toronto, Canada",
+    thumbnail: "bg-gradient-to-br from-lime-600 via-green-700 to-emerald-900",
+    icon: "",
+    tags: ["WordPress", "PHP", "Custom Themes", "Responsive"],
+  },
+  {
+    id: "12",
+    title: "3D Product Modeling & Rendering - Blender",
+    provider: {
+      name: "Kenji Tanaka",
+      avatar: "",
+      level: "Expert",
+      verified: true,
+    },
+    category: "Art & Design",
+    price: {
+      amount: 1400,
+      type: "fixed",
+    },
+    rating: 4.9,
+    reviewCount: 73,
+    deliveryTime: "5 days",
+    location: "Tokyo, Japan",
+    thumbnail: "bg-gradient-to-br from-orange-400 via-red-500 to-rose-700",
+    icon: "",
+    tags: ["3D Modeling", "Blender", "Product Rendering", "Visualization"],
+    successRate: 99,
+  },
+  {
+    id: "13",
+    title: "Social Media Content Creation & Management",
+    provider: {
+      name: "Olivia Anderson",
+      avatar: "",
+      level: "Intermediate",
+      verified: true,
+    },
+    category: "Marketing",
+    price: {
+      amount: 85,
+      type: "hourly",
+    },
+    rating: 4.6,
+    reviewCount: 92,
+    deliveryTime: "Ongoing",
+    location: "Miami, FL",
+    thumbnail: "bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-700",
+    icon: "",
+    tags: ["Social Media", "Content Creation", "Instagram", "TikTok"],
+  },
+  {
+    id: "14",
+    title: "Mobile App Development - React Native & Flutter",
+    provider: {
+      name: "Ahmed Hassan",
+      avatar: "",
+      level: "Expert",
+      verified: true,
+    },
+    category: "Programming & Tech",
+    price: {
+      amount: 3800,
+      type: "fixed",
+    },
+    rating: 4.8,
+    reviewCount: 81,
+    deliveryTime: "12 days",
+    location: "Dubai, UAE",
+    thumbnail: "bg-gradient-to-br from-teal-300 via-cyan-500 to-blue-700",
+    icon: "",
+    tags: ["React Native", "Flutter", "Mobile Apps", "Cross-platform"],
+  },
+  {
+    id: "15",
+    title: "Data Analysis & Visualization - Tableau & Power BI",
+    provider: {
+      name: "Sofia Kowalski",
+      avatar: "",
+      level: "Expert",
+      verified: true,
+    },
+    category: "Data Science & AI",
+    price: {
+      amount: 140,
+      type: "hourly",
+    },
+    rating: 4.9,
+    reviewCount: 107,
+    deliveryTime: "5 days",
+    location: "Warsaw, Poland",
+    thumbnail: "bg-gradient-to-br from-green-600 via-teal-700 to-cyan-800",
+    icon: "",
+    tags: ["Data Analysis", "Tableau", "Power BI", "SQL"],
+    successRate: 98,
+  },
+];
 
 // ---------------------------------------------------------------------------
 // On-chain data helpers
@@ -145,38 +467,42 @@ interface ResultsGridProps {
   searchQuery?: string;
 }
 
+const RESULTS_WITH_IMAGES = (services: ResultData[]) =>
+  services.map((service) => ({
+    ...service,
+    thumbnail: getRandomPlaceholderImage(service.category),
+  }));
+
 export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
   const { data: onChainServices, isLoading } = useAllActiveServices();
 
   const [filteredResults, setFilteredResults] = useState<ResultData[]>([]);
   const [semanticReady, setSemanticReady] = useState(false);
-
-  // Debounce state
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
   const [isSearching, setIsSearching] = useState(false);
   const isFirstMount = useRef(true);
 
-  // Map raw on-chain data once per fetch
   const allServices = useMemo<ResultData[]>(() => {
     if (!onChainServices || !Array.isArray(onChainServices)) return [];
     return (onChainServices as OnChainService[]).map(mapOnChainService);
   }, [onChainServices]);
 
-  // Hold the index in a ref — rebuilt only when services change
+  const servicesWithImages = useMemo(() => {
+    return RESULTS_WITH_IMAGES(allServices);
+  }, [allServices]);
+
   const indexRef = useRef<SearchIndex | null>(null);
 
   useEffect(() => {
-    if (allServices.length === 0) return;
+    if (servicesWithImages.length === 0) return;
 
-    const index = createSearchIndex(allServices);
+    const index = createSearchIndex(servicesWithImages);
     indexRef.current = index;
     setSemanticReady(false);
 
-    // Mark ready once background embedding finishes
     index.ready.then(() => setSemanticReady(true));
-  }, [allServices]);
+  }, [servicesWithImages]);
 
-  // Handle debouncing inside the component
   useEffect(() => {
     if (isFirstMount.current) {
       isFirstMount.current = false;
@@ -184,12 +510,44 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
     }
 
     setIsSearching(true);
+
     const handler = setTimeout(() => {
       setDebouncedQuery(searchQuery);
-    }, 400); // Wait 400ms before triggering the search query update
+    }, 400);
 
     return () => clearTimeout(handler);
   }, [searchQuery]);
+
+  useEffect(() => {
+    if (!debouncedQuery) {
+      setFilteredResults(servicesWithImages);
+      setIsSearching(false);
+      return;
+    }
+
+    const query = debouncedQuery.toLowerCase().trim();
+
+    if (semanticReady && indexRef.current) {
+      const results = indexRef.current.search(query);
+      setFilteredResults(results);
+    } else {
+      // Fallback to simple filtering
+      const results = servicesWithImages.filter((result) => {
+        return (
+          result.title.toLowerCase().includes(query) ||
+          result.category.toLowerCase().includes(query) ||
+          result.tags.some((tag) =>
+            tag.toLowerCase().includes(query)
+          ) ||
+          result.provider.name.toLowerCase().includes(query)
+        );
+      });
+
+      setFilteredResults(results);
+    }
+
+    setIsSearching(false);
+  }, [debouncedQuery, semanticReady, servicesWithImages]);
 
   // Re-run search whenever debounced query or semantic readiness changes
   const runSearch = useCallback(async () => {

@@ -87,11 +87,23 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
               <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
                 {/* Service Image */}
                 {service.thumbnail && (
-                  <div className={`aspect-video rounded-2xl ${service.thumbnail} overflow-hidden relative`}>
-                    <div className="absolute inset-0 opacity-70">
+                  <div className="aspect-video rounded-2xl overflow-hidden relative">
+                    {service.thumbnail.startsWith("http") ? (
+                      <img
+                        src={service.thumbnail}
+                        alt={`${service.category} placeholder`}
+                        className="absolute inset-0 w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className={`absolute inset-0 ${service.thumbnail || "bg-slate-200"}`}></div>
+                    )}
+                    
+                    {/* Overlay Layers */}
+                    <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none">
                       <div className="absolute top-0 left-0 w-32 h-32 bg-white/30 dark:bg-white/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '3s' }}></div>
                       <div className="absolute bottom-0 right-0 w-40 h-40 bg-black/20 dark:bg-white/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s', animationDelay: '0.5s' }}></div>
                     </div>
+                    
                     {service.featured && (
                       <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg">
                         <Star className="w-3 h-3 fill-current" />

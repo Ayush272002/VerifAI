@@ -5,6 +5,7 @@ from typing import Any, Generator
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
+from ..core.data_models import GigCategorizationRequest
 from ..core.data_models import ImageReviewRequest
 from ..core.data_models import PythonFilesReviewRequest
 from ..core.data_models import UnifiedVerifyRequest
@@ -26,6 +27,22 @@ def health() -> dict[str, str]:
         Health response payload
     """
     return {"message": "Agent service is available"}
+
+
+@router.post("/classify-gig")
+def classify_gig(payload: GigCategorizationRequest) -> dict[str, str]:
+    """Classify gig into one canonical marketplace category."""
+    category = _ai_service.classify_gig_category(
+        payload.title,
+        payload.description,
+        payload.tags,
+    )
+
+    return {
+        "category": category,
+        "title": payload.title,
+        "description": payload.description,
+    }
 
 
 @router.get("/query/{query}")

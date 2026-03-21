@@ -85,6 +85,7 @@ export function ResultCard({ data, index }: ResultCardProps) {
           stiffness: 100,
         }}
         whileHover={{ y: -8, scale: 1.02 }}
+        onClick={() => setShowDetails(true)}
         className="group relative cursor-pointer h-full"
       >
         {/* Featured Glow */}
@@ -103,12 +104,23 @@ export function ResultCard({ data, index }: ResultCardProps) {
           <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/50 to-transparent dark:from-white/10 dark:to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
 
           {/* Thumbnail */}
-          <div
-            className={`relative aspect-video overflow-hidden ${data.thumbnail}`}
-          >
-            <div className="w-full h-full flex items-center justify-center relative">
+          <div className="relative aspect-video overflow-hidden">
+            {(data.thumbnail || "").startsWith("http") ? (
+              <img
+                src={data.thumbnail}
+                alt={`${data.category} placeholder`}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+            ) : (
+              <div
+                className={`absolute inset-0 ${data.thumbnail || "bg-slate-200"}`}
+              ></div>
+            )}
+
+            {/* Overlay Layers */}
+            <div className="absolute inset-0">
               {/* Animated gradient mesh */}
-              <div className="absolute inset-0 opacity-70">
+              <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none">
                 <div
                   className="absolute top-0 left-0 w-32 h-32 bg-white/30 dark:bg-white/20 rounded-full blur-3xl animate-pulse"
                   style={{ animationDuration: "3s" }}
@@ -122,21 +134,24 @@ export function ResultCard({ data, index }: ResultCardProps) {
                   style={{ animationDuration: "5s", animationDelay: "1s" }}
                 ></div>
               </div>
-              {/* Icon overlay */}
-              {data.icon && (
-                <div className="relative z-10 w-20 h-20 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-xl border border-white/30 dark:border-white/20 flex items-center justify-center shadow-xl overflow-hidden">
-                  {data.icon.startsWith("data:") ||
-                  data.icon.startsWith("http") ? (
-                    <img
-                      src={data.icon}
-                      alt="Service icon"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="text-4xl">{data.icon}</div>
-                  )}
-                </div>
-              )}
+
+              {/* Icon overlay content */}
+              <div className="w-full h-full flex items-center justify-center relative">
+                {data.icon && (
+                  <div className="relative z-10 w-20 h-20 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-xl border border-white/30 dark:border-white/20 flex items-center justify-center shadow-xl overflow-hidden">
+                    {data.icon.startsWith("data:") ||
+                    data.icon.startsWith("http") ? (
+                      <img
+                        src={data.icon}
+                        alt="Service icon"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-4xl">{data.icon}</div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Featured Badge */}

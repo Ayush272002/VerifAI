@@ -71,3 +71,11 @@ class UnifiedVerifyRequest(BaseModel):
     what_they_offer: str = Field(..., min_length=1)
     seller_description: str = Field(..., min_length=1)
     files: list[FilePayload] = Field(..., min_length=1)
+
+
+class GigCategorizationRequest(BaseModel):
+    """Request payload for gig category classification."""
+
+    title: str = Field(..., min_length=3)
+    description: str = Field(..., min_length=10)
+    tags: list[str] = Field(default_factory=list)
