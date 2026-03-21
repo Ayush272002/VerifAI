@@ -25,6 +25,7 @@ import { formatEther, createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
 import { toast } from "sonner";
 import ABI from "../ABI.json";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const CONTRACT_ADDRESS = process.env
   .NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
@@ -164,14 +165,14 @@ export function MyPendingWorksModal({
 
               console.log("Provider request data received:", requestDataArray);
 
-              // Parse tuple array: [client, provider, serviceIndex, clientNote, escrowAmount, status, ...]
-              if (requestDataArray && requestDataArray.length >= 6) {
-                const client = requestDataArray[0] as string;
-                const provider = requestDataArray[1] as string;
-                const serviceIndex = requestDataArray[2] as bigint;
-                const escrowAmount = requestDataArray[4] as bigint;
-                const clientNote = requestDataArray[3] as string;
-                const contractStatus = (requestDataArray[5] as number) || 0;
+              // Handle both array and object formats for `requests`
+              if (requestDataArray) {
+                const client = (requestDataArray as any).client ?? requestDataArray[0] ?? "";
+                const provider = (requestDataArray as any).provider ?? requestDataArray[1] ?? "";
+                const serviceIndex = (requestDataArray as any).serviceIndex ?? requestDataArray[2] ?? BigInt(0);
+                const escrowAmount = (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
+                const clientNote = (requestDataArray as any).clientNote ?? requestDataArray[3] ?? "";
+                const contractStatus = (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
 
                 // Fetch the service title using provider and serviceIndex
                 let serviceTitle = "Service Request";
@@ -183,37 +184,15 @@ export function MyPendingWorksModal({
                     args: [provider as `0x${string}`, serviceIndex],
                   })) as any;
 
-                  console.log(
-                    "Service data fetched:",
-                    serviceData,
-                    "Type:",
-                    typeof serviceData,
-                  );
-
                   // Handle both array and object formats
-                  if (Array.isArray(serviceData)) {
-                    serviceTitle = serviceData[0] || "Service Request";
-                  } else if (serviceData?.title) {
+                  if (serviceData?.title) {
                     serviceTitle = serviceData.title;
+                  } else if (Array.isArray(serviceData)) {
+                    serviceTitle = serviceData[0] || "Service Request";
                   }
-
-                  console.log("Extracted service title:", serviceTitle);
                 } catch (e) {
                   console.warn("Failed to fetch service title:", e);
                 }
-
-                console.log(
-                  "Parsed data - client:",
-                  client,
-                  "escrowAmount:",
-                  escrowAmount,
-                  "clientNote:",
-                  clientNote,
-                  "serviceTitle:",
-                  serviceTitle,
-                  "contractStatus:",
-                  contractStatus,
-                );
 
                 // Map contract status to UI status: 0=Pending, 1=Accepted, 2=PendingReview
                 let uiStatus: "pending" | "in_progress" | "completed" =
@@ -279,13 +258,13 @@ export function MyPendingWorksModal({
 
               console.log("Client request data received:", requestDataArray);
 
-              // Parse tuple array: [client, provider, serviceIndex, clientNote, escrowAmount, status, ...]
-              if (requestDataArray && requestDataArray.length >= 6) {
-                const provider = requestDataArray[1] as string;
-                const serviceIndex = requestDataArray[2] as bigint;
-                const escrowAmount = requestDataArray[4] as bigint;
-                const clientNote = requestDataArray[3] as string;
-                const contractStatus = (requestDataArray[5] as number) || 0;
+              // Handle both array and object formats for `requests`
+              if (requestDataArray) {
+                const provider = (requestDataArray as any).provider ?? requestDataArray[1] ?? "";
+                const serviceIndex = (requestDataArray as any).serviceIndex ?? requestDataArray[2] ?? BigInt(0);
+                const escrowAmount = (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
+                const clientNote = (requestDataArray as any).clientNote ?? requestDataArray[3] ?? "";
+                const contractStatus = (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
 
                 // Fetch the service title using provider and serviceIndex
                 let serviceTitle = "My Service Request";
@@ -297,24 +276,12 @@ export function MyPendingWorksModal({
                     args: [provider as `0x${string}`, serviceIndex],
                   })) as any;
 
-                  console.log(
-                    "Service data fetched (client):",
-                    serviceData,
-                    "Type:",
-                    typeof serviceData,
-                  );
-
                   // Handle both array and object formats
-                  if (Array.isArray(serviceData)) {
-                    serviceTitle = serviceData[0] || "My Service Request";
-                  } else if (serviceData?.title) {
+                  if (serviceData?.title) {
                     serviceTitle = serviceData.title;
+                  } else if (Array.isArray(serviceData)) {
+                    serviceTitle = serviceData[0] || "My Service Request";
                   }
-
-                  console.log(
-                    "Extracted service title (client):",
-                    serviceTitle,
-                  );
                 } catch (e) {
                   console.warn("Failed to fetch service title:", e);
                 }
@@ -388,12 +355,21 @@ export function MyPendingWorksModal({
     try {
       const hash = await acceptRequest(workId as `0x${string}`);
       if (hash) {
-        toast.success("Request accepted!");
-        setWorks((prev) =>
-          prev.map((w) =>
-            w.id === workId ? { ...w, status: "in_progress" } : w,
-          ),
-        );
+        toast.info("Transaction submitted, waiting for confirmation...");
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status === "success") {
+          toast.success("Request accepted!");
+          if (selectedWork?.id === workId) {
+            setSelectedWork({ ...selectedWork, status: "in_progress" });
+          }
+          setWorks((prev) =>
+            prev.map((w) =>
+              w.id === workId ? { ...w, status: "in_progress" } : w,
+            ),
+          );
+        } else {
+          toast.error("Transaction failed");
+        }
       }
     } catch (err) {
       console.error("Error accepting request:", err);
@@ -405,8 +381,17 @@ export function MyPendingWorksModal({
     try {
       const hash = await rejectRequest(workId as `0x${string}`);
       if (hash) {
-        toast.success("Request rejected and refunded");
-        setWorks((prev) => prev.filter((w) => w.id !== workId));
+        toast.info("Transaction submitted, waiting for confirmation...");
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status === "success") {
+          toast.success("Request rejected and refunded");
+          if (selectedWork?.id === workId) {
+            setSelectedWork(null);
+          }
+          setWorks((prev) => prev.filter((w) => w.id !== workId));
+        } else {
+          toast.error("Transaction failed");
+        }
       }
     } catch (err) {
       console.error("Error rejecting request:", err);
@@ -419,26 +404,32 @@ export function MyPendingWorksModal({
     try {
       const hash = await postMessage(workId as `0x${string}`, messageInput);
       if (hash) {
-        toast.success("Message sent!");
-        const newMessage = {
-          sender: "me" as const,
-          text: messageInput,
-          timestamp: new Date().toLocaleTimeString(),
-        };
-        setMessageInput("");
-        // Add message to selected work
-        setSelectedWork({
-          ...selectedWork,
-          messages: [...selectedWork.messages, newMessage],
-        });
-        // Update works array too
-        setWorks((prev) =>
-          prev.map((w) =>
-            w.id === workId
-              ? { ...w, messages: [...w.messages, newMessage] }
-              : w,
-          ),
-        );
+        toast.info("Sending message...");
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status === "success") {
+          toast.success("Message sent!");
+          const newMessage = {
+            sender: "me" as const,
+            text: messageInput,
+            timestamp: new Date().toLocaleTimeString(),
+          };
+          setMessageInput("");
+          if (selectedWork?.id === workId) {
+            setSelectedWork({
+              ...selectedWork,
+              messages: [...selectedWork.messages, newMessage],
+            });
+          }
+          setWorks((prev) =>
+            prev.map((w) =>
+              w.id === workId
+                ? { ...w, messages: [...w.messages, newMessage] }
+                : w,
+            ),
+          );
+        } else {
+          toast.error("Transaction failed");
+        }
       }
     } catch (err) {
       console.error("Error sending message:", err);
@@ -518,7 +509,20 @@ export function MyPendingWorksModal({
               <div className="flex-1 overflow-hidden flex">
                 {/* Works List */}
                 <div className="w-2/5 border-r border-black/5 dark:border-white/5 overflow-y-auto custom-scrollbar">
-                  {filteredWorks.length === 0 ? (
+                  {loading ? (
+                    <div className="p-4 space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="w-full glass-macos rounded-2xl p-4">
+                          <Skeleton className="h-4 w-3/4 mb-2" />
+                          <Skeleton className="h-3 w-1/2 mb-4" />
+                          <div className="flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/5">
+                            <Skeleton className="h-4 w-1/4" />
+                            <Skeleton className="h-3 w-1/5" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : filteredWorks.length === 0 ? (
                     <div className="p-8 text-center">
                       <div className="text-6xl mb-4 opacity-20">📋</div>
                       <p className="text-black/60 dark:text-white/60 text-sm">
@@ -581,7 +585,24 @@ export function MyPendingWorksModal({
 
                 {/* Work Details */}
                 <div className="flex-1 flex flex-col">
-                  {selectedWork ? (
+                  {loading ? (
+                    <div className="p-6 h-full flex flex-col">
+                      <div className="border-b border-black/5 dark:border-white/5 pb-6">
+                        <Skeleton className="h-8 w-1/2 mb-4" />
+                        <Skeleton className="h-4 w-1/3 mb-4" />
+                        <div className="mt-4 glass-macos rounded-xl p-4">
+                          <Skeleton className="h-4 w-1/4 mb-2" />
+                          <Skeleton className="h-3 w-full mb-1" />
+                          <Skeleton className="h-3 w-5/6 mb-1" />
+                          <Skeleton className="h-3 w-4/6" />
+                        </div>
+                      </div>
+                      <div className="flex-1 flex flex-col gap-4 pt-6">
+                        <Skeleton className="h-10 w-2/3 self-end rounded-2xl" />
+                        <Skeleton className="h-10 w-2/3 self-start rounded-2xl" />
+                      </div>
+                    </div>
+                  ) : selectedWork ? (
                     <>
                       {/* Details Header */}
                       <div className="p-6 border-b border-black/5 dark:border-white/5">
@@ -609,98 +630,132 @@ export function MyPendingWorksModal({
                           selectedWork.status === "pending" && (
                             <div className="flex gap-3 mt-4">
                               <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
+                                whileHover={{ scale: isAccepting || isRejecting ? 1 : 1.02 }}
+                                whileTap={{ scale: isAccepting || isRejecting ? 1 : 0.98 }}
                                 onClick={() => handleAccept(selectedWork.id)}
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-sm flex items-center justify-center gap-2"
+                                disabled={isAccepting || isRejecting}
+                                className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 ${
+                                  isAccepting || isRejecting
+                                    ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
+                                    : "bg-gradient-to-r from-emerald-500 to-teal-500"
+                                }`}
                               >
-                                <CheckCircle2 className="w-4 h-4" />
-                                Accept Project
+                                {isAccepting ? (
+                                  <>
+                                    <Clock className="w-4 h-4 animate-spin" />
+                                    Accepting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    Accept Project
+                                  </>
+                                )}
                               </motion.button>
                               <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
+                                whileHover={{ scale: isAccepting || isRejecting ? 1 : 1.02 }}
+                                whileTap={{ scale: isAccepting || isRejecting ? 1 : 0.98 }}
                                 onClick={() => handleReject(selectedWork.id)}
-                                className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 text-white font-semibold text-sm flex items-center justify-center gap-2"
+                                disabled={isAccepting || isRejecting}
+                                className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 ${
+                                  isAccepting || isRejecting
+                                    ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
+                                    : "bg-gradient-to-r from-rose-500 to-red-500"
+                                }`}
                               >
-                                <XCircle className="w-4 h-4" />
-                                Decline
+                                {isRejecting ? (
+                                  <>
+                                    <Clock className="w-4 h-4 animate-spin" />
+                                    Declining...
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle className="w-4 h-4" />
+                                    Decline
+                                  </>
+                                )}
                               </motion.button>
                             </div>
                           )}
                       </div>
 
-                      {/* Chat */}
-                      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
-                        <div className="flex items-center gap-2 mb-4">
-                          <MessageCircle className="w-4 h-4 text-black/60 dark:text-white/60" />
-                          <h4 className="text-sm font-semibold text-black dark:text-white">
-                            Messages
-                          </h4>
-                        </div>
-                        {selectedWork.messages.length === 0 ? (
-                          <p className="text-sm text-black/40 dark:text-white/40 text-center py-8">
-                            No messages yet. Start a conversation!
-                          </p>
-                        ) : (
-                          selectedWork.messages.map((msg, idx) => (
-                            <div
-                              key={idx}
-                              className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
-                            >
-                              <div
-                                className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
-                                  msg.sender === "me"
-                                    ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
-                                    : "glass-macos text-black dark:text-white"
+                      {/* Chat / Messages Section */}
+                      {selectedWork.status !== "pending" && (
+                        <>
+                          {/* Chat */}
+                          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 border-t border-black/5 dark:border-white/5">
+                            <div className="flex items-center gap-2 mb-4">
+                              <MessageCircle className="w-4 h-4 text-black/60 dark:text-white/60" />
+                              <h4 className="text-sm font-semibold text-black dark:text-white">
+                                Messages
+                              </h4>
+                            </div>
+                            {selectedWork.messages.length === 0 ? (
+                              <p className="text-sm text-black/40 dark:text-white/40 text-center py-8">
+                                No messages yet. Start a conversation!
+                              </p>
+                            ) : (
+                              selectedWork.messages.map((msg, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
+                                >
+                                  <div
+                                    className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
+                                      msg.sender === "me"
+                                        ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
+                                        : "glass-macos text-black dark:text-white"
+                                    }`}
+                                  >
+                                    <p className="text-sm">{msg.text}</p>
+                                    <p
+                                      className={`text-xs mt-1 ${
+                                        msg.sender === "me"
+                                          ? "text-white/70"
+                                          : "text-black/50 dark:text-white/50"
+                                      }`}
+                                    >
+                                      {msg.timestamp}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+
+                          {/* Message Input */}
+                          <div className="border-t border-black/5 dark:border-white/5 p-4">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={messageInput}
+                                onChange={(e) => setMessageInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !isSendingMessage) {
+                                    handleSendMessage(selectedWork.id);
+                                  }
+                                }}
+                                disabled={isSendingMessage}
+                                placeholder={isSendingMessage ? "Sending..." : "Type a message..."}
+                                className="flex-1 glass-search px-4 py-2.5 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all disabled:opacity-50"
+                              />
+                              <motion.button
+                                whileHover={{ scale: !messageInput.trim() || isSendingMessage ? 1 : 1.05 }}
+                                whileTap={{ scale: !messageInput.trim() || isSendingMessage ? 1 : 0.95 }}
+                                onClick={() => handleSendMessage(selectedWork.id)}
+                                disabled={!messageInput.trim() || isSendingMessage}
+                                className={`px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
+                                  messageInput.trim() && !isSendingMessage
+                                    ? "btn-macos"
+                                    : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
                                 }`}
                               >
-                                <p className="text-sm">{msg.text}</p>
-                                <p
-                                  className={`text-xs mt-1 ${
-                                    msg.sender === "me"
-                                      ? "text-white/70"
-                                      : "text-black/50 dark:text-white/50"
-                                  }`}
-                                >
-                                  {msg.timestamp}
-                                </p>
-                              </div>
+                                {isSendingMessage ? <Clock className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                              </motion.button>
                             </div>
-                          ))
-                        )}
-                      </div>
-
-                      {/* Message Input */}
-                      <div className="border-t border-black/5 dark:border-white/5 p-4">
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={messageInput}
-                            onChange={(e) => setMessageInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                handleSendMessage(selectedWork.id);
-                              }
-                            }}
-                            placeholder="Type a message..."
-                            className="flex-1 glass-search px-4 py-2.5 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
-                          />
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleSendMessage(selectedWork.id)}
-                            disabled={!messageInput.trim()}
-                            className={`px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                              messageInput.trim()
-                                ? "btn-macos"
-                                : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
-                            }`}
-                          >
-                            <Send className="w-4 h-4" />
-                          </motion.button>
-                        </div>
-                      </div>
+                          </div>
+                        </>
+                      )}
                     </>
                   ) : (
                     <div className="flex-1 flex items-center justify-center p-8">
