@@ -53,7 +53,7 @@ async def civic_guardrails_middleware(request: Request, call_next):
         body = await request.json()
 
         # Assumes prompt is in the "user_input" field of the request body
-        if "" in body
+        if "user_input" in body
             user_input = body["user_input"]
             validate_with_civic(user_input)
 
