@@ -6,6 +6,7 @@ import requests
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from .routers.agent_router import router as agent_router
 from .routers.contract_router import router as contract_router
@@ -17,23 +18,51 @@ from .routers.agent_router import router as agent_router
 dotenv.load_dotenv()
 
 # Load Civic credentials from .env
-CIVIC_URL = os.getenv("civicURL")
 CIVIC_TOKEN = os.getenv("token")
 
-def validate_with_civic(request: Request):
-    """Validate the request using Civic API."""
-    headers = {"Authorization": f"Bearer {CIVIC_TOKEN}"}
-    payload = {"request": request.json()}
 
-    response = requests.post(CIVIC_URL, json=payload, headers=headers)
+async def civic_guardrails_middleware(prompt: str):
+    headers = {
+        "Authorization": f"Bearer {CIVIC_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "prompt": prompt
+    }
+
+    response = requests.post("https://nexus.civic.com/bodyguard/check", json=payload, headers=headers)
+
     if response.status_code != 200:
-        raise HTTPException(status_code=403, detail="Request validation failed with Civic.")
-    
-    civic_response = response.json()
-    if not civic_response.get("is_safe", False):
-        raise HTTPException(status_code=403, detail="Request contains malicious content.")
+        raise HTTPException(
+            status_code=500,
+            detail="Bodyguard API failed"
+        )
 
-    return civic_response
+    data = response.json()
+
+    threat_score = data.get("threat_score", 0)
+    is_safe = data.get("is_safe", True)
+
+    if not is_safe or threat_score > 0.5:
+        raise HTTPException(
+            status_code=403,
+            detail="Prompt flagged as malicious"
+        )
+
+    return data
+
+class CivicValidationMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "POST":
+            body = await request.json()
+
+            prompt = body.get("prompt")
+            if prompt:
+                await civic_guardrails_middleware(prompt)
+
+        response = await call_next(request)
+        return response
 
 app = FastAPI()
 
@@ -47,24 +76,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(CivicValidationMiddleware)
 
-@app.middleware("http")
-async def civic_guardrails_middleware(request: Request, call_next):
-    """Middleware to validate AI prompts using Civic."""
-    try:
-        body = await request.json()
-
-        # Assumes prompt is in the "user_input" field of the request body
-        if "user_input" in body:
-            user_input = body["user_input"]
-            validate_with_civic(user_input)
-
-        response = await call_next(request)
-        return response
-    except HTTPException as e:
-        return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"detail": str(e)})
 
 app.include_router(contract_router)
 app.include_router(ipfs_router)
