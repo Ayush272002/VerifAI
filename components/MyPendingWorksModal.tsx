@@ -13,7 +13,7 @@ import {
 import { EthIcon } from "@/components/EthIcon";
 import { useAccount } from "wagmi";
 import {
-  useGetPendingRequests,
+  useGetActiveRequests,
   useRequestDetails,
   useRequestMessages,
   useAcceptRequest,
@@ -75,17 +75,22 @@ export function MyPendingWorksModal({
   const [loading, setLoading] = useState(false);
 
   const { address } = useAccount();
-  const { data: providerPendingIds } = useGetPendingRequests(
+  const { data: providerPendingIds } = useGetActiveRequests(
     address as `0x${string}`,
     false,
   );
-  const { data: clientPendingIds } = useGetPendingRequests(
+  const { data: clientPendingIds } = useGetActiveRequests(
     address as `0x${string}`,
     true,
   );
   const { acceptRequest, isPending: isAccepting } = useAcceptRequest();
   const { rejectRequest, isPending: isRejecting } = useRejectRequest();
   const { postMessage, isPending: isSendingMessage } = usePostMessage();
+
+  // Fetch messages for the selected work
+  const { data: messagesData } = useRequestMessages(
+    selectedWork?.id as `0x${string}` | undefined,
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -97,6 +102,25 @@ export function MyPendingWorksModal({
     console.log("Client pending IDs:", clientPendingIds);
     console.log("Current address:", address);
   }, [providerPendingIds, clientPendingIds, address]);
+
+  // Transform fetched messages to UI format
+  useEffect(() => {
+    if (!selectedWork || !messagesData) return;
+
+    const formattedMessages = (messagesData as any[]).map((msg: any) => ({
+      sender:
+        msg.sender.toLowerCase() === address?.toLowerCase()
+          ? ("me" as const)
+          : ("them" as const),
+      text: msg.text,
+      timestamp: new Date(parseInt(msg.timestamp) * 1000).toLocaleTimeString(),
+    }));
+
+    setSelectedWork({
+      ...selectedWork,
+      messages: formattedMessages,
+    });
+  }, [messagesData, selectedWork?.id, address]);
 
   // Fetch pending requests data
   useEffect(() => {
@@ -127,34 +151,62 @@ export function MyPendingWorksModal({
           );
           for (const requestId of providerPendingIds as string[]) {
             try {
+              console.log("Fetching provider request data for:", requestId);
+
               // Fetch actual request details from contract
-              const requestData = (await publicClient.readContract({
+              const requestDataArray = (await publicClient.readContract({
                 address: CONTRACT_ADDRESS,
                 abi: ABI,
                 functionName: "requests",
                 args: [requestId],
-              })) as any;
+              })) as any[];
 
-              if (requestData && requestData.escrowAmount !== undefined) {
-                const escrowAmountEth = formatEther(requestData.escrowAmount);
-                const clientAddr =
-                  typeof requestData.client === "string"
-                    ? requestData.client
-                    : requestData.client?.toString() || "Unknown";
+              console.log("Provider request data received:", requestDataArray);
+
+              // Parse tuple array: [client, provider, serviceIndex, clientNote, escrowAmount, status, ...]
+              if (requestDataArray && requestDataArray.length >= 6) {
+                const client = requestDataArray[0] as string;
+                const escrowAmount = requestDataArray[4] as bigint;
+                const clientNote = requestDataArray[3] as string;
+                const contractStatus = (requestDataArray[5] as number) || 0;
+
+                console.log(
+                  "Parsed data - client:",
+                  client,
+                  "escrowAmount:",
+                  escrowAmount,
+                  "clientNote:",
+                  clientNote,
+                  "contractStatus:",
+                  contractStatus,
+                );
+
+                // Map contract status to UI status: 0=Pending, 1=Accepted, 2=PendingReview
+                let uiStatus: "pending" | "in_progress" | "completed" =
+                  "pending";
+                if (contractStatus === 1 || contractStatus === 2) {
+                  uiStatus = "in_progress";
+                } else if (contractStatus === 3) {
+                  uiStatus = "completed";
+                } else if (contractStatus === 4) {
+                  return; // Skip rejected requests
+                }
+
+                const escrowAmountEth = formatEther(escrowAmount);
+                const clientAddr = client || "Unknown";
 
                 allWorks.push({
                   id: requestId,
-                  serviceTitle: requestData.clientNote || "Service Request",
+                  serviceTitle: clientNote || "Service Request",
                   otherParty:
                     clientAddr.substring(0, 6) +
                     "..." +
                     clientAddr.substring(clientAddr.length - 4),
                   amount: parseFloat(escrowAmountEth),
-                  status: "pending",
+                  status: uiStatus,
                   role: "provider",
                   deadline: "7 days",
-                  taskDetails:
-                    requestData.clientNote || "Pending service request",
+                  taskDetails: clientNote || "Service request",
                   createdAt: "Recently",
                   messages: [],
                 });
@@ -162,7 +214,8 @@ export function MyPendingWorksModal({
                 console.warn(
                   "Invalid request data for provider request:",
                   requestId,
-                  requestData,
+                  "received:",
+                  requestDataArray,
                 );
               }
             } catch (e) {
@@ -180,34 +233,51 @@ export function MyPendingWorksModal({
           console.log("Fetching", clientPendingIds.length, "client requests");
           for (const requestId of clientPendingIds as string[]) {
             try {
+              console.log("Fetching client request data for:", requestId);
+
               // Fetch actual request details from contract
-              const requestData = (await publicClient.readContract({
+              const requestDataArray = (await publicClient.readContract({
                 address: CONTRACT_ADDRESS,
                 abi: ABI,
                 functionName: "requests",
                 args: [requestId],
-              })) as any;
+              })) as any[];
 
-              if (requestData && requestData.escrowAmount !== undefined) {
-                const escrowAmountEth = formatEther(requestData.escrowAmount);
-                const providerAddr =
-                  typeof requestData.provider === "string"
-                    ? requestData.provider
-                    : requestData.provider?.toString() || "Unknown";
+              console.log("Client request data received:", requestDataArray);
+
+              // Parse tuple array: [client, provider, serviceIndex, clientNote, escrowAmount, status, ...]
+              if (requestDataArray && requestDataArray.length >= 6) {
+                const provider = requestDataArray[1] as string;
+                const escrowAmount = requestDataArray[4] as bigint;
+                const clientNote = requestDataArray[3] as string;
+                const contractStatus = (requestDataArray[5] as number) || 0;
+
+                // Map contract status: 0=Pending, 1=Accepted, 2=PendingReview
+                let uiStatus: "pending" | "in_progress" | "completed" =
+                  "pending";
+                if (contractStatus === 1 || contractStatus === 2) {
+                  uiStatus = "in_progress";
+                } else if (contractStatus === 3) {
+                  uiStatus = "completed";
+                } else if (contractStatus === 4) {
+                  return; // Skip rejected requests
+                }
+
+                const escrowAmountEth = formatEther(escrowAmount);
+                const providerAddr = provider || "Unknown";
 
                 allWorks.push({
                   id: requestId,
-                  serviceTitle: requestData.clientNote || "My Service Request",
+                  serviceTitle: clientNote || "My Service Request",
                   otherParty:
                     providerAddr.substring(0, 6) +
                     "..." +
                     providerAddr.substring(providerAddr.length - 4),
                   amount: parseFloat(escrowAmountEth),
-                  status: "pending",
+                  status: uiStatus,
                   role: "client",
                   deadline: "7 days",
-                  taskDetails:
-                    requestData.clientNote || "Waiting for provider response",
+                  taskDetails: clientNote || "Service request",
                   createdAt: "Recently",
                   messages: [],
                 });
@@ -215,7 +285,8 @@ export function MyPendingWorksModal({
                 console.warn(
                   "Invalid request data for client request:",
                   requestId,
-                  requestData,
+                  "received:",
+                  requestDataArray,
                 );
               }
             } catch (e) {
@@ -224,7 +295,12 @@ export function MyPendingWorksModal({
           }
         }
 
-        console.log("Total pending works fetched:", allWorks.length, allWorks);
+        console.log(
+          "Total pending works fetched:",
+          allWorks.length,
+          "Works:",
+          allWorks,
+        );
         setWorks(allWorks);
       } finally {
         setLoading(false);
@@ -243,36 +319,62 @@ export function MyPendingWorksModal({
 
   const handleAccept = async (workId: string) => {
     try {
-      await acceptRequest(workId as `0x${string}`);
-      toast.success("Request accepted!");
-      setWorks((prev) =>
-        prev.map((w) =>
-          w.id === workId ? { ...w, status: "in_progress" } : w,
-        ),
-      );
+      const hash = await acceptRequest(workId as `0x${string}`);
+      if (hash) {
+        toast.success("Request accepted!");
+        setWorks((prev) =>
+          prev.map((w) =>
+            w.id === workId ? { ...w, status: "in_progress" } : w,
+          ),
+        );
+      }
     } catch (err) {
+      console.error("Error accepting request:", err);
       toast.error("Failed to accept request");
     }
   };
 
   const handleReject = async (workId: string) => {
     try {
-      await rejectRequest(workId as `0x${string}`);
-      toast.success("Request rejected and refunded");
-      setWorks((prev) => prev.filter((w) => w.id !== workId));
+      const hash = await rejectRequest(workId as `0x${string}`);
+      if (hash) {
+        toast.success("Request rejected and refunded");
+        setWorks((prev) => prev.filter((w) => w.id !== workId));
+      }
     } catch (err) {
+      console.error("Error rejecting request:", err);
       toast.error("Failed to reject request");
     }
   };
 
   const handleSendMessage = async (workId: string) => {
-    if (!messageInput.trim()) return;
+    if (!messageInput.trim() || !selectedWork) return;
     try {
-      await postMessage(workId as `0x${string}`, messageInput);
-      toast.success("Message sent!");
-      setMessageInput("");
-      // In real app, refetch messages
+      const hash = await postMessage(workId as `0x${string}`, messageInput);
+      if (hash) {
+        toast.success("Message sent!");
+        const newMessage = {
+          sender: "me" as const,
+          text: messageInput,
+          timestamp: new Date().toLocaleTimeString(),
+        };
+        setMessageInput("");
+        // Add message to selected work
+        setSelectedWork({
+          ...selectedWork,
+          messages: [...selectedWork.messages, newMessage],
+        });
+        // Update works array too
+        setWorks((prev) =>
+          prev.map((w) =>
+            w.id === workId
+              ? { ...w, messages: [...w.messages, newMessage] }
+              : w,
+          ),
+        );
+      }
     } catch (err) {
+      console.error("Error sending message:", err);
       toast.error("Failed to send message");
     }
   };
@@ -342,34 +444,6 @@ export function MyPendingWorksModal({
                       {tab.label}
                     </motion.button>
                   ))}
-                </div>
-
-                {/* DEBUG: Show current state */}
-                <div className="mt-4 text-xs text-black/50 dark:text-white/50 bg-black/5 dark:bg-white/5 p-2 rounded">
-                  <p>
-                    Address:{" "}
-                    {address
-                      ? address.substring(0, 10) + "..."
-                      : "Not connected"}
-                  </p>
-                  <p>
-                    Provider pending:{" "}
-                    {providerPendingIds
-                      ? Array.isArray(providerPendingIds)
-                        ? providerPendingIds.length
-                        : "invalid"
-                      : "loading"}
-                  </p>
-                  <p>
-                    Client pending:{" "}
-                    {clientPendingIds
-                      ? Array.isArray(clientPendingIds)
-                        ? clientPendingIds.length
-                        : "invalid"
-                      : "loading"}
-                  </p>
-                  <p>Works loaded: {works.length}</p>
-                  <p>Loading: {loading ? "yes" : "no"}</p>
                 </div>
               </div>
 

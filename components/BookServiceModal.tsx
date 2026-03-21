@@ -55,12 +55,22 @@ export function BookServiceModal({
       const serviceIndex = BigInt(parts[parts.length - 1] || "0");
 
       // Call requestService with provider address, service index, and client note
-      await requestService(
+      // ⚠️ CRITICAL: Must send exact service listing price, not user input
+      console.log("Booking service with:", {
+        provider: service.provider.address,
+        serviceIndex: serviceIndex.toString(),
+        servicePrice: service.price.amount,
+        clientNote: taskDetails,
+      });
+
+      const txHash = await requestService(
         service.provider.address as `0x${string}`,
         serviceIndex,
         taskDetails,
-        service.price.amount.toString(),
+        service.price.amount.toString(), // Send exact listing price
       );
+
+      console.log("Transaction hash:", txHash);
 
       console.log("Service request created (Pending status):", {
         serviceId: service.id,

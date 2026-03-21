@@ -6,9 +6,24 @@
 "use client";
 
 import { motion, AnimatePresence } from "motion/react";
-import { useState } from "react";
-import { X, Trash2, Clock, CheckCircle2, AlertCircle, Package } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  X,
+  Trash2,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Package,
+  Loader,
+} from "lucide-react";
 import { EthIcon } from "./EthIcon";
+import { useAccount } from "wagmi";
+import { useProviderServices, useGetProviderRequests } from "@/lib/marketplace";
+import { formatEther } from "viem";
+import ABI from "../ABI.json";
+
+const CONTRACT_ADDRESS = process.env
+  .NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
 
 interface MyServicesModalProps {
   isOpen: boolean;
@@ -24,55 +39,129 @@ const SPRING = {
 type ServiceStatus = "all" | "active" | "booked" | "unbooked";
 
 interface Service {
-  id: string;
+  id: number;
   title: string;
-  category: string;
+  description: string;
+  category?: string;
   price: number;
   status: "active" | "booked" | "completed";
   bookedBy?: string;
-  deliveryTime: string;
+  deliveryTime?: string;
   createdAt: string;
   backgroundImage: string;
 }
 
-// Mock data - replace with actual data from blockchain/API
-const MOCK_SERVICES: Service[] = [
-  {
-    id: "1",
-    title: "Professional Web Development",
-    category: "Web Development",
-    price: 2.5,
-    status: "booked",
-    bookedBy: "0x1234...5678",
-    deliveryTime: "7 days",
-    createdAt: "2024-01-15",
-    backgroundImage: "bg-gradient-to-br from-cyan-400 to-blue-500",
-  },
-  {
-    id: "2",
-    title: "Custom Logo Design",
-    category: "Design & Creative",
-    price: 0.8,
-    status: "active",
-    deliveryTime: "3 days",
-    createdAt: "2024-01-20",
-    backgroundImage: "bg-gradient-to-br from-purple-400 to-pink-500",
-  },
-  {
-    id: "3",
-    title: "Content Writing Service",
-    category: "Content Writing",
-    price: 0.5,
-    status: "active",
-    deliveryTime: "2 days",
-    createdAt: "2024-01-22",
-    backgroundImage: "bg-gradient-to-br from-emerald-400 to-teal-500",
-  },
-];
+const CATEGORY_GRADIENTS: { [key: string]: string } = {
+  "web development": "bg-gradient-to-br from-cyan-400 to-blue-500",
+  "design & creative": "bg-gradient-to-br from-purple-400 to-pink-500",
+  "content writing": "bg-gradient-to-br from-emerald-400 to-teal-500",
+  default: "bg-gradient-to-br from-slate-400 to-slate-500",
+};
 
 export function MyServicesModal({ isOpen, onClose }: MyServicesModalProps) {
-  const [services, setServices] = useState<Service[]>(MOCK_SERVICES);
+  const { address } = useAccount();
+  const [services, setServices] = useState<Service[]>([]);
   const [filter, setFilter] = useState<ServiceStatus>("all");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch provider's services
+  const { data: servicesData } = useProviderServices(
+    address as `0x${string}` | undefined,
+  );
+
+  // Fetch provider's requests to determine which services are booked
+  const { data: requestsData } = useGetProviderRequests(
+    address as `0x${string}` | undefined,
+  );
+
+  // Parse and update services when data changes
+  useEffect(() => {
+    if (!servicesData || !address) {
+      setServices([]);
+      return;
+    }
+
+    const parseServices = () => {
+      setIsLoading(true);
+      try {
+        const parsedServices: Service[] = [];
+
+        // servicesData is an array of Service structs returned by getServices(providerAddress)
+        const serviceArray = Array.isArray(servicesData) ? servicesData : [];
+
+        console.log("Raw servicesData:", servicesData);
+        console.log("serviceArray:", serviceArray);
+
+        serviceArray.forEach((serviceData: any, index: number) => {
+          try {
+            console.log(`Service ${index} raw data:`, serviceData);
+
+            // Service struct can be either array [title, description, priceWei, active]
+            // or object {title, description, priceWei, active}
+            const title =
+              typeof serviceData === "object" && serviceData !== null
+                ? serviceData.title || serviceData[0] || ""
+                : "";
+            const description =
+              typeof serviceData === "object" && serviceData !== null
+                ? serviceData.description || serviceData[1] || ""
+                : "";
+            const priceWei =
+              typeof serviceData === "object" && serviceData !== null
+                ? serviceData.priceWei || serviceData[2] || BigInt(0)
+                : BigInt(0);
+            const active =
+              typeof serviceData === "object" && serviceData !== null
+                ? (serviceData.active ?? serviceData[3] ?? true) !== false
+                : true;
+
+            if (!title || !description) {
+              console.warn(
+                `Skipping service ${index}: missing title or description`,
+              );
+              return;
+            }
+
+            const bookedRequests =
+              (requestsData as any[])?.filter((req: any) => {
+                const serviceIdx = req[2]; 
+                return (
+                  serviceIdx === BigInt(index) && (req[5] === 1 || req[5] === 2)
+                );
+              }) || [];
+
+            const isBooked = bookedRequests.length > 0;
+            const bookedRequest = bookedRequests[0];
+
+            parsedServices.push({
+              id: index,
+              title,
+              description,
+              price: parseFloat(formatEther(priceWei)),
+              status: !active ? "completed" : isBooked ? "booked" : "active",
+              bookedBy: isBooked ? bookedRequest[0] : undefined,
+              deliveryTime: "5-7 days",
+              createdAt: new Date().toISOString().split("T")[0],
+              backgroundImage:
+                CATEGORY_GRADIENTS[description.toLowerCase()] ||
+                CATEGORY_GRADIENTS.default,
+            });
+          } catch (e) {
+            console.error(`Error parsing service at index ${index}:`, e);
+          }
+        });
+
+        setServices(parsedServices);
+      } catch (e) {
+        console.error("Error parsing services:", e);
+        setServices([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    parseServices();
+  }, [servicesData, requestsData, address]);
 
   const filteredServices = services.filter((service) => {
     if (filter === "all") return true;
@@ -82,7 +171,7 @@ export function MyServicesModal({ isOpen, onClose }: MyServicesModalProps) {
     return true;
   });
 
-  const handleRemoveService = (id: string) => {
+  const handleRemoveService = (id: number) => {
     if (confirm("Are you sure you want to remove this service?")) {
       setServices(services.filter((s) => s.id !== id));
     }
@@ -127,11 +216,11 @@ export function MyServicesModal({ isOpen, onClose }: MyServicesModalProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-[100]"
+            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-100"
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-101 flex items-center justify-center p-4 pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -189,7 +278,14 @@ export function MyServicesModal({ isOpen, onClose }: MyServicesModalProps) {
 
               {/* Content */}
               <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
-                {filteredServices.length === 0 ? (
+                {isLoading ? (
+                  <div className="flex flex-col items-center justify-center h-full py-20">
+                    <Loader className="w-12 h-12 text-cyan-600 dark:text-cyan-400 animate-spin mb-4" />
+                    <p className="text-lg font-semibold text-black/60 dark:text-white/60">
+                      Loading your services...
+                    </p>
+                  </div>
+                ) : filteredServices.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full py-20">
                     <AlertCircle className="w-16 h-16 text-black/20 dark:text-white/20 mb-4" />
                     <p className="text-lg font-semibold text-black/60 dark:text-white/60">
@@ -216,10 +312,14 @@ export function MyServicesModal({ isOpen, onClose }: MyServicesModalProps) {
                           className="glass-macos rounded-2xl overflow-hidden group hover:shadow-xl transition-shadow"
                         >
                           {/* Background Image */}
-                          <div className={`relative h-32 ${service.backgroundImage}`}>
+                          <div
+                            className={`relative h-32 ${service.backgroundImage}`}
+                          >
                             <div className="absolute inset-0 bg-black/10 dark:bg-black/30"></div>
                             <div className="absolute top-3 right-3 flex gap-2">
-                              <div className={`px-3 py-1.5 rounded-full ${statusInfo.bg} backdrop-blur-xl border ${statusInfo.border} ${statusInfo.color} text-xs font-bold flex items-center gap-1.5`}>
+                              <div
+                                className={`px-3 py-1.5 rounded-full ${statusInfo.bg} backdrop-blur-xl border ${statusInfo.border} ${statusInfo.color} text-xs font-bold flex items-center gap-1.5`}
+                              >
                                 <StatusIcon className="w-3 h-3" />
                                 {statusInfo.label}
                               </div>
@@ -232,8 +332,8 @@ export function MyServicesModal({ isOpen, onClose }: MyServicesModalProps) {
                               <h3 className="text-lg font-bold text-black dark:text-white mb-1 line-clamp-1">
                                 {service.title}
                               </h3>
-                              <p className="text-xs text-black/60 dark:text-white/60">
-                                {service.category}
+                              <p className="text-xs text-black/60 dark:text-white/60 line-clamp-1">
+                                {service.description}
                               </p>
                             </div>
 
@@ -253,16 +353,18 @@ export function MyServicesModal({ isOpen, onClose }: MyServicesModalProps) {
                               </div>
                             </div>
 
-                            {service.bookedBy && (
-                              <div className="pt-3 border-t border-black/5 dark:border-white/5">
-                                <p className="text-xs text-black/60 dark:text-white/60 mb-1">
-                                  Booked by
-                                </p>
-                                <p className="text-sm font-mono font-semibold text-cyan-600 dark:text-cyan-400">
-                                  {service.bookedBy}
-                                </p>
-                              </div>
-                            )}
+                            {service.status === "booked" &&
+                              service.bookedBy && (
+                                <div className="text-xs text-black/60 dark:text-white/60">
+                                  <span className="font-semibold">
+                                    Booked by:{" "}
+                                  </span>
+                                  {service.bookedBy.substring(0, 6)}...
+                                  {service.bookedBy.substring(
+                                    service.bookedBy.length - 4,
+                                  )}
+                                </div>
+                              )}
 
                             {/* Actions */}
                             <div className="flex gap-2 pt-2">
@@ -289,7 +391,8 @@ export function MyServicesModal({ isOpen, onClose }: MyServicesModalProps) {
               <div className="border-t border-black/5 dark:border-white/5 p-6 bg-white/50 dark:bg-black/50">
                 <div className="flex justify-between items-center">
                   <p className="text-sm text-black/60 dark:text-white/60">
-                    {filteredServices.length} {filteredServices.length === 1 ? "service" : "services"}
+                    {filteredServices.length}{" "}
+                    {filteredServices.length === 1 ? "service" : "services"}
                   </p>
                   <motion.button
                     type="button"

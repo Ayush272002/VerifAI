@@ -369,6 +369,37 @@ contract VerifAIMarketplace {
         return providerRequests[provider];
     }
 
+    function getActiveRequests(
+        address user,
+        bool asClient
+    ) external view returns (bytes32[] memory) {
+        bytes32[] memory allUserRequests = asClient
+            ? clientRequests[user]
+            : providerRequests[user];
+        bytes32[] memory active = new bytes32[](allUserRequests.length);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < allUserRequests.length; i++) {
+            RequestStatus status = requests[allUserRequests[i]].status;
+            // Include Pending (0), Accepted (1), PendingReview (3)
+            if (
+                status == RequestStatus.Pending ||
+                status == RequestStatus.Accepted ||
+                status == RequestStatus.PendingReview
+            ) {
+                active[count] = allUserRequests[i];
+                count++;
+            }
+        }
+
+        // Return array with actual active count
+        bytes32[] memory result = new bytes32[](count);
+        for (uint256 i = 0; i < count; i++) {
+            result[i] = active[i];
+        }
+        return result;
+    }
+
     // Get pending requests only
     function getPendingRequests(
         address user,

@@ -248,3 +248,19 @@ export function useGetPendingRequests(
     },
   });
 }
+
+// Get all active requests (Pending, Accepted, PendingReview) for a user
+export function useGetActiveRequests(
+  userAddress: `0x${string}` | undefined,
+  asClient: boolean = true,
+) {
+  return useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: "getActiveRequests",
+    args: userAddress ? [userAddress, asClient] : undefined,
+    query: {
+      enabled: !!userAddress,
+    },
+  });
+}

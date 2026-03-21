@@ -327,6 +327,30 @@
 		"type": "function"
 	},
 	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "user",
+				"type": "address"
+			},
+			{
+				"internalType": "bool",
+				"name": "asClient",
+				"type": "bool"
+			}
+		],
+		"name": "getActiveRequests",
+		"outputs": [
+			{
+				"internalType": "bytes32[]",
+				"name": "",
+				"type": "bytes32[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [],
 		"name": "getAllActiveServices",
 		"outputs": [
