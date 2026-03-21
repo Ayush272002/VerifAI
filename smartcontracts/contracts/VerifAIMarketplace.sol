@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-
 contract VerifAIMarketplace {
     address public oracle; // AI agent wallet — only one allowed to submit rulings
 
@@ -13,12 +12,12 @@ contract VerifAIMarketplace {
     constructor(address _oracle) {
         oracle = _oracle;
     }
-    
+
     struct Service {
         string title;
         string description;
         uint256 priceWei; // price the provider charges per job
-        bool active;      // soft-delete: set false to "remove"
+        bool active; // soft-delete: set false to "remove"
     }
 
     // Core registry: provider address → list of services
@@ -28,8 +27,16 @@ contract VerifAIMarketplace {
     address[] public allProviders;
     mapping(address => bool) public isProviderKnown;
 
-    event ServiceAdded(address indexed provider, uint256 indexed serviceIndex, string title, uint256 priceWei);
-    event ServiceRemoved(address indexed provider, uint256 indexed serviceIndex);
+    event ServiceAdded(
+        address indexed provider,
+        uint256 indexed serviceIndex,
+        string title,
+        uint256 priceWei
+    );
+    event ServiceRemoved(
+        address indexed provider,
+        uint256 indexed serviceIndex
+    );
 
     function addService(
         string calldata title,
@@ -44,12 +51,14 @@ contract VerifAIMarketplace {
             allProviders.push(msg.sender);
         }
 
-        providerServices[msg.sender].push(Service({
-            title: title,
-            description: description,
-            priceWei: priceWei,
-            active: true
-        }));
+        providerServices[msg.sender].push(
+            Service({
+                title: title,
+                description: description,
+                priceWei: priceWei,
+                active: true
+            })
+        );
 
         index = providerServices[msg.sender].length - 1;
         emit ServiceAdded(msg.sender, index, title, priceWei);
@@ -62,7 +71,9 @@ contract VerifAIMarketplace {
         emit ServiceRemoved(msg.sender, serviceIndex);
     }
 
-    function getServices(address provider) external view returns (Service[] memory) {
+    function getServices(
+        address provider
+    ) external view returns (Service[] memory) {
         return providerServices[provider];
     }
 
@@ -79,7 +90,11 @@ contract VerifAIMarketplace {
         bool active;
     }
 
-    function getAllActiveServices() external view returns (GlobalServiceView[] memory) {
+    function getAllActiveServices()
+        external
+        view
+        returns (GlobalServiceView[] memory)
+    {
         uint256 totalActive = 0;
         for (uint256 i = 0; i < allProviders.length; i++) {
             address p = allProviders[i];
@@ -89,10 +104,12 @@ contract VerifAIMarketplace {
                 }
             }
         }
-        
-        GlobalServiceView[] memory result = new GlobalServiceView[](totalActive);
+
+        GlobalServiceView[] memory result = new GlobalServiceView[](
+            totalActive
+        );
         uint256 count = 0;
-        
+
         for (uint256 i = 0; i < allProviders.length; i++) {
             address p = allProviders[i];
             for (uint256 j = 0; j < providerServices[p].length; j++) {
@@ -113,23 +130,23 @@ contract VerifAIMarketplace {
     }
 
     enum RequestStatus {
-        Pending,       // B requested; A hasn't decided
-        Accepted,      // A accepted; work in progress
-        Rejected,      // A rejected; ETH refunded to B
+        Pending, // B requested; A hasn't decided
+        Accepted, // A accepted; work in progress
+        Rejected, // A rejected; ETH refunded to B
         PendingReview, // A uploaded proof; oracle is reviewing
-        Resolved       // Oracle issued ruling; ETH paid to winner
+        Resolved // Oracle issued ruling; ETH paid to winner
     }
 
     struct ServiceRequest {
-        address payable client;       // B
-        address payable provider;     // A
-        uint256 serviceIndex;         // index into providerServices[provider]
-        string clientNote;            // B's custom text input at request time
-        uint256 escrowAmount;         // ETH locked by B
+        address payable client; // B
+        address payable provider; // A
+        uint256 serviceIndex; // index into providerServices[provider]
+        string clientNote; // B's custom text input at request time
+        uint256 escrowAmount; // ETH locked by B
         RequestStatus status;
-        string completionProofCid;    // IPFS CID uploaded by A as proof of work
-        bytes32 rulingHash;           // SHA-256 of AI ruling (set by oracle)
-        address winner;               // set by oracle if disputed
+        string completionProofCid; // IPFS CID uploaded by A as proof of work
+        bytes32 rulingHash; // SHA-256 of AI ruling (set by oracle)
+        address winner; // set by oracle if disputed
         bool fundsReleased;
     }
 
@@ -145,9 +162,26 @@ contract VerifAIMarketplace {
     );
     event RequestAccepted(bytes32 indexed requestId, address indexed provider);
     event RequestRejected(bytes32 indexed requestId, address indexed provider);
-    event ProofSubmitted(bytes32 indexed requestId, address indexed provider, string proofCid);
-    event RulingSubmitted(bytes32 indexed requestId, address indexed winner, bytes32 rulingHash);
-    event FundsReleased(bytes32 indexed requestId, address indexed recipient, uint256 amount);
+    event ProofSubmitted(
+        bytes32 indexed requestId,
+        address indexed provider,
+        string proofCid
+    );
+    event RulingSubmitted(
+        bytes32 indexed requestId,
+        address indexed winner,
+        bytes32 rulingHash
+    );
+    event FundsReleased(
+        bytes32 indexed requestId,
+        address indexed recipient,
+        uint256 amount
+    );
+
+    // Helper: Get all requests where msg.sender is the client
+    mapping(address => bytes32[]) private clientRequests;
+    // Helper: Get all requests where msg.sender is the provider
+    mapping(address => bytes32[]) private providerRequests;
 
     function requestService(
         address payable provider,
@@ -159,13 +193,18 @@ contract VerifAIMarketplace {
         require(msg.value == svc.priceWei, "Must send exact service price");
         require(msg.sender != provider, "Provider cannot request own service");
 
-        requestId = keccak256(abi.encodePacked(
-            block.timestamp,
-            msg.sender,
-            provider,
-            serviceIndex
-        ));
-        require(requests[requestId].client == address(0), "Request ID collision");
+        requestId = keccak256(
+            abi.encodePacked(
+                block.timestamp,
+                msg.sender,
+                provider,
+                serviceIndex
+            )
+        );
+        require(
+            requests[requestId].client == address(0),
+            "Request ID collision"
+        );
 
         requests[requestId] = ServiceRequest({
             client: payable(msg.sender),
@@ -180,7 +219,18 @@ contract VerifAIMarketplace {
             fundsReleased: false
         });
 
-        emit ServiceRequested(requestId, msg.sender, provider, serviceIndex, msg.value, clientNote);
+        // Track requests for easier lookup
+        clientRequests[msg.sender].push(requestId);
+        providerRequests[provider].push(requestId);
+
+        emit ServiceRequested(
+            requestId,
+            msg.sender,
+            provider,
+            serviceIndex,
+            msg.value,
+            clientNote
+        );
     }
 
     function acceptRequest(bytes32 requestId) external {
@@ -208,7 +258,10 @@ contract VerifAIMarketplace {
     }
 
     // Provider uploads proof — ETH stays locked, oracle takes it from here.
-    function completeRequest(bytes32 requestId, string calldata proofCid) external {
+    function completeRequest(
+        bytes32 requestId,
+        string calldata proofCid
+    ) external {
         ServiceRequest storage req = requests[requestId];
         require(msg.sender == req.provider, "Only provider");
         require(req.status == RequestStatus.Accepted, "Must be accepted first");
@@ -229,9 +282,15 @@ contract VerifAIMarketplace {
         address payable winner
     ) external onlyOracle {
         ServiceRequest storage req = requests[requestId];
-        require(req.status == RequestStatus.PendingReview, "Not pending oracle review");
+        require(
+            req.status == RequestStatus.PendingReview,
+            "Not pending oracle review"
+        );
         require(!req.fundsReleased, "Funds already released");
-        require(winner == req.client || winner == req.provider, "Winner must be a party");
+        require(
+            winner == req.client || winner == req.provider,
+            "Winner must be a party"
+        );
 
         req.rulingHash = rulingHash;
         req.winner = winner;
@@ -244,7 +303,6 @@ contract VerifAIMarketplace {
         emit RulingSubmitted(requestId, winner, rulingHash);
         emit FundsReleased(requestId, winner, req.escrowAmount);
     }
-
 
     struct Message {
         address sender;
@@ -262,7 +320,10 @@ contract VerifAIMarketplace {
         string text
     );
 
-    function postMessage(bytes32 requestId, string calldata text) external returns (uint256 messageIndex) {
+    function postMessage(
+        bytes32 requestId,
+        string calldata text
+    ) external returns (uint256 messageIndex) {
         ServiceRequest storage req = requests[requestId];
         require(
             msg.sender == req.client || msg.sender == req.provider,
@@ -270,23 +331,98 @@ contract VerifAIMarketplace {
         );
         require(
             req.status == RequestStatus.Pending ||
-            req.status == RequestStatus.Accepted ||
-            req.status == RequestStatus.PendingReview,
+                req.status == RequestStatus.Accepted ||
+                req.status == RequestStatus.PendingReview,
             "Cannot message on closed request"
         );
         require(bytes(text).length > 0, "Empty message");
 
         messageIndex = requestMessages[requestId].length;
-        requestMessages[requestId].push(Message({
-            sender: msg.sender,
-            text: text,
-            timestamp: block.timestamp
-        }));
+        requestMessages[requestId].push(
+            Message({
+                sender: msg.sender,
+                text: text,
+                timestamp: block.timestamp
+            })
+        );
 
         emit MessagePosted(requestId, msg.sender, messageIndex, text);
     }
 
-    function getMessages(bytes32 requestId) external view returns (Message[] memory) {
+    function getMessages(
+        bytes32 requestId
+    ) external view returns (Message[] memory) {
         return requestMessages[requestId];
+    }
+
+    // Get all requests for a client
+    function getClientRequests(
+        address client
+    ) external view returns (bytes32[] memory) {
+        return clientRequests[client];
+    }
+
+    // Get all requests for a provider
+    function getProviderRequests(
+        address provider
+    ) external view returns (bytes32[] memory) {
+        return providerRequests[provider];
+    }
+
+    function getActiveRequests(
+        address user,
+        bool asClient
+    ) external view returns (bytes32[] memory) {
+        bytes32[] memory allUserRequests = asClient
+            ? clientRequests[user]
+            : providerRequests[user];
+        bytes32[] memory active = new bytes32[](allUserRequests.length);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < allUserRequests.length; i++) {
+            RequestStatus status = requests[allUserRequests[i]].status;
+            // Include Pending (0), Accepted (1), PendingReview (3)
+            if (
+                status == RequestStatus.Pending ||
+                status == RequestStatus.Accepted ||
+                status == RequestStatus.PendingReview
+            ) {
+                active[count] = allUserRequests[i];
+                count++;
+            }
+        }
+
+        // Return array with actual active count
+        bytes32[] memory result = new bytes32[](count);
+        for (uint256 i = 0; i < count; i++) {
+            result[i] = active[i];
+        }
+        return result;
+    }
+
+    // Get pending requests only
+    function getPendingRequests(
+        address user,
+        bool asClient
+    ) external view returns (bytes32[] memory) {
+        bytes32[] memory allUserRequests = asClient
+            ? clientRequests[user]
+            : providerRequests[user];
+        bytes32[] memory pending = new bytes32[](allUserRequests.length);
+        uint256 count = 0;
+
+        for (uint256 i = 0; i < allUserRequests.length; i++) {
+            if (requests[allUserRequests[i]].status == RequestStatus.Pending) {
+                pending[count] = allUserRequests[i];
+                count++;
+            }
+        }
+
+        // Return array with actual pending count
+        bytes32[] memory result = new bytes32[](count);
+        for (uint256 i = 0; i < count; i++) {
+            result[i] = pending[i];
+        }
+        return result;
     }
 }

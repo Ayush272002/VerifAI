@@ -1,9 +1,39 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, MessageCircle, CheckCircle2, XCircle, Clock, Send } from "lucide-react";
+import {
+  X,
+  MessageCircle,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Send,
+} from "lucide-react";
 import { EthIcon } from "@/components/EthIcon";
+import { useAccount } from "wagmi";
+import {
+  useGetActiveRequests,
+  useRequestDetails,
+  useRequestMessages,
+  useAcceptRequest,
+  useRejectRequest,
+  usePostMessage,
+  useGetServiceByIndex,
+} from "@/lib/marketplace";
+import { formatEther, createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
+import { toast } from "sonner";
+import ABI from "../ABI.json";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const CONTRACT_ADDRESS = process.env
+  .NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
+
+const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http(),
+});
 
 interface PendingWork {
   id: string;
@@ -33,76 +63,378 @@ const SPRING = {
   stiffness: 100,
 } as const;
 
-// Mock data
-const MOCK_WORKS: PendingWork[] = [
-  {
-    id: "1",
-    serviceTitle: "Custom React Dashboard Development",
-    otherParty: "0x742d...3a9c",
-    amount: 0.5,
-    status: "pending",
-    role: "provider",
-    deadline: "7 days",
-    taskDetails: "Build a responsive admin dashboard with charts and data tables. Include dark mode support.",
-    createdAt: "2 hours ago",
-    messages: [
-      { sender: "them", text: "Hey! Looking forward to working with you.", timestamp: "1 hour ago" },
-    ],
-  },
-  {
-    id: "2",
-    serviceTitle: "UI/UX Design for Mobile App",
-    otherParty: "0x8a3f...1b2e",
-    amount: 0.3,
-    status: "in_progress",
-    role: "client",
-    deadline: "5 days",
-    taskDetails: "Design a modern mobile app interface for a fitness tracking application.",
-    createdAt: "1 day ago",
-    messages: [
-      { sender: "me", text: "Can you send me the initial mockups?", timestamp: "5 hours ago" },
-      { sender: "them", text: "Sure, I'll have them ready by tomorrow.", timestamp: "3 hours ago" },
-    ],
-  },
-  {
-    id: "3",
-    serviceTitle: "Smart Contract Audit",
-    otherParty: "0x5c7d...8f4a",
-    amount: 1.2,
-    status: "pending",
-    role: "client",
-    deadline: "14 days",
-    taskDetails: "Comprehensive security audit of ERC-20 token contract with detailed report.",
-    createdAt: "3 days ago",
-    messages: [],
-  },
-];
-
-export function MyPendingWorksModal({ isOpen, onClose }: MyPendingWorksModalProps) {
-  const [activeTab, setActiveTab] = useState<"all" | "client" | "provider">("all");
+export function MyPendingWorksModal({
+  isOpen,
+  onClose,
+}: MyPendingWorksModalProps) {
+  const [activeTab, setActiveTab] = useState<"all" | "client" | "provider">(
+    "provider",
+  );
   const [selectedWork, setSelectedWork] = useState<PendingWork | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [mounted, setMounted] = useState(false);
+  const [works, setWorks] = useState<PendingWork[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const filteredWorks = MOCK_WORKS.filter(work => {
+  const { address } = useAccount();
+  const { data: providerPendingIds } = useGetActiveRequests(
+    address as `0x${string}`,
+    false,
+  );
+  const { data: clientPendingIds } = useGetActiveRequests(
+    address as `0x${string}`,
+    true,
+  );
+  const { acceptRequest, isPending: isAccepting } = useAcceptRequest();
+  const { rejectRequest, isPending: isRejecting } = useRejectRequest();
+  const { postMessage, isPending: isSendingMessage } = usePostMessage();
+
+  // Fetch messages for the selected work
+  const { data: messagesData } = useRequestMessages(
+    selectedWork?.id as `0x${string}` | undefined,
+  );
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Debug: Log pending request IDs
+  useEffect(() => {
+    console.log("Provider pending IDs:", providerPendingIds);
+    console.log("Client pending IDs:", clientPendingIds);
+    console.log("Current address:", address);
+  }, [providerPendingIds, clientPendingIds, address]);
+
+  // Transform fetched messages to UI format
+  useEffect(() => {
+    if (!selectedWork || !messagesData) return;
+
+    const formattedMessages = (messagesData as any[]).map((msg: any) => ({
+      sender:
+        msg.sender.toLowerCase() === address?.toLowerCase()
+          ? ("me" as const)
+          : ("them" as const),
+      text: msg.text,
+      timestamp: new Date(parseInt(msg.timestamp) * 1000).toLocaleTimeString(),
+    }));
+
+    setSelectedWork({
+      ...selectedWork,
+      messages: formattedMessages,
+    });
+  }, [messagesData, selectedWork?.id, address]);
+
+  // Fetch pending requests data
+  useEffect(() => {
+    const fetchPendingWorks = async () => {
+      if (!address) {
+        console.log("No address, skipping fetch");
+        return;
+      }
+
+      console.log("Fetching pending works for address:", address);
+      console.log("Provider pending IDs:", providerPendingIds);
+      console.log("Client pending IDs:", clientPendingIds);
+
+      setLoading(true);
+      try {
+        const allWorks: PendingWork[] = [];
+
+        // Fetch provider pending requests
+        if (
+          providerPendingIds &&
+          Array.isArray(providerPendingIds) &&
+          providerPendingIds.length > 0
+        ) {
+          console.log(
+            "Fetching",
+            providerPendingIds.length,
+            "provider requests",
+          );
+          for (const requestId of providerPendingIds as string[]) {
+            try {
+              console.log("Fetching provider request data for:", requestId);
+
+              // Fetch actual request details from contract
+              const requestDataArray = (await publicClient.readContract({
+                address: CONTRACT_ADDRESS,
+                abi: ABI,
+                functionName: "requests",
+                args: [requestId],
+              })) as any[];
+
+              console.log("Provider request data received:", requestDataArray);
+
+              // Handle both array and object formats for `requests`
+              if (requestDataArray) {
+                const client = (requestDataArray as any).client ?? requestDataArray[0] ?? "";
+                const provider = (requestDataArray as any).provider ?? requestDataArray[1] ?? "";
+                const serviceIndex = (requestDataArray as any).serviceIndex ?? requestDataArray[2] ?? BigInt(0);
+                const escrowAmount = (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
+                const clientNote = (requestDataArray as any).clientNote ?? requestDataArray[3] ?? "";
+                const contractStatus = (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
+
+                // Fetch the service title using provider and serviceIndex
+                let serviceTitle = "Service Request";
+                try {
+                  const serviceData = (await publicClient.readContract({
+                    address: CONTRACT_ADDRESS,
+                    abi: ABI,
+                    functionName: "providerServices",
+                    args: [provider as `0x${string}`, serviceIndex],
+                  })) as any;
+
+                  // Handle both array and object formats
+                  if (serviceData?.title) {
+                    serviceTitle = serviceData.title;
+                  } else if (Array.isArray(serviceData)) {
+                    serviceTitle = serviceData[0] || "Service Request";
+                  }
+                } catch (e) {
+                  console.warn("Failed to fetch service title:", e);
+                }
+
+                // Map contract status to UI status: 0=Pending, 1=Accepted, 2=PendingReview
+                let uiStatus: "pending" | "in_progress" | "completed" =
+                  "pending";
+                if (contractStatus === 1 || contractStatus === 2) {
+                  uiStatus = "in_progress";
+                } else if (contractStatus === 3) {
+                  uiStatus = "completed";
+                } else if (contractStatus === 4) {
+                  return; // Skip rejected requests
+                }
+
+                const escrowAmountEth = formatEther(escrowAmount);
+                const clientAddr = client || "Unknown";
+
+                allWorks.push({
+                  id: requestId,
+                  serviceTitle: serviceTitle || "Service Request",
+                  otherParty:
+                    clientAddr.substring(0, 6) +
+                    "..." +
+                    clientAddr.substring(clientAddr.length - 4),
+                  amount: parseFloat(escrowAmountEth),
+                  status: uiStatus,
+                  role: "provider",
+                  deadline: "7 days",
+                  taskDetails: clientNote || "Service request",
+                  createdAt: "Recently",
+                  messages: [],
+                });
+              } else {
+                console.warn(
+                  "Invalid request data for provider request:",
+                  requestId,
+                  "received:",
+                  requestDataArray,
+                );
+              }
+            } catch (e) {
+              console.error("Error fetching provider request:", requestId, e);
+            }
+          }
+        }
+
+        // Fetch client pending requests
+        if (
+          clientPendingIds &&
+          Array.isArray(clientPendingIds) &&
+          clientPendingIds.length > 0
+        ) {
+          console.log("Fetching", clientPendingIds.length, "client requests");
+          for (const requestId of clientPendingIds as string[]) {
+            try {
+              console.log("Fetching client request data for:", requestId);
+
+              // Fetch actual request details from contract
+              const requestDataArray = (await publicClient.readContract({
+                address: CONTRACT_ADDRESS,
+                abi: ABI,
+                functionName: "requests",
+                args: [requestId],
+              })) as any[];
+
+              console.log("Client request data received:", requestDataArray);
+
+              // Handle both array and object formats for `requests`
+              if (requestDataArray) {
+                const provider = (requestDataArray as any).provider ?? requestDataArray[1] ?? "";
+                const serviceIndex = (requestDataArray as any).serviceIndex ?? requestDataArray[2] ?? BigInt(0);
+                const escrowAmount = (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
+                const clientNote = (requestDataArray as any).clientNote ?? requestDataArray[3] ?? "";
+                const contractStatus = (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
+
+                // Fetch the service title using provider and serviceIndex
+                let serviceTitle = "My Service Request";
+                try {
+                  const serviceData = (await publicClient.readContract({
+                    address: CONTRACT_ADDRESS,
+                    abi: ABI,
+                    functionName: "providerServices",
+                    args: [provider as `0x${string}`, serviceIndex],
+                  })) as any;
+
+                  // Handle both array and object formats
+                  if (serviceData?.title) {
+                    serviceTitle = serviceData.title;
+                  } else if (Array.isArray(serviceData)) {
+                    serviceTitle = serviceData[0] || "My Service Request";
+                  }
+                } catch (e) {
+                  console.warn("Failed to fetch service title:", e);
+                }
+
+                // Map contract status: 0=Pending, 1=Accepted, 2=PendingReview
+                let uiStatus: "pending" | "in_progress" | "completed" =
+                  "pending";
+                if (contractStatus === 1 || contractStatus === 2) {
+                  uiStatus = "in_progress";
+                } else if (contractStatus === 3) {
+                  uiStatus = "completed";
+                } else if (contractStatus === 4) {
+                  return; // Skip rejected requests
+                }
+
+                const escrowAmountEth = formatEther(escrowAmount);
+                const providerAddr = provider || "Unknown";
+
+                allWorks.push({
+                  id: requestId,
+                  serviceTitle: serviceTitle || "My Service Request",
+                  otherParty:
+                    providerAddr.substring(0, 6) +
+                    "..." +
+                    providerAddr.substring(providerAddr.length - 4),
+                  amount: parseFloat(escrowAmountEth),
+                  status: uiStatus,
+                  role: "client",
+                  deadline: "7 days",
+                  taskDetails: clientNote || "Service request",
+                  createdAt: "Recently",
+                  messages: [],
+                });
+              } else {
+                console.warn(
+                  "Invalid request data for client request:",
+                  requestId,
+                  "received:",
+                  requestDataArray,
+                );
+              }
+            } catch (e) {
+              console.error("Error fetching client request:", requestId, e);
+            }
+          }
+        }
+
+        console.log(
+          "Total pending works fetched:",
+          allWorks.length,
+          "Works:",
+          allWorks,
+        );
+        setWorks(allWorks);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (isOpen) {
+      fetchPendingWorks();
+    }
+  }, [address, providerPendingIds, clientPendingIds, isOpen]);
+
+  const filteredWorks = works.filter((work) => {
     if (activeTab === "all") return true;
     return work.role === activeTab;
   });
 
-  const handleAccept = (workId: string) => {
-    console.log("Accepting work:", workId);
-    // Blockchain integration will go here
+  const handleAccept = async (workId: string) => {
+    try {
+      const hash = await acceptRequest(workId as `0x${string}`);
+      if (hash) {
+        toast.info("Transaction submitted, waiting for confirmation...");
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status === "success") {
+          toast.success("Request accepted!");
+          if (selectedWork?.id === workId) {
+            setSelectedWork({ ...selectedWork, status: "in_progress" });
+          }
+          setWorks((prev) =>
+            prev.map((w) =>
+              w.id === workId ? { ...w, status: "in_progress" } : w,
+            ),
+          );
+        } else {
+          toast.error("Transaction failed");
+        }
+      }
+    } catch (err) {
+      console.error("Error accepting request:", err);
+      toast.error("Failed to accept request");
+    }
   };
 
-  const handleReject = (workId: string) => {
-    console.log("Rejecting work:", workId);
-    // Blockchain integration will go here
+  const handleReject = async (workId: string) => {
+    try {
+      const hash = await rejectRequest(workId as `0x${string}`);
+      if (hash) {
+        toast.info("Transaction submitted, waiting for confirmation...");
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status === "success") {
+          toast.success("Request rejected and refunded");
+          if (selectedWork?.id === workId) {
+            setSelectedWork(null);
+          }
+          setWorks((prev) => prev.filter((w) => w.id !== workId));
+        } else {
+          toast.error("Transaction failed");
+        }
+      }
+    } catch (err) {
+      console.error("Error rejecting request:", err);
+      toast.error("Failed to reject request");
+    }
   };
 
-  const handleSendMessage = (workId: string) => {
-    if (!messageInput.trim()) return;
-    console.log("Sending message to work:", workId, messageInput);
-    setMessageInput("");
+  const handleSendMessage = async (workId: string) => {
+    if (!messageInput.trim() || !selectedWork) return;
+    try {
+      const hash = await postMessage(workId as `0x${string}`, messageInput);
+      if (hash) {
+        toast.info("Sending message...");
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        if (receipt.status === "success") {
+          toast.success("Message sent!");
+          const newMessage = {
+            sender: "me" as const,
+            text: messageInput,
+            timestamp: new Date().toLocaleTimeString(),
+          };
+          setMessageInput("");
+          if (selectedWork?.id === workId) {
+            setSelectedWork({
+              ...selectedWork,
+              messages: [...selectedWork.messages, newMessage],
+            });
+          }
+          setWorks((prev) =>
+            prev.map((w) =>
+              w.id === workId
+                ? { ...w, messages: [...w.messages, newMessage] }
+                : w,
+            ),
+          );
+        } else {
+          toast.error("Transaction failed");
+        }
+      }
+    } catch (err) {
+      console.error("Error sending message:", err);
+      toast.error("Failed to send message");
+    }
   };
 
   return (
@@ -177,7 +509,20 @@ export function MyPendingWorksModal({ isOpen, onClose }: MyPendingWorksModalProp
               <div className="flex-1 overflow-hidden flex">
                 {/* Works List */}
                 <div className="w-2/5 border-r border-black/5 dark:border-white/5 overflow-y-auto custom-scrollbar">
-                  {filteredWorks.length === 0 ? (
+                  {loading ? (
+                    <div className="p-4 space-y-3">
+                      {[1, 2, 3].map((i) => (
+                        <div key={i} className="w-full glass-macos rounded-2xl p-4">
+                          <Skeleton className="h-4 w-3/4 mb-2" />
+                          <Skeleton className="h-3 w-1/2 mb-4" />
+                          <div className="flex items-center justify-between pt-3 border-t border-black/5 dark:border-white/5">
+                            <Skeleton className="h-4 w-1/4" />
+                            <Skeleton className="h-3 w-1/5" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : filteredWorks.length === 0 ? (
                     <div className="p-8 text-center">
                       <div className="text-6xl mb-4 opacity-20">📋</div>
                       <p className="text-black/60 dark:text-white/60 text-sm">
@@ -204,16 +549,19 @@ export function MyPendingWorksModal({ isOpen, onClose }: MyPendingWorksModalProp
                                 {work.serviceTitle}
                               </h3>
                               <p className="text-xs text-black/60 dark:text-white/60">
-                                {work.role === "client" ? "Provider" : "Client"}: {work.otherParty}
+                                {work.role === "client" ? "Provider" : "Client"}
+                                : {work.otherParty}
                               </p>
                             </div>
-                            <div className={`px-2 py-1 rounded-lg text-xs font-bold ${
-                              work.status === "pending"
-                                ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
-                                : work.status === "in_progress"
-                                ? "bg-cyan-500/20 text-cyan-700 dark:text-cyan-400"
-                                : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
-                            }`}>
+                            <div
+                              className={`px-2 py-1 rounded-lg text-xs font-bold ${
+                                work.status === "pending"
+                                  ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
+                                  : work.status === "in_progress"
+                                    ? "bg-cyan-500/20 text-cyan-700 dark:text-cyan-400"
+                                    : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                              }`}
+                            >
                               {work.status.replace("_", " ")}
                             </div>
                           </div>
@@ -237,7 +585,24 @@ export function MyPendingWorksModal({ isOpen, onClose }: MyPendingWorksModalProp
 
                 {/* Work Details */}
                 <div className="flex-1 flex flex-col">
-                  {selectedWork ? (
+                  {loading ? (
+                    <div className="p-6 h-full flex flex-col">
+                      <div className="border-b border-black/5 dark:border-white/5 pb-6">
+                        <Skeleton className="h-8 w-1/2 mb-4" />
+                        <Skeleton className="h-4 w-1/3 mb-4" />
+                        <div className="mt-4 glass-macos rounded-xl p-4">
+                          <Skeleton className="h-4 w-1/4 mb-2" />
+                          <Skeleton className="h-3 w-full mb-1" />
+                          <Skeleton className="h-3 w-5/6 mb-1" />
+                          <Skeleton className="h-3 w-4/6" />
+                        </div>
+                      </div>
+                      <div className="flex-1 flex flex-col gap-4 pt-6">
+                        <Skeleton className="h-10 w-2/3 self-end rounded-2xl" />
+                        <Skeleton className="h-10 w-2/3 self-start rounded-2xl" />
+                      </div>
+                    </div>
+                  ) : selectedWork ? (
                     <>
                       {/* Details Header */}
                       <div className="p-6 border-b border-black/5 dark:border-white/5">
@@ -261,101 +626,136 @@ export function MyPendingWorksModal({ isOpen, onClose }: MyPendingWorksModalProp
                         </div>
 
                         {/* Action Buttons */}
-                        {selectedWork.role === "provider" && selectedWork.status === "pending" && (
-                          <div className="flex gap-3 mt-4">
-                            <motion.button
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => handleAccept(selectedWork.id)}
-                              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold text-sm flex items-center justify-center gap-2"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                              Accept Project
-                            </motion.button>
-                            <motion.button
-                              whileHover={{ scale: 1.02 }}
-                              whileTap={{ scale: 0.98 }}
-                              onClick={() => handleReject(selectedWork.id)}
-                              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-red-500 text-white font-semibold text-sm flex items-center justify-center gap-2"
-                            >
-                              <XCircle className="w-4 h-4" />
-                              Decline
-                            </motion.button>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Chat */}
-                      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4">
-                        <div className="flex items-center gap-2 mb-4">
-                          <MessageCircle className="w-4 h-4 text-black/60 dark:text-white/60" />
-                          <h4 className="text-sm font-semibold text-black dark:text-white">
-                            Messages
-                          </h4>
-                        </div>
-                        {selectedWork.messages.length === 0 ? (
-                          <p className="text-sm text-black/40 dark:text-white/40 text-center py-8">
-                            No messages yet. Start a conversation!
-                          </p>
-                        ) : (
-                          selectedWork.messages.map((msg, idx) => (
-                            <div
-                              key={idx}
-                              className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
-                            >
-                              <div
-                                className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
-                                  msg.sender === "me"
-                                    ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
-                                    : "glass-macos text-black dark:text-white"
+                        {selectedWork.role === "provider" &&
+                          selectedWork.status === "pending" && (
+                            <div className="flex gap-3 mt-4">
+                              <motion.button
+                                whileHover={{ scale: isAccepting || isRejecting ? 1 : 1.02 }}
+                                whileTap={{ scale: isAccepting || isRejecting ? 1 : 0.98 }}
+                                onClick={() => handleAccept(selectedWork.id)}
+                                disabled={isAccepting || isRejecting}
+                                className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 ${
+                                  isAccepting || isRejecting
+                                    ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
+                                    : "bg-gradient-to-r from-emerald-500 to-teal-500"
                                 }`}
                               >
-                                <p className="text-sm">{msg.text}</p>
-                                <p
-                                  className={`text-xs mt-1 ${
-                                    msg.sender === "me"
-                                      ? "text-white/70"
-                                      : "text-black/50 dark:text-white/50"
-                                  }`}
-                                >
-                                  {msg.timestamp}
-                                </p>
-                              </div>
+                                {isAccepting ? (
+                                  <>
+                                    <Clock className="w-4 h-4 animate-spin" />
+                                    Accepting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    Accept Project
+                                  </>
+                                )}
+                              </motion.button>
+                              <motion.button
+                                whileHover={{ scale: isAccepting || isRejecting ? 1 : 1.02 }}
+                                whileTap={{ scale: isAccepting || isRejecting ? 1 : 0.98 }}
+                                onClick={() => handleReject(selectedWork.id)}
+                                disabled={isAccepting || isRejecting}
+                                className={`flex-1 px-4 py-2.5 rounded-xl text-white font-semibold text-sm flex items-center justify-center gap-2 ${
+                                  isAccepting || isRejecting
+                                    ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
+                                    : "bg-gradient-to-r from-rose-500 to-red-500"
+                                }`}
+                              >
+                                {isRejecting ? (
+                                  <>
+                                    <Clock className="w-4 h-4 animate-spin" />
+                                    Declining...
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle className="w-4 h-4" />
+                                    Decline
+                                  </>
+                                )}
+                              </motion.button>
                             </div>
-                          ))
-                        )}
+                          )}
                       </div>
 
-                      {/* Message Input */}
-                      <div className="border-t border-black/5 dark:border-white/5 p-4">
-                        <div className="flex gap-2">
-                          <input
-                            type="text"
-                            value={messageInput}
-                            onChange={(e) => setMessageInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                handleSendMessage(selectedWork.id);
-                              }
-                            }}
-                            placeholder="Type a message..."
-                            className="flex-1 glass-search px-4 py-2.5 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
-                          />
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleSendMessage(selectedWork.id)}
-                            disabled={!messageInput.trim()}
-                            className={`px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                              messageInput.trim()
-                                ? "btn-macos"
-                                : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
-                            }`}
-                          >
-                            <Send className="w-4 h-4" />
-                          </motion.button>
-                        </div>
-                      </div>
+                      {/* Chat / Messages Section */}
+                      {selectedWork.status !== "pending" && (
+                        <>
+                          {/* Chat */}
+                          <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-4 border-t border-black/5 dark:border-white/5">
+                            <div className="flex items-center gap-2 mb-4">
+                              <MessageCircle className="w-4 h-4 text-black/60 dark:text-white/60" />
+                              <h4 className="text-sm font-semibold text-black dark:text-white">
+                                Messages
+                              </h4>
+                            </div>
+                            {selectedWork.messages.length === 0 ? (
+                              <p className="text-sm text-black/40 dark:text-white/40 text-center py-8">
+                                No messages yet. Start a conversation!
+                              </p>
+                            ) : (
+                              selectedWork.messages.map((msg, idx) => (
+                                <div
+                                  key={idx}
+                                  className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
+                                >
+                                  <div
+                                    className={`max-w-[70%] px-4 py-2.5 rounded-2xl ${
+                                      msg.sender === "me"
+                                        ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
+                                        : "glass-macos text-black dark:text-white"
+                                    }`}
+                                  >
+                                    <p className="text-sm">{msg.text}</p>
+                                    <p
+                                      className={`text-xs mt-1 ${
+                                        msg.sender === "me"
+                                          ? "text-white/70"
+                                          : "text-black/50 dark:text-white/50"
+                                      }`}
+                                    >
+                                      {msg.timestamp}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))
+                            )}
+                          </div>
+
+                          {/* Message Input */}
+                          <div className="border-t border-black/5 dark:border-white/5 p-4">
+                            <div className="flex gap-2">
+                              <input
+                                type="text"
+                                value={messageInput}
+                                onChange={(e) => setMessageInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && !isSendingMessage) {
+                                    handleSendMessage(selectedWork.id);
+                                  }
+                                }}
+                                disabled={isSendingMessage}
+                                placeholder={isSendingMessage ? "Sending..." : "Type a message..."}
+                                className="flex-1 glass-search px-4 py-2.5 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all disabled:opacity-50"
+                              />
+                              <motion.button
+                                whileHover={{ scale: !messageInput.trim() || isSendingMessage ? 1 : 1.05 }}
+                                whileTap={{ scale: !messageInput.trim() || isSendingMessage ? 1 : 0.95 }}
+                                onClick={() => handleSendMessage(selectedWork.id)}
+                                disabled={!messageInput.trim() || isSendingMessage}
+                                className={`px-4 py-2.5 rounded-xl font-semibold text-sm flex items-center gap-2 transition-all ${
+                                  messageInput.trim() && !isSendingMessage
+                                    ? "btn-macos"
+                                    : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
+                                }`}
+                              >
+                                {isSendingMessage ? <Clock className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                              </motion.button>
+                            </div>
+                          </div>
+                        </>
+                      )}
                     </>
                   ) : (
                     <div className="flex-1 flex items-center justify-center p-8">

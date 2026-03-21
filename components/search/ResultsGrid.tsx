@@ -382,7 +382,13 @@ const mapOnChainService = (svc: OnChainService): ResultData => {
   return {
     id: `onchain-${svc.provider}-${svc.serviceIndex}`,
     title: svc.title,
-    provider: { name: shortAddr, avatar: "", level: "Expert", verified: true },
+    provider: {
+      name: shortAddr,
+      avatar: "",
+      level: "Expert",
+      verified: true,
+      address: svc.provider,
+    },
     category,
     price: { amount: Number(formatEther(svc.priceWei)), type: "fixed" },
     rating: 5.0,

@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from "motion/react";
 import { X, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import type { ResultData } from "./search/ResultCard";
 import { EthIcon } from "@/components/EthIcon";
+import { useRequestService } from "@/lib/marketplace";
+import { useAccount } from "wagmi";
+import { toast } from "sonner";
 
 interface BookServiceModalProps {
   isOpen: boolean;
@@ -18,37 +21,94 @@ const SPRING = {
   stiffness: 100,
 } as const;
 
-export function BookServiceModal({ isOpen, onClose, service }: BookServiceModalProps) {
+export function BookServiceModal({
+  isOpen,
+  onClose,
+  service,
+}: BookServiceModalProps) {
   const [taskDetails, setTaskDetails] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const { address } = useAccount();
+  const { requestService, isPending } = useRequestService();
+
+  const isFormValid = taskDetails.trim() !== "" && address && service;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!taskDetails.trim() || !service) return;
+    if (!taskDetails.trim() || !service || !address) return;
+
+    // Validate provider address
+    if (!service.provider.address || service.provider.address === "undefined") {
+      toast.error(
+        "Provider address not available. Service may not be properly loaded.",
+      );
+      return;
+    }
 
     setIsProcessing(true);
 
-    // Simulate blockchain transaction
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    try {
+      // Parse service index from id (format: "onchain-providerAddress-serviceIndex")
+      const parts = service.id.split("-");
+      const serviceIndex = BigInt(parts[parts.length - 1] || "0");
 
-    console.log("Booking service with details:", {
-      serviceId: service.id,
-      provider: service.provider.name,
-      amount: service.price.amount,
-      taskDetails,
-      timestamp: new Date().toISOString(),
-    });
+      // Call requestService with provider address, service index, and client note
+      // ⚠️ CRITICAL: Must send exact service listing price, not user input
+      console.log("Booking service with:", {
+        provider: service.provider.address,
+        serviceIndex: serviceIndex.toString(),
+        servicePrice: service.price.amount,
+        clientNote: taskDetails,
+      });
 
-    setIsProcessing(false);
-    setShowConfirmation(true);
+      const txHash = await requestService(
+        service.provider.address as `0x${string}`,
+        serviceIndex,
+        taskDetails,
+        service.price.amount.toString(), // Send exact listing price
+      );
 
-    setTimeout(() => {
-      setShowConfirmation(false);
-      onClose();
-      setTaskDetails("");
-    }, 2500);
+      console.log("Transaction hash:", txHash);
+
+      console.log("Service request created (Pending status):", {
+        serviceId: service.id,
+        provider: service.provider.name,
+        amount: service.price.amount,
+        taskDetails,
+        escrowLocked: true,
+        status: "Pending",
+        timestamp: new Date().toISOString(),
+      });
+
+      setIsProcessing(false);
+      setShowConfirmation(true);
+
+      toast.success(
+        "Service request created! Funds locked in escrow. Status: Pending",
+      );
+
+      setTimeout(() => {
+        setShowConfirmation(false);
+        onClose();
+        setTaskDetails("");
+      }, 2500);
+    } catch (err: any) {
+      setIsProcessing(false);
+
+      if (
+        err?.message?.includes("User rejected the request") ||
+        err?.code === 4001
+      ) {
+        toast.info("Transaction cancelled by user.");
+      } else {
+        console.error("Failed to request service:", err);
+        toast.error(
+          "Failed to create service request: " + (err?.message || err),
+        );
+      }
+    }
   };
 
   if (!service) return null;
@@ -58,7 +118,7 @@ export function BookServiceModal({ isOpen, onClose, service }: BookServiceModalP
     "Timeline and milestones",
     "Specific requirements or constraints",
     "Expected output format",
-    "Any reference materials or examples"
+    "Any reference materials or examples",
   ];
 
   return (
@@ -107,18 +167,25 @@ export function BookServiceModal({ isOpen, onClose, service }: BookServiceModalP
               </div>
 
               {/* Content */}
-              <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar">
+              <form
+                onSubmit={handleSubmit}
+                className="flex-1 overflow-y-auto custom-scrollbar"
+              >
                 <div className="p-6 space-y-6">
                   {/* Service Summary */}
                   <div className="glass-macos rounded-2xl p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <span className="text-sm font-semibold text-black dark:text-white">Service Cost</span>
+                      <span className="text-sm font-semibold text-black dark:text-white">
+                        Service Cost
+                      </span>
                       <div className="flex items-center gap-2">
                         <EthIcon className="w-5 h-5" />
                         <span className="text-xl font-bold text-black dark:text-white">
                           {service.price.amount.toLocaleString()}
                         </span>
-                        <span className="text-sm text-black/60 dark:text-white/60">ETH</span>
+                        <span className="text-sm text-black/60 dark:text-white/60">
+                          ETH
+                        </span>
                       </div>
                     </div>
                     <div className="text-xs text-black/60 dark:text-white/60">
@@ -137,7 +204,10 @@ export function BookServiceModal({ isOpen, onClose, service }: BookServiceModalP
                       </p>
                       <ul className="space-y-1">
                         {sampleRequirements.map((req, idx) => (
-                          <li key={idx} className="text-xs text-black/60 dark:text-white/60 flex items-start gap-2">
+                          <li
+                            key={idx}
+                            className="text-xs text-black/60 dark:text-white/60 flex items-start gap-2"
+                          >
                             <span className="text-cyan-500">•</span>
                             <span>{req}</span>
                           </li>
@@ -174,7 +244,9 @@ ADDITIONAL NOTES:
                       className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/40 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all resize-none font-mono text-sm"
                     />
                     <p className="text-xs text-black/50 dark:text-white/50 mt-2">
-                      Be specific and structured. This helps the provider deliver exactly what you need and enables quality evaluation.
+                      Be specific and structured. This helps the provider
+                      deliver exactly what you need and enables quality
+                      evaluation.
                     </p>
                   </div>
 
@@ -184,10 +256,20 @@ ADDITIONAL NOTES:
                       <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
                       <div>
                         <p className="text-sm font-semibold text-black dark:text-white mb-1">
-                          Payment will be held in escrow
+                          Payment locked in escrow - Status: Pending
                         </p>
                         <p className="text-xs text-black/60 dark:text-white/60">
-                          Your payment will be securely held on-chain until you confirm the work is completed to your satisfaction.
+                          Your {service.price.amount} ETH will be securely
+                          locked on-chain. Once sent:
+                          <br />
+                          • Status will be "Pending" - awaiting provider
+                          response
+                          <br />
+                          • You can check messages directly from pending
+                          requests
+                          <br />
+                          • Provider can accept or reject your request
+                          <br />• Funds released only after dispute resolution
                         </p>
                       </div>
                     </div>
@@ -208,24 +290,32 @@ ADDITIONAL NOTES:
                   </motion.button>
                   <motion.button
                     type="submit"
-                    disabled={!taskDetails.trim() || isProcessing}
-                    whileHover={(!isProcessing && taskDetails.trim()) ? { scale: 1.02 } : {}}
-                    whileTap={(!isProcessing && taskDetails.trim()) ? { scale: 0.98 } : {}}
+                    disabled={!isFormValid || isProcessing || isPending}
+                    whileHover={
+                      isFormValid && !isProcessing && !isPending
+                        ? { scale: 1.02 }
+                        : {}
+                    }
+                    whileTap={
+                      isFormValid && !isProcessing && !isPending
+                        ? { scale: 0.98 }
+                        : {}
+                    }
                     className={`px-8 py-2.5 rounded-2xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                      (!isProcessing && taskDetails.trim())
+                      isFormValid && !isProcessing && !isPending
                         ? "btn-macos"
                         : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
                     }`}
                   >
-                    {isProcessing ? (
+                    {isProcessing || isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        Processing Payment...
+                        {isPending ? "Confirming TX..." : "Processing..."}
                       </>
                     ) : (
                       <>
                         <EthIcon className="w-4 h-4" />
-                        Pay {service.price.amount} ETH
+                        Request & Lock {service.price.amount} ETH in Escrow
                       </>
                     )}
                   </motion.button>
@@ -249,10 +339,11 @@ ADDITIONAL NOTES:
                 </div>
                 <div className="flex-1">
                   <p className="font-bold text-black dark:text-white text-sm">
-                    Booking Confirmed!
+                    Request Created - Pending!
                   </p>
                   <p className="text-xs text-black/60 dark:text-white/60">
-                    Payment held in escrow
+                    {service?.price.amount} ETH locked in escrow. Awaiting
+                    provider response.
                   </p>
                 </div>
               </motion.div>
