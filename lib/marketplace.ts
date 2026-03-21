@@ -42,6 +42,25 @@ export function useProviderServices(
   });
 }
 
+// 2a. Get a specific service by provider and index
+export function useGetServiceByIndex(
+  providerAddress: `0x${string}` | undefined,
+  serviceIndex: bigint | number | undefined,
+) {
+  return useReadContract({
+    address: CONTRACT_ADDRESS,
+    abi: ABI,
+    functionName: "providerServices",
+    args:
+      providerAddress && serviceIndex !== undefined
+        ? [providerAddress, serviceIndex]
+        : undefined,
+    query: {
+      enabled: !!providerAddress && serviceIndex !== undefined,
+    },
+  });
+}
+
 // 3. Get details of a specific request
 export function useRequestDetails(requestId: `0x${string}` | undefined) {
   return useReadContract({

@@ -19,6 +19,7 @@ import {
   useAcceptRequest,
   useRejectRequest,
   usePostMessage,
+  useGetServiceByIndex,
 } from "@/lib/marketplace";
 import { formatEther, createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
@@ -166,9 +167,40 @@ export function MyPendingWorksModal({
               // Parse tuple array: [client, provider, serviceIndex, clientNote, escrowAmount, status, ...]
               if (requestDataArray && requestDataArray.length >= 6) {
                 const client = requestDataArray[0] as string;
+                const provider = requestDataArray[1] as string;
+                const serviceIndex = requestDataArray[2] as bigint;
                 const escrowAmount = requestDataArray[4] as bigint;
                 const clientNote = requestDataArray[3] as string;
                 const contractStatus = (requestDataArray[5] as number) || 0;
+
+                // Fetch the service title using provider and serviceIndex
+                let serviceTitle = "Service Request";
+                try {
+                  const serviceData = (await publicClient.readContract({
+                    address: CONTRACT_ADDRESS,
+                    abi: ABI,
+                    functionName: "providerServices",
+                    args: [provider as `0x${string}`, serviceIndex],
+                  })) as any;
+
+                  console.log(
+                    "Service data fetched:",
+                    serviceData,
+                    "Type:",
+                    typeof serviceData,
+                  );
+
+                  // Handle both array and object formats
+                  if (Array.isArray(serviceData)) {
+                    serviceTitle = serviceData[0] || "Service Request";
+                  } else if (serviceData?.title) {
+                    serviceTitle = serviceData.title;
+                  }
+
+                  console.log("Extracted service title:", serviceTitle);
+                } catch (e) {
+                  console.warn("Failed to fetch service title:", e);
+                }
 
                 console.log(
                   "Parsed data - client:",
@@ -177,6 +209,8 @@ export function MyPendingWorksModal({
                   escrowAmount,
                   "clientNote:",
                   clientNote,
+                  "serviceTitle:",
+                  serviceTitle,
                   "contractStatus:",
                   contractStatus,
                 );
@@ -197,7 +231,7 @@ export function MyPendingWorksModal({
 
                 allWorks.push({
                   id: requestId,
-                  serviceTitle: clientNote || "Service Request",
+                  serviceTitle: serviceTitle || "Service Request",
                   otherParty:
                     clientAddr.substring(0, 6) +
                     "..." +
@@ -248,9 +282,42 @@ export function MyPendingWorksModal({
               // Parse tuple array: [client, provider, serviceIndex, clientNote, escrowAmount, status, ...]
               if (requestDataArray && requestDataArray.length >= 6) {
                 const provider = requestDataArray[1] as string;
+                const serviceIndex = requestDataArray[2] as bigint;
                 const escrowAmount = requestDataArray[4] as bigint;
                 const clientNote = requestDataArray[3] as string;
                 const contractStatus = (requestDataArray[5] as number) || 0;
+
+                // Fetch the service title using provider and serviceIndex
+                let serviceTitle = "My Service Request";
+                try {
+                  const serviceData = (await publicClient.readContract({
+                    address: CONTRACT_ADDRESS,
+                    abi: ABI,
+                    functionName: "providerServices",
+                    args: [provider as `0x${string}`, serviceIndex],
+                  })) as any;
+
+                  console.log(
+                    "Service data fetched (client):",
+                    serviceData,
+                    "Type:",
+                    typeof serviceData,
+                  );
+
+                  // Handle both array and object formats
+                  if (Array.isArray(serviceData)) {
+                    serviceTitle = serviceData[0] || "My Service Request";
+                  } else if (serviceData?.title) {
+                    serviceTitle = serviceData.title;
+                  }
+
+                  console.log(
+                    "Extracted service title (client):",
+                    serviceTitle,
+                  );
+                } catch (e) {
+                  console.warn("Failed to fetch service title:", e);
+                }
 
                 // Map contract status: 0=Pending, 1=Accepted, 2=PendingReview
                 let uiStatus: "pending" | "in_progress" | "completed" =
@@ -268,7 +335,7 @@ export function MyPendingWorksModal({
 
                 allWorks.push({
                   id: requestId,
-                  serviceTitle: clientNote || "My Service Request",
+                  serviceTitle: serviceTitle || "My Service Request",
                   otherParty:
                     providerAddr.substring(0, 6) +
                     "..." +

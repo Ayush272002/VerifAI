@@ -318,18 +318,6 @@ export default function WalletConnect({
               My Services
             </div>
             <DropdownMenuItem
-              className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
-              onClick={onMyPendingWorksClick}
-            >
-              <Loader2 className="mr-2 h-4 w-4" />
-              Pending Works
-              {providerPendingCount > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                  {providerPendingCount}
-                </span>
-              )}
-            </DropdownMenuItem>
-            <DropdownMenuItem
               className="cursor-pointer flex items-center text-black dark:text-white focus:text-black dark:focus:text-white hover:text-black dark:hover:text-white focus:bg-black/5 dark:focus:bg-white/5 hover:bg-black/5 dark:hover:bg-white/5 font-medium"
               onClick={onMyServicesClick}
             >
