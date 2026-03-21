@@ -24,7 +24,6 @@ import { useTheme } from "@/hooks/useTheme";
 
 import WalletConnect from "@/components/WalletConnect";
 import { Button } from "@/components/ui/button";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { PublishServiceModal } from "@/components/PublishServiceModal";
 import { MyServicesModal } from "@/components/MyServicesModal";
 
@@ -134,7 +133,6 @@ const LandingPage = (): React.JSX.Element => {
         >
           <div className="max-w-[1800px] mx-auto px-6 lg:px-12 h-24 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <ThemeToggle />
               <Link href="/" className="group">
                 <motion.span
                   whileHover={{ scale: 1.05 }}

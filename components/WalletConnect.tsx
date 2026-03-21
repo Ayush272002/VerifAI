@@ -290,20 +290,38 @@ export default function WalletConnect({ onMyServicesClick, theme, onThemeToggle 
             {onThemeToggle && (
               <>
                 <DropdownMenuItem
-                  className="cursor-pointer flex items-center justify-between text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
-                  onClick={onThemeToggle}
+                  className="cursor-pointer flex items-center justify-between text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    onThemeToggle();
+                  }}
                 >
-                  <div className="flex items-center">
-                    {theme === 'dark' ? (
-                      <Moon className="mr-2 h-4 w-4" />
-                    ) : (
-                      <Sun className="mr-2 h-4 w-4" />
-                    )}
-                    Theme
+                  <div className="flex items-center gap-2">
+                    <Sun className="h-4 w-4" />
+                    <span>Theme</span>
                   </div>
-                  <span className="text-xs text-black/60 dark:text-white/60">
-                    {theme === 'dark' ? 'Dark' : 'Light'}
-                  </span>
+                  <button
+                    className="relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none"
+                    style={{
+                      background: theme === 'dark'
+                        ? 'rgba(6, 182, 212, 0.2)'
+                        : 'rgba(251, 146, 60, 0.2)',
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  >
+                    <span
+                      className="inline-block h-4 w-4 transform rounded-full transition-transform"
+                      style={{
+                        background: theme === 'dark'
+                          ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
+                          : 'linear-gradient(135deg, #fb923c 0%, #f97316 100%)',
+                        transform: theme === 'dark' ? 'translateX(18px)' : 'translateX(2px)',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                      }}
+                    />
+                  </button>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
               </>

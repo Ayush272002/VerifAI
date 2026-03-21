@@ -14,7 +14,6 @@ import Link from "next/link";
 import { Search, SlidersHorizontal, Plus, Grid3x3 } from "lucide-react";
 import { FilterBar } from "@/components/search/FilterBar";
 import { ResultsGrid } from "@/components/search/ResultsGrid";
-import { ThemeToggle } from "@/components/theme-toggle";
 import WalletConnect from "@/components/WalletConnect";
 import { PublishServiceModal } from "@/components/PublishServiceModal";
 import { MyServicesModal } from "@/components/MyServicesModal";
@@ -90,7 +89,6 @@ function BrowsePageContent() {
         >
           <div className="max-w-[1800px] mx-auto px-6 lg:px-12 h-24 flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <ThemeToggle />
               <Link href="/" className="group">
                 <motion.span
                   whileHover={{ scale: 1.05 }}
