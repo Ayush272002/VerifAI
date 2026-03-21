@@ -192,7 +192,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         try {
           const errorData = await verifyRes.json();
           // Extract the detail message from FastAPI's HTTPException response
-          const errorMessage = errorData.detail || "Form validation failed";
+          const errorMessage = errorData.detail[0].msg || "Form validation failed";
           toast.error(`Validation failed: ${errorMessage}`);
         } catch {
           toast.error("Form verification failed. Please check your inputs.");
