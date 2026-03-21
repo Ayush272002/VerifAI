@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X,
@@ -20,12 +20,91 @@ import {
   useRejectRequest,
   usePostMessage,
   useGetServiceByIndex,
+  useCompleteRequest,
 } from "@/lib/marketplace";
 import { formatEther, createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
 import { toast } from "sonner";
 import ABI from "../ABI.json";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FileText, ImageIcon, Loader2, Upload } from "lucide-react";
+
+// --- Verification Types & Helpers ---
+type RequirementCheck = {
+  requirement: string;
+  checked: boolean;
+  evidence: string;
+};
+
+type FileAnalysis = {
+  file_name: string;
+  media_type: string;
+  summary: string;
+  key_elements: string[];
+};
+
+type VerificationResult = {
+  modality: string;
+  overall_status: string;
+  completion_pct: number;
+  confidence_pct: number;
+  summary: string;
+  requirement_checks: RequirementCheck[];
+  totals: {
+    completed: number;
+    total: number;
+  };
+};
+
+type StageInfo = {
+  stage: string;
+  message: string;
+};
+
+const BACKEND_BASE_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
+
+const inferContentType = (fileName: string): string => {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+  const mimeMap: Record<string, string> = {
+    py: "text/x-python",
+    js: "text/javascript",
+    ts: "text/typescript",
+    tsx: "text/typescript",
+    jsx: "text/javascript",
+    json: "application/json",
+    md: "text/markdown",
+    txt: "text/plain",
+    csv: "text/csv",
+    html: "text/html",
+    css: "text/css",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    gif: "image/gif",
+    webp: "image/webp",
+    svg: "image/svg+xml",
+    pdf: "application/pdf",
+    docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  };
+  return mimeMap[ext] ?? "application/octet-stream";
+};
+
+const isBinaryType = (contentType: string): boolean =>
+  contentType.startsWith("image/") ||
+  contentType === "application/pdf" ||
+  contentType ===
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+const fileToBase64 = async (file: File): Promise<string> => {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const CHUNK = 8192;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+};
 
 const CONTRACT_ADDRESS = process.env
   .NEXT_PUBLIC_CONTRACT_ADDRESS as `0x${string}`;
@@ -40,8 +119,10 @@ interface PendingWork {
   serviceTitle: string;
   otherParty: string;
   amount: number;
-  status: "pending" | "in_progress" | "completed";
+  status: "pending" | "in_progress" | "pending_review" | "completed";
   role: "client" | "provider";
+  clientAddress: string;
+  providerAddress: string;
   deadline: string;
   taskDetails: string;
   createdAt: string;
@@ -88,6 +169,36 @@ export function MyPendingWorksModal({
   const { acceptRequest, isPending: isAccepting } = useAcceptRequest();
   const { rejectRequest, isPending: isRejecting } = useRejectRequest();
   const { postMessage, isPending: isSendingMessage } = usePostMessage();
+  const { completeRequest } = useCompleteRequest();
+
+  // Verification & Upload State
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [analyses, setAnalyses] = useState<FileAnalysis[]>([]);
+  const [streamingOutput, setStreamingOutput] = useState<string>("");
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [currentStage, setCurrentStage] = useState<StageInfo | null>(null);
+  const streamScrollRef = useRef<HTMLDivElement>(null);
+  const [isCompleting, setIsCompleting] = useState(false);
+
+  // Auto-scroll streaming output to bottom
+  useEffect(() => {
+    if (streamScrollRef.current) {
+      streamScrollRef.current.scrollTop = streamScrollRef.current.scrollHeight;
+    }
+  }, [streamingOutput]);
+
+  const handleFilesChange = (event: React.ChangeEvent<HTMLInputElement>): void => {
+    const selected = Array.from(event.target.files ?? []);
+    setUploadedFiles((prev) => [...prev, ...selected]);
+    event.target.value = "";
+  };
+
+  const removeFile = (index: number): void => {
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
 
   // Fetch messages for the selected work
   const { data: messagesData } = useRequestMessages(
@@ -194,14 +305,16 @@ export function MyPendingWorksModal({
                   console.warn("Failed to fetch service title:", e);
                 }
 
-                // Map contract status to UI status: 0=Pending, 1=Accepted, 2=PendingReview
-                let uiStatus: "pending" | "in_progress" | "completed" =
+                // Map contract status to UI status: 0=Pending, 1=Accepted, 3=PendingReview, 4=Resolved
+                let uiStatus: "pending" | "in_progress" | "pending_review" | "completed" =
                   "pending";
-                if (contractStatus === 1 || contractStatus === 2) {
+                if (contractStatus === 1) {
                   uiStatus = "in_progress";
                 } else if (contractStatus === 3) {
-                  uiStatus = "completed";
+                  uiStatus = "pending_review";
                 } else if (contractStatus === 4) {
+                  uiStatus = "completed";
+                } else if (contractStatus === 2) {
                   return; // Skip rejected requests
                 }
 
@@ -210,6 +323,8 @@ export function MyPendingWorksModal({
 
                 allWorks.push({
                   id: requestId,
+                  clientAddress: client,
+                  providerAddress: provider,
                   serviceTitle: serviceTitle || "Service Request",
                   otherParty:
                     clientAddr.substring(0, 6) +
@@ -260,6 +375,7 @@ export function MyPendingWorksModal({
 
               // Handle both array and object formats for `requests`
               if (requestDataArray) {
+                const client = (requestDataArray as any).client ?? requestDataArray[0] ?? "";
                 const provider = (requestDataArray as any).provider ?? requestDataArray[1] ?? "";
                 const serviceIndex = (requestDataArray as any).serviceIndex ?? requestDataArray[2] ?? BigInt(0);
                 const escrowAmount = (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
@@ -286,14 +402,16 @@ export function MyPendingWorksModal({
                   console.warn("Failed to fetch service title:", e);
                 }
 
-                // Map contract status: 0=Pending, 1=Accepted, 2=PendingReview
-                let uiStatus: "pending" | "in_progress" | "completed" =
+                // Map contract status to UI status: 0=Pending, 1=Accepted, 3=PendingReview, 4=Resolved
+                let uiStatus: "pending" | "in_progress" | "pending_review" | "completed" =
                   "pending";
-                if (contractStatus === 1 || contractStatus === 2) {
+                if (contractStatus === 1) {
                   uiStatus = "in_progress";
                 } else if (contractStatus === 3) {
-                  uiStatus = "completed";
+                  uiStatus = "pending_review";
                 } else if (contractStatus === 4) {
+                  uiStatus = "completed";
+                } else if (contractStatus === 2) {
                   return; // Skip rejected requests
                 }
 
@@ -302,6 +420,8 @@ export function MyPendingWorksModal({
 
                 allWorks.push({
                   id: requestId,
+                  clientAddress: client,
+                  providerAddress: provider,
                   serviceTitle: serviceTitle || "My Service Request",
                   otherParty:
                     providerAddr.substring(0, 6) +
@@ -437,6 +557,237 @@ export function MyPendingWorksModal({
     }
   };
 
+  const consumeStream = async (response: Response): Promise<void> => {
+    if (!response.body) {
+      throw new Error("Response body is empty");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    const processLines = (lines: string[]): void => {
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.startsWith("event:")) continue;
+
+        const eventType = line.replace("event:", "").trim();
+        const dataLine = lines[i + 1];
+
+        if (!dataLine?.startsWith("data:")) continue;
+
+        const data = dataLine.replace("data:", "").trim();
+
+        try {
+          if (eventType === "token") {
+            const tokenData = JSON.parse(data) as { token?: string };
+            setStreamingOutput((prev) => prev + (tokenData.token ?? ""));
+          } else if (eventType === "stage") {
+            const stageData = JSON.parse(data) as StageInfo;
+            setCurrentStage(stageData);
+            setStreamingOutput(
+              (prev) => prev + `\n--- ${stageData.message} ---\n`,
+            );
+          } else if (eventType === "analysis") {
+            const analysisData = JSON.parse(data) as FileAnalysis;
+            setAnalyses((prev) => [...prev, analysisData]);
+          } else if (eventType === "report") {
+            const reportData = JSON.parse(data) as VerificationResult;
+            setVerificationResult(reportData);
+            setIsStreaming(false);
+            setCurrentStage(null);
+
+            // Trigger Oracle ruling completion
+            submitRulingToOracle(reportData);
+          }
+        } catch {
+          // skip malformed
+        }
+      }
+    };
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        processLines(lines);
+      }
+
+      if (buffer) {
+        processLines(buffer.split("\n"));
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  };
+
+  const submitRulingToOracle = async (report: VerificationResult) => {
+    if (!selectedWork) return;
+
+    try {
+      setIsCompleting(true);
+      const isSuccess =
+        report.overall_status.toLowerCase() === "success" ||
+        report.completion_pct >= 60;
+      
+      const winnerAddress = isSuccess
+        ? selectedWork.providerAddress
+        : selectedWork.clientAddress;
+
+      toast.info(`Submitting Oracle Ruling... ${isSuccess ? "Paying Provider" : "Refunding Client"}`, { id: "oracle-ruling" });
+
+      const res = await fetch(`${BACKEND_BASE_URL}/marketplace/oracle/submit-ruling`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          request_id: selectedWork.id,
+          ruling_text: JSON.stringify(report),
+          winner: winnerAddress,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Oracle API rejected the task.");
+      }
+
+      const oracleData = await res.json();
+      if (!oracleData.success) {
+        throw new Error(oracleData.error);
+      }
+
+      toast.success("Transaction Resolved On-Chain!", { id: "oracle-ruling" });
+      
+      const newStatus = "completed";
+      setSelectedWork({ ...selectedWork, status: newStatus as any });
+      setWorks((prev) =>
+        prev.map((w) =>
+          w.id === selectedWork.id ? { ...w, status: newStatus as any } : w,
+        ),
+      );
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Oracle Failed: " + (err.message || "Unknown error"));
+    } finally {
+      setIsCompleting(false);
+    }
+  };
+
+  const handleLockEvidence = async () => {
+    if (!selectedWork || uploadedFiles.length === 0) return;
+    setIsVerifying(true);
+    try {
+      toast.info("Uploading evidence securely to decentralised storage...");
+      const fileNames = uploadedFiles.map(f => f.name);
+
+      const res = await fetch(`${BACKEND_BASE_URL}/ipfs/upload-json`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ names: fileNames }),
+      });
+
+      if (!res.ok) throw new Error("Decentralised storage cluster unavailable");
+      const uploadData = await res.json();
+      
+      toast.info("Locking Evidence on-chain...");
+      const txHash = await completeRequest(
+        selectedWork.id as `0x${string}`,
+        uploadData.IpfsHash,
+      );
+      
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
+
+      if (receipt.status !== "success") {
+        throw new Error("Lock-in transaction reverted");
+      }
+
+      toast.success("Evidence permanently locked in!");
+      setSelectedWork({ ...selectedWork, status: "pending_review" as any });
+      setWorks((prev) =>
+        prev.map((w) =>
+          w.id === selectedWork.id ? { ...w, status: "pending_review" as any } : w,
+        ),
+      );
+    } catch (e: any) {
+      console.error(e);
+      toast.error(e.shortMessage || e.message || "Failed to lock evidence");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleVerifySubmit = async (): Promise<void> => {
+    if (!selectedWork) return;
+    if (uploadedFiles.length === 0) {
+      setErrorMessage("Please upload at least one proof file.");
+      return;
+    }
+
+    try {
+      setIsVerifying(true);
+      setIsStreaming(true);
+      setErrorMessage("");
+      setVerificationResult(null);
+      setAnalyses([]);
+      setStreamingOutput("");
+      setCurrentStage(null);
+
+      // Split taskDetails by newline to form reasonable requirements list
+      const reqList = selectedWork.taskDetails
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0)
+        .map((item) => ({ requirement: item }));
+
+      const filePayloads = await Promise.all(
+        uploadedFiles.map(async (file) => {
+          const contentType = file.type || inferContentType(file.name);
+          const content = isBinaryType(contentType)
+            ? await fileToBase64(file)
+            : await file.text();
+
+          return {
+            file_name: file.name,
+            content,
+            content_type: contentType,
+          };
+        }),
+      );
+
+      const body = {
+        requirements_list: reqList,
+        seller_profile: "Provider", // Can be dynamic if we fetch provider data
+        what_they_offer: selectedWork.serviceTitle,
+        seller_description: "Provider selling the service",
+        files: filePayloads,
+      };
+
+      const response = await fetch(`${BACKEND_BASE_URL}/agent/verify/stream`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      if (!response.ok) {
+        const detail = await response.text();
+        throw new Error(`Verification failed: ${detail}`);
+      }
+
+      await consumeStream(response);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Request failed",
+      );
+      setIsStreaming(false);
+      setIsVerifying(false); // only disable verifying initially, it stays disabled if successful.
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -559,7 +910,9 @@ export function MyPendingWorksModal({
                                   ? "bg-amber-500/20 text-amber-700 dark:text-amber-400"
                                   : work.status === "in_progress"
                                     ? "bg-cyan-500/20 text-cyan-700 dark:text-cyan-400"
-                                    : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
+                                    : work.status === "pending_review"
+                                      ? "bg-purple-500/20 text-purple-700 dark:text-purple-400"
+                                      : "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400"
                               }`}
                             >
                               {work.status.replace("_", " ")}
@@ -678,6 +1031,186 @@ export function MyPendingWorksModal({
                             </div>
                           )}
                       </div>
+
+                      {/* Verification & Proof Upload Section */}
+                      {selectedWork.role === "provider" && (selectedWork.status === "in_progress" || selectedWork.status === "pending_review") && (
+                        <div className="p-6 border-b border-black/5 dark:border-white/5 bg-white/30 dark:bg-black/30">
+                          {selectedWork.status === "in_progress" ? (
+                            <>
+                              <h4 className="text-sm font-semibold text-black dark:text-white mb-2">
+                                Lock In Verification Proofs
+                              </h4>
+                              <p className="text-xs text-black/60 dark:text-white/60 mb-4">
+                                Upload evidence, lock it permanently into the contract, and allow the Oracle agents to review.
+                              </p>
+
+                              {/* Multi-file upload */}
+                              <div className="space-y-2 mb-4">
+                                <input
+                                  type="file"
+                                  multiple
+                                  onChange={handleFilesChange}
+                                  disabled={isVerifying || isCompleting}
+                                  className="w-full rounded-md border border-input glass-macos px-3 py-2 text-sm text-black dark:text-white"
+                                />
+                                {uploadedFiles.length > 0 && (
+                                  <div className="space-y-1 mt-2">
+                                    {uploadedFiles.map((file, index) => (
+                                      <div
+                                        key={`${file.name}-${index}`}
+                                        className="flex items-center justify-between gap-2 rounded-md border border-black/5 dark:border-white/10 px-2 py-1 text-xs"
+                                      >
+                                        <div className="flex items-center gap-1.5 truncate text-black dark:text-white">
+                                          {(file.type || inferContentType(file.name)).startsWith(
+                                            "image/",
+                                          ) ? (
+                                            <ImageIcon className="w-3.5 h-3.5 text-black/60 dark:text-white/60 flex-shrink-0" />
+                                          ) : (
+                                            <FileText className="w-3.5 h-3.5 text-black/60 dark:text-white/60 flex-shrink-0" />
+                                          )}
+                                          <span className="truncate">{file.name}</span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => removeFile(index)}
+                                          disabled={isVerifying || isCompleting}
+                                          className="text-black/50 dark:text-white/50 hover:text-red-500 transition-colors disabled:opacity-50"
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+
+                              <motion.button
+                                whileHover={{ scale: isVerifying ? 1 : 1.02 }}
+                                whileTap={{ scale: isVerifying ? 1 : 0.98 }}
+                                onClick={handleLockEvidence}
+                                disabled={isVerifying || uploadedFiles.length === 0}
+                                className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 ${
+                                  isVerifying || uploadedFiles.length === 0
+                                    ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
+                                    : "bg-blue-600 hover:bg-blue-500 text-white"
+                                }`}
+                              >
+                                {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                Lock Evidence On-Chain
+                              </motion.button>
+                            </>
+                          ) : (
+                            <>
+                              <h4 className="text-sm font-semibold text-purple-600 dark:text-purple-400 mb-2 flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4" />
+                                Evidence Locked
+                              </h4>
+                              <p className="text-xs text-black/60 dark:text-white/60 mb-4">
+                                Your evidence has safely been committed. Proceed with autonomous agent evaluation to resolve the transaction.
+                              </p>
+
+                              {errorMessage && (
+                                <div className="rounded-md border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm text-red-500 mb-4">
+                                  {errorMessage}
+                                </div>
+                              )}
+
+                              {(!isStreaming && !verificationResult) ? (
+                                <motion.button
+                                  whileHover={{ scale: isVerifying ? 1 : 1.02 }}
+                                  whileTap={{ scale: isVerifying ? 1 : 0.98 }}
+                                  onClick={handleVerifySubmit}
+                                  disabled={isVerifying || isCompleting || uploadedFiles.length === 0}
+                                  className={`w-full py-2.5 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 ${
+                                    isVerifying || isCompleting || uploadedFiles.length === 0
+                                      ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
+                                      : "btn-macos"
+                                  }`}
+                                >
+                                  {isVerifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                                  {uploadedFiles.length === 0 ? "Re-Select Files to Evaluate" : "Evaluate with AI Agents"}
+                                </motion.button>
+                              ) : (
+                                <div className="space-y-4">
+                                  {/* Streaming Text Output */}
+                                  <div className="glass-macos rounded-xl p-3 max-h-48 overflow-y-auto custom-scrollbar font-mono text-[10px] leading-relaxed relative text-black dark:text-white bg-black/5 dark:bg-black/40" ref={streamScrollRef}>
+                                    {currentStage && (
+                                      <div className="mb-2 flex items-center gap-1.5 opacity-70 border-b border-black/10 dark:border-white/10 pb-1 w-full font-sans text-xs">
+                                        <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+                                        <span className="font-semibold text-cyan-600 dark:text-cyan-400">ORACLE {">"}</span> {currentStage.message}
+                                      </div>
+                                    )}
+                                    <div className="whitespace-pre-wrap">{streamingOutput}</div>
+                                    {isStreaming && (
+                                      <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-70">
+                                        <div className="w-1.5 h-1.5 bg-cyan-500 rounded-full animate-pulse" />
+                                        <span className="text-cyan-600 dark:text-cyan-400 font-semibold font-sans">Evaluating...</span>
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Live Analyses */}
+                                  {analyses.length > 0 && !verificationResult && (
+                                    <div className="space-y-2">
+                                      {analyses.map((a, idx) => (
+                                        <div key={idx} className="glass-macos rounded-lg p-2 text-xs">
+                                          <div className="flex justify-between font-bold text-black dark:text-white">
+                                            <span>{a.file_name}</span>
+                                            <span className="opacity-60">{a.media_type}</span>
+                                          </div>
+                                          <p className="opacity-80 mt-1">{a.summary}</p>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+
+                                  {/* Final Verification Result */}
+                                  {verificationResult && (
+                                    <div className="space-y-3">
+                                      <div className="grid grid-cols-3 gap-2 text-center">
+                                        <div className="glass-macos rounded-lg p-2">
+                                          <p className="text-[10px] opacity-60">Status</p>
+                                          <p className="font-semibold capitalize text-sm">{verificationResult.overall_status}</p>
+                                        </div>
+                                        <div className="glass-macos rounded-lg p-2">
+                                          <p className="text-[10px] opacity-60">Completion</p>
+                                          <p className="font-semibold text-sm">{verificationResult.completion_pct}%</p>
+                                        </div>
+                                        <div className="glass-macos rounded-lg p-2">
+                                          <p className="text-[10px] opacity-60">Confidence</p>
+                                          <p className="font-semibold text-sm">{verificationResult.confidence_pct}%</p>
+                                        </div>
+                                      </div>
+
+                                      <div className="glass-macos rounded-lg p-3 text-xs opacity-80 border border-black/10 dark:border-white/10">
+                                        {verificationResult.summary}
+                                      </div>
+
+                                      <div className="space-y-1 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
+                                        {verificationResult.requirement_checks.map((req, idx) => (
+                                          <div key={idx} className="glass-macos rounded-md p-2 flex justify-between items-center gap-2 hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
+                                            <span className="text-xs truncate font-medium" title={req.requirement}>{req.requirement}</span>
+                                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                              req.checked ? "bg-emerald-500/20 text-emerald-600 block" : "bg-red-500/20 text-red-600 block"
+                                            }`}>{req.checked ? "Pass" : "Fail"}</span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {isCompleting && (
+                                    <div className="flex flex-col items-center justify-center gap-2 p-4 text-cyan-600 dark:text-cyan-400 glass-macos rounded-xl border border-cyan-500/20">
+                                      <Loader2 className="w-6 h-6 animate-spin" />
+                                      <span className="text-sm font-semibold tracking-wide">Executing Oracle Smart Contract Ruling...</span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
 
                       {/* Chat / Messages Section */}
                       {selectedWork.status !== "pending" && (

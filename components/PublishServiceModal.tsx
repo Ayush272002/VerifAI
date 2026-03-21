@@ -7,6 +7,7 @@ import { X, Plus, Clock, Upload, CheckCircle2, Loader2 } from "lucide-react";
 import { useAddService } from "@/lib/marketplace";
 import { EthIcon } from "@/components/EthIcon";
 import { GIG_CATEGORIES, getRandomPlaceholderImage } from "@/lib/gigCategories";
+import { usePublicClient } from "wagmi";
 
 interface PublishServiceModalProps {
   isOpen: boolean;
@@ -19,7 +20,10 @@ const SPRING = {
   stiffness: 100,
 } as const;
 
-export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProps) {
+export function PublishServiceModal({
+  isOpen,
+  onClose,
+}: PublishServiceModalProps) {
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -31,13 +35,15 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
   });
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [deliverables, setDeliverables] = useState<{id: string, text: string}[]>([{ id: Math.random().toString(), text: "" }]);
+  const [deliverables, setDeliverables] = useState<
+    { id: string; text: string }[]
+  >([{ id: Math.random().toString(), text: "" }]);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [classificationError, setClassificationError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validDeliverables = deliverables.filter(d => d.text.trim() !== "");
+  const validDeliverables = deliverables.filter((d) => d.text.trim() !== "");
 
   useEffect(() => {
     if (formData.category) {
@@ -51,7 +57,9 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
 
   const handleAutoCategorize = async () => {
     if (!formData.title.trim() || !formData.description.trim()) {
-      setClassificationError("Title and description are required for classification.");
+      setClassificationError(
+        "Title and description are required for classification.",
+      );
       return;
     }
 
@@ -124,68 +132,105 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
   };
 
   const updateDeliverable = (id: string, value: string) => {
-    setDeliverables(deliverables.map(d => d.id === id ? { ...d, text: value } : d));
+    setDeliverables(
+      deliverables.map((d) => (d.id === id ? { ...d, text: value } : d)),
+    );
   };
 
   const addDeliverable = () => {
-    setDeliverables([...deliverables, { id: Math.random().toString(), text: "" }]);
+    setDeliverables([
+      ...deliverables,
+      { id: Math.random().toString(), text: "" },
+    ]);
     setTimeout(() => {
-      const inputs = document.querySelectorAll<HTMLInputElement>('input[data-feature="deliverable"]');
+      const inputs = document.querySelectorAll<HTMLInputElement>(
+        'input[data-feature="deliverable"]',
+      );
       if (inputs.length > 0) inputs[inputs.length - 1].focus();
     }, 0);
   };
 
   const removeDeliverable = (id: string, index: number) => {
-    let newDeliverables = deliverables.filter(d => d.id !== id);
+    let newDeliverables = deliverables.filter((d) => d.id !== id);
     if (newDeliverables.length === 0) {
       newDeliverables = [{ id: Math.random().toString(), text: "" }];
     }
     setDeliverables(newDeliverables);
   };
 
-  const handleDeliverableKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
-    if (e.key === 'Enter') {
+  const handleDeliverableKeyDown = (
+    e: KeyboardEvent<HTMLInputElement>,
+    index: number,
+  ) => {
+    if (e.key === "Enter") {
       e.preventDefault();
       if (deliverables[index].text.trim() !== "") {
         const newId = Math.random().toString();
         const newDeliverables = [...deliverables];
         newDeliverables.splice(index + 1, 0, { id: newId, text: "" });
         setDeliverables(newDeliverables);
-        
+
         setTimeout(() => {
-          const inputs = document.querySelectorAll<HTMLInputElement>('input[data-feature="deliverable"]');
+          const inputs = document.querySelectorAll<HTMLInputElement>(
+            'input[data-feature="deliverable"]',
+          );
           if (inputs[index + 1]) inputs[index + 1].focus();
         }, 0);
       }
-    } else if (e.key === 'Backspace' && deliverables[index].text === "") {
-        e.preventDefault();
-        const idToRemove = deliverables[index].id;
-        removeDeliverable(idToRemove, index);
-        setTimeout(() => {
-          const inputs = document.querySelectorAll<HTMLInputElement>('input[data-feature="deliverable"]');
-          if (inputs[index - 1]) inputs[index - 1].focus();
-        }, 0);
+    } else if (e.key === "Backspace" && deliverables[index].text === "") {
+      e.preventDefault();
+      const idToRemove = deliverables[index].id;
+      removeDeliverable(idToRemove, index);
+      setTimeout(() => {
+        const inputs = document.querySelectorAll<HTMLInputElement>(
+          'input[data-feature="deliverable"]',
+        );
+        if (inputs[index - 1]) inputs[index - 1].focus();
+      }, 0);
     }
   };
 
   const { addService, isPending } = useAddService();
+  const publicClient = usePublicClient();
+  const [isConfirming, setIsConfirming] = useState(false);
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid || isPending) return;
+    if (!isFormValid || isPending || isConfirming) return;
 
     try {
       const resolvedBackgroundImage =
-        formData.backgroundImage || getRandomPlaceholderImage(formData.category);
-      
-      const deliverablesText = validDeliverables.map((d, i) => `${i + 1}. ${d.text}`).join('\n');
+        formData.backgroundImage ||
+        getRandomPlaceholderImage(formData.category);
+
+      const deliverablesText = validDeliverables
+        .map((d, i) => `${i + 1}. ${d.text}`)
+        .join("\n");
       const fullDescription = `${formData.description}\n\nWhat You'll Get:\n${deliverablesText}\n\nCategory: ${formData.category}\nDelivery Time: ${formData.deliveryTime}\nTags: ${tags.join(", ")}`;
 
-      await addService(formData.title, fullDescription, formData.priceAmount);
+      setIsConfirming(true);
+      toast.info("Submitting transaction securely...");
+      const txHash = await addService(
+        formData.title,
+        fullDescription,
+        formData.priceAmount,
+      );
+
+      toast.info("Awaiting block confirmation...");
+      if (!publicClient) throw new Error("Public client not available");
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
+
+      if (receipt.status !== "success") {
+        throw new Error("Transaction reverted on-chain");
+      }
+
       console.log("Service published on-chain:", {
         ...formData,
         backgroundImage: resolvedBackgroundImage,
         tags,
+        receipt,
       });
       setShowConfirmation(true);
       setTimeout(() => {
@@ -216,6 +261,8 @@ const handleSubmit = async (e: React.FormEvent) => {
         console.error("Failed to publish service to blockchain:", err);
         toast.error("Failed to publish service: " + (err?.message || err));
       }
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -287,39 +334,6 @@ const handleSubmit = async (e: React.FormEvent) => {
                     />
                   </div>
 
-                  {/* Category */}
-                  <div>
-                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">
-                      Category *
-                    </label>
-                    <div className="flex gap-2 flex-wrap">
-                      <select
-                        required
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="flex-1 glass-search px-4 py-3 rounded-xl text-black dark:text-white outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
-                      >
-                        <option value="">Select a category</option>
-                        {GIG_CATEGORIES.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={handleAutoCategorize}
-                        disabled={isCategorizing}
-                        className="btn-macos min-w-[170px] px-3 py-2 text-sm"
-                      >
-                        {isCategorizing ? "Classifying..." : "Auto categorize"}
-                      </button>
-                    </div>
-                    {classificationError && (
-                      <p className="text-xs mt-2 text-red-600 dark:text-red-400">{classificationError}</p>
-                    )}
-                  </div>
-
                   {/* Description */}
                   <div>
                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">
@@ -340,6 +354,43 @@ const handleSubmit = async (e: React.FormEvent) => {
                     />
                   </div>
 
+                  {/* Category */}
+                  <div>
+                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">
+                      Category *
+                    </label>
+                    <div className="flex gap-2 flex-wrap">
+                      <select
+                        required
+                        value={formData.category}
+                        onChange={(e) =>
+                          setFormData({ ...formData, category: e.target.value })
+                        }
+                        className="flex-1 glass-search px-4 py-3 rounded-xl text-black dark:text-white outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                      >
+                        <option value="">Select a category</option>
+                        {GIG_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleAutoCategorize}
+                        disabled={isCategorizing}
+                        className="btn-macos min-w-[170px] px-3 py-2 text-sm"
+                      >
+                        {isCategorizing ? "Classifying..." : "Auto categorize"}
+                      </button>
+                    </div>
+                    {classificationError && (
+                      <p className="text-xs mt-2 text-red-600 dark:text-red-400">
+                        {classificationError}
+                      </p>
+                    )}
+                  </div>
+
                   {/* What You'll Deliver */}
                   <div>
                     <label className="block text-sm font-semibold text-black dark:text-white mb-2">
@@ -354,7 +405,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                               key={deliverable.id}
                               initial={{ opacity: 0, y: -10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, height: 0, overflow: "hidden" }}
+                              exit={{
+                                opacity: 0,
+                                height: 0,
+                                overflow: "hidden",
+                              }}
                               transition={{ duration: 0.2 }}
                               className="flex items-center gap-3 group"
                             >
@@ -367,15 +422,24 @@ const handleSubmit = async (e: React.FormEvent) => {
                                 data-feature="deliverable"
                                 type="text"
                                 value={deliverable.text}
-                                onChange={(e) => updateDeliverable(deliverable.id, e.target.value)}
-                                onKeyDown={(e) => handleDeliverableKeyDown(e, idx)}
+                                onChange={(e) =>
+                                  updateDeliverable(
+                                    deliverable.id,
+                                    e.target.value,
+                                  )
+                                }
+                                onKeyDown={(e) =>
+                                  handleDeliverableKeyDown(e, idx)
+                                }
                                 placeholder="E.g., Fully functional website"
                                 className="flex-1 bg-transparent border-b border-black/5 dark:border-white/5 hover:border-black/20 dark:hover:border-white/20 focus:border-cyan-500 text-sm text-black dark:text-white pt-1 pb-1 outline-none transition-all placeholder:text-black/30 dark:placeholder:text-white/30"
                               />
                               <button
                                 type="button"
-                                onClick={() => removeDeliverable(deliverable.id, idx)}
-                                className={`opacity-0 group-hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-1 transition-all ${deliverables.length === 1 && deliverable.text === '' ? 'invisible' : ''}`}
+                                onClick={() =>
+                                  removeDeliverable(deliverable.id, idx)
+                                }
+                                className={`opacity-0 group-hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-1 transition-all ${deliverables.length === 1 && deliverable.text === "" ? "invisible" : ""}`}
                               >
                                 <X className="w-4 h-4 text-black/60 dark:text-white/60" />
                               </button>
@@ -666,23 +730,33 @@ const handleSubmit = async (e: React.FormEvent) => {
                   </motion.button>
                   <motion.button
                     type="submit"
-                    disabled={!isFormValid || isPending}
+                    disabled={!isFormValid || isPending || isConfirming}
                     whileHover={
-                      isFormValid && !isPending ? { scale: 1.02 } : {}
+                      isFormValid && !isPending && !isConfirming
+                        ? { scale: 1.02 }
+                        : {}
                     }
-                    whileTap={isFormValid && !isPending ? { scale: 0.98 } : {}}
+                    whileTap={
+                      isFormValid && !isPending && !isConfirming
+                        ? { scale: 0.98 }
+                        : {}
+                    }
                     className={`px-8 py-2.5 rounded-2xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                      isFormValid && !isPending
+                      isFormValid && !isPending && !isConfirming
                         ? "btn-macos"
                         : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
                     }`}
                   >
-                    {isPending ? (
+                    {isPending || isConfirming ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Plus className="w-4 h-4" />
                     )}
-                    {isPending ? "Confirming..." : "Publish Service"}
+                    {isPending
+                      ? "Confirming in Wallet..."
+                      : isConfirming
+                        ? "Confirming on-chain..."
+                        : "Publish Service"}
                   </motion.button>
                 </div>
               </form>
