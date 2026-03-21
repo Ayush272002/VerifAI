@@ -1,14 +1,9 @@
-/**
- * @fileoverview Publish Service Modal Component
- * Allows service providers to publish their services
- */
-
 "use client";
 
 import { useState, useRef, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Plus, Clock, Upload, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { X, Plus, Clock, Upload, CheckCircle2, Loader2 } from "lucide-react";
+import { useAddService } from "@/lib/marketplace";
 
 interface PublishServiceModalProps {
   isOpen: boolean;
@@ -82,29 +77,38 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!isFormValid) return;
+  const { addService, isPending } = useAddService();
 
-    console.log("Service published:", { ...formData, tags });
-    // TODO: Add actual submission logic here
-    setShowConfirmation(true);
-    setTimeout(() => {
-      setShowConfirmation(false);
-      onClose();
-      // Reset form
-      setFormData({
-        title: "",
-        category: "",
-        description: "",
-        priceType: "fixed",
-        priceAmount: "",
-        deliveryTime: "",
-        backgroundImage: null,
-      });
-      setTags([]);
-      setTagInput("");
-    }, 2500);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isFormValid || isPending) return;
+
+    try {
+      const fullDescription = `${formData.description}\n\nCategory: ${formData.category}\nDelivery Time: ${formData.deliveryTime}\nTags: ${tags.join(", ")}`;
+      
+      await addService(formData.title, fullDescription, formData.priceAmount);
+
+      console.log("Service published on-chain:", { ...formData, tags });
+      setShowConfirmation(true);
+      setTimeout(() => {
+        setShowConfirmation(false);
+        onClose();
+        // Reset form
+        setFormData({
+          title: "",
+          category: "",
+          description: "",
+          priceType: "fixed",
+          priceAmount: "",
+          deliveryTime: "",
+          backgroundImage: null,
+        });
+        setTags([]);
+        setTagInput("");
+      }, 2500);
+    } catch (err) {
+      console.error("Failed to publish service to blockchain:", err);
+    }
   };
 
   return (
@@ -117,11 +121,11 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-[100]"
+            className="fixed inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-sm z-100"
           />
 
           {/* Modal */}
-          <div className="fixed inset-0 z-[101] flex items-center justify-center p-4 pointer-events-none">
+          <div className="fixed inset-0 z-101 flex items-center justify-center p-4 pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -408,7 +412,7 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                       Preview
                     </label>
                     <div className="glass-macos rounded-2xl p-4">
-                      <div className="aspect-video rounded-xl bg-gradient-to-br from-slate-700 via-gray-800 to-zinc-900 flex items-center justify-center mb-3 overflow-hidden relative">
+                      <div className="aspect-video rounded-xl bg-linear-to-br from-slate-700 via-gray-800 to-zinc-900 flex items-center justify-center mb-3 overflow-hidden relative">
                         {formData.backgroundImage ? (
                           <img
                             src={formData.backgroundImage}
@@ -451,18 +455,17 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                   </motion.button>
                   <motion.button
                     type="submit"
-                    onClick={handleSubmit}
-                    disabled={!isFormValid}
-                    whileHover={isFormValid ? { scale: 1.02 } : {}}
-                    whileTap={isFormValid ? { scale: 0.98 } : {}}
+                    disabled={!isFormValid || isPending}
+                    whileHover={(isFormValid && !isPending) ? { scale: 1.02 } : {}}
+                    whileTap={(isFormValid && !isPending) ? { scale: 0.98 } : {}}
                     className={`px-8 py-2.5 rounded-2xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                      isFormValid
+                      (isFormValid && !isPending)
                         ? "btn-macos"
                         : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
                     }`}
                   >
-                    <Plus className="w-4 h-4" />
-                    Publish Service
+                    {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    {isPending ? "Confirming..." : "Publish Service"}
                   </motion.button>
                 </div>
               </form>
@@ -477,9 +480,9 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 transition={SPRING}
-                className="absolute bottom-8 left-1/2 -translate-x-1/2 glass-macos rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3 min-w-[300px]"
+                className="absolute bottom-8 left-1/2 -translate-x-1/2 glass-macos rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3 min-w-75"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
                   <CheckCircle2 className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1">

@@ -14,6 +14,15 @@ export function useAllProviders() {
     });
 }
 
+// 1.5 Get all actively listed services across the whole marketplace
+export function useAllActiveServices() {
+    return useReadContract({
+        address: CONTRACT_ADDRESS,
+        abi: ABI,
+        functionName: 'getAllActiveServices',
+    });
+}
+
 // 2. Get all services for a specific provider
 export function useProviderServices(providerAddress: `0x${string}` | undefined) {
     return useReadContract({
