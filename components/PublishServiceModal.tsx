@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useRef, KeyboardEvent } from "react";
+import { useState, useRef, useEffect, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Plus, Clock, Upload, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,17 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [classificationError, setClassificationError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-assign random placeholder image when category is selected
+  useEffect(() => {
+    if (formData.category) {
+      const placeholderImage = getRandomPlaceholderImage(formData.category);
+      setFormData((prev) => ({
+        ...prev,
+        backgroundImage: placeholderImage,
+      }));
+    }
+  }, [formData.category]);
 
   const handleAutoCategorize = async () => {
     if (!formData.title.trim() || !formData.description.trim()) {
