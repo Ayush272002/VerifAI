@@ -217,16 +217,11 @@ def verify_gig_form(payload: GigValidationRequest) -> dict[str, str]:
 
     print(payload)
 
-    validation_result = _ai_service.validate_gig_fields(
-        payload.title,
-        payload.description,
-        tags=payload.tags,
-        category=payload.category
-    )
+    validation_result = _ai_service.validate_gig_fields(payload)
     print(f"Validation result: {validation_result}")
 
     # Check if validation failed (contains "Outlier" or is not "complete")
-    if "outlier" in validation_result.lower() or validation_result.strip().lower() != "complete":
+    if "outlier" in validation_result.lower() or "complete" not in validation_result.strip().lower():
         raise HTTPException(
             status_code=422,
             detail=validation_result
