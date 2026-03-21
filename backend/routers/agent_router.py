@@ -198,3 +198,13 @@ def stream_verify_image_delivery(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"},
     )
+
+
+
+@router.post("/verify/form/service")
+def verify_gig_form(payload: GigCategorizationRequest) -> dict[str, str]:
+    """Classify gig into one canonical marketplace category."""
+    
+    print(payload)
+
+    return {"msg": _ai_service.validate_gig_fields(payload.title,payload.description,tags=payload.tags)}
