@@ -1,8 +1,16 @@
-# Modern Next.js + FastAPI Template
+# VerifAI
 
-A clean, modern, full-stack template with Next.js 16, FastAPI, Tailwind CSS 4, and shadcn/ui.
+We built a trustless Web3 freelance platform where gig deliverables uploaded to IPFS are evaluated by an autonomous AI arbitration engine (Mixture-of-Agents) to settle escrowed funds via smart contracts.
 
-<img src="public/image.png" alt="Modern Next.js + FastAPI Template" width="auto">
+We use the Ethereum blockchain to handle payments, with wallet addresses as user identifiers. The platform works as follows:
+
+A buyer deposits ETH into escrow via a smart contract, defining strict requirements for the freelance gig.
+The freelancer completes the work and uploads deliverables (eg: code, images, documents) to IPFS, with content hashes stored on-chain to ensure immutability and prevent tampering.
+The backend triggers a LangGraph pipeline, where a modality router extracts structured context from each file.
+An orchestrator parses the buyer’s requirements, clusters them logically, and dynamically instantiates specialised sub-agents to evaluate fulfilment.
+These agents assess assigned criteria in parallel against the submitted evidence. If the aggregated confidence score exceeds the threshold, the smart contract releases escrowed funds to the freelancer without human intervention.
+
+This architecture removes the 15–20% commission fees typical of major freelance platforms and eliminates dispute delays. The Mixture-of-Agents (MoA) design reduces LLM hallucination, preventing buyers from rejecting valid work and sellers from submitting low-quality deliverables.
 
 ## Tech Stack
 

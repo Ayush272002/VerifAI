@@ -34,7 +34,7 @@ const FADE_UP = {
     opacity: 1,
     y: 0,
     transition: {
-      type: "spring",
+      type: "spring" as const,
       damping: 25,
       stiffness: 100,
     }
@@ -50,7 +50,7 @@ const STAGGER = {
 };
 
 const SPRING = {
-  type: "spring",
+  type: "spring" as const,
   damping: 20,
   stiffness: 100,
 };
@@ -145,11 +145,10 @@ const LandingPage = (): React.JSX.Element => {
                 </motion.span>
               </Link>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-6">
               <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
-                <Link href="/browse" className="text-sm font-medium text-black dark:text-white hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors flex items-center gap-2">
-                  <Grid3x3 className="w-4 h-4" />
-                  <span className="hidden md:inline">Browse All</span>
+                <Link href="/browse" className="text-sm font-medium text-black/80 dark:text-white/80 hover:text-black dark:hover:text-white transition-colors">
+                  Browse
                 </Link>
               </motion.div>
               {mounted && isConnected && (
@@ -158,10 +157,9 @@ const LandingPage = (): React.JSX.Element => {
                   whileTap={{ scale: 0.98 }}
                   transition={SPRING}
                   onClick={() => setShowPublishModal(true)}
-                  className="btn-macos !py-2 !px-4 flex items-center gap-2"
+                  className="rounded-lg px-4 py-1.5 text-sm font-medium border border-black/10 dark:border-white/10 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all"
                 >
-                  <Plus className="w-4 h-4" />
-                  <span className="hidden md:inline">Publish Service</span>
+                  Publish
                 </motion.button>
               )}
               <WalletConnect
@@ -201,9 +199,8 @@ const LandingPage = (): React.JSX.Element => {
               </motion.div>
 
               <motion.div variants={FADE_UP} className="space-y-6">
-                {/* Search bar */}
                 <div className="relative max-w-2xl">
-                  <div className="glass-search flex items-center pl-6 pr-2 py-3 rounded-full">
+                  <div className="flex items-center pl-6 pr-2 py-2 rounded-full border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] transition-colors focus-within:border-black/20 dark:focus-within:border-white/20">
                     <Search className="w-5 h-5 text-black/50 dark:text-white/50 mr-3 flex-shrink-0" />
                     <input
                       type="text"
@@ -218,7 +215,7 @@ const LandingPage = (): React.JSX.Element => {
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
                       transition={SPRING}
-                      className="btn-macos ml-2 !py-2 !px-5"
+                      className="bg-black dark:bg-white text-white dark:text-black text-sm font-medium ml-2 py-2 px-6 rounded-full hover:bg-black/90 dark:hover:bg-white/90 transition-colors"
                     >
                       Search
                     </motion.button>
@@ -328,176 +325,190 @@ const LandingPage = (): React.JSX.Element => {
           </motion.div>
         </section>
 
-        {/* How It Works - Compact with Liquid Glass */}
-        <section id="work" className="py-32 px-6 lg:px-12 max-w-[1400px] mx-auto border-t border-black/5 dark:border-white/5">
+        {/* How It Works - Flowchart */}
+        <section id="work" className="py-32 px-6 lg:px-12 max-w-[1400px] mx-auto border-t border-black/5 dark:border-white/5 relative overflow-hidden">
           <motion.div
             initial="hidden"
             whileInView="visible"
-            viewport={{ once: true }}
+            viewport={{ once: true, margin: "-100px" }}
             variants={STAGGER}
           >
-            <motion.div variants={FADE_UP} className="mb-16 text-center">
-              <h2 className="text-6xl lg:text-7xl font-serif font-bold text-black dark:text-white mb-6">
+            <motion.div variants={FADE_UP} className="mb-20 text-center relative z-10">
+              <h2 className="text-5xl lg:text-7xl font-serif font-bold text-black dark:text-white mb-6">
                 How it works
               </h2>
               <p className="text-xl text-black/60 dark:text-white/60 max-w-2xl mx-auto">
-                Three steps to trustless, instant arbitration
+                A transparent, branched workflow from initial escrow to smart contract settlement.
               </p>
             </motion.div>
 
-            {/* Compact Steps Grid */}
-            <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-              {/* Step 1 */}
-              <motion.div
-                variants={FADE_UP}
-                whileHover={{ y: -4, scale: 1.02 }}
-                transition={SPRING}
-                className="relative group"
-              >
-                <div className="absolute -inset-1 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative bg-white/60 dark:bg-black/60 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-xl">
-                  <div className="text-xs font-mono text-black/40 dark:text-white/40 mb-3">01</div>
-                  <h3 className="text-2xl font-serif font-bold text-black dark:text-white mb-3">
-                    Lock funds
-                  </h3>
-                  <p className="text-sm text-black/60 dark:text-white/60 leading-relaxed mb-4">
-                    Both parties deposit funds into a smart contract. Money held securely until resolved.
-                  </p>
-                  <div className="aspect-square rounded-2xl bg-gradient-to-br from-cyan-50 to-blue-100 dark:from-cyan-950/30 dark:to-blue-950/30 border border-cyan-200/50 dark:border-cyan-800/30 flex items-center justify-center">
-                    <motion.div
-                      whileHover={{ rotate: 10, scale: 1.1 }}
-                      transition={SPRING}
-                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center shadow-xl"
-                    >
-                      <Lock className="w-8 h-8 text-white" />
-                    </motion.div>
-                  </div>
-                </div>
-              </motion.div>
+            {/* True Flowchart Container */}
+            <div className="relative w-full overflow-hidden pb-12 pt-16 flex justify-center pointer-events-none">
+              <div className="w-[1200px] shrink-0 scale-[0.35] sm:scale-[0.55] md:scale-75 lg:scale-100 origin-center flex items-center justify-center gap-0 relative px-12 pointer-events-auto">
+                
+                {/* Visual grid behind flowchart */}
+                <div className="absolute inset-x-0 inset-y-[-100px] bg-[linear-gradient(to_right,#8080800a_1px,transparent_1px),linear-gradient(to_bottom,#8080800a_1px,transparent_1px)] bg-size-[40px_40px] pointer-events-none z-0 rounded-3xl" mask-image="linear-gradient(to bottom, transparent, black 10%, black 90%, transparent)"></div>
 
-              {/* Step 2 */}
-              <motion.div
-                variants={FADE_UP}
-                whileHover={{ y: -4, scale: 1.02 }}
-                transition={SPRING}
-                className="relative group"
-              >
-                <div className="absolute -inset-1 bg-gradient-to-br from-purple-400/20 to-pink-500/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative bg-white/60 dark:bg-black/60 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-xl">
-                  <div className="text-xs font-mono text-black/40 dark:text-white/40 mb-3">02</div>
-                  <h3 className="text-2xl font-serif font-bold text-black dark:text-white mb-3">
-                    Freeze evidence
-                  </h3>
-                  <p className="text-sm text-black/60 dark:text-white/60 leading-relaxed mb-4">
-                    Submit proof to IPFS. Hash written to blockchain. Cryptographically immutable.
-                  </p>
-                  <div className="aspect-square rounded-2xl bg-gradient-to-br from-purple-50 to-pink-100 dark:from-purple-950/30 dark:to-pink-950/30 border border-purple-200/50 dark:border-purple-800/30 flex items-center justify-center relative overflow-hidden">
-                    <motion.div
-                      whileHover={{ rotate: -10, scale: 1.1 }}
-                      transition={SPRING}
-                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center shadow-xl"
-                    >
-                      <Database className="w-8 h-8 text-white" />
-                    </motion.div>
-                  </div>
+                {/* --- Category 1: Escrow --- */}
+                <div className="flex flex-col justify-center relative z-10 w-44">
+                  <div className="absolute -top-10 left-0 text-[10px] font-mono text-black/40 dark:text-white/40 uppercase tracking-widest font-semibold mb-2">1. Escrow</div>
+                  <motion.div 
+                    variants={FADE_UP}
+                    className="w-full bg-white/10 dark:bg-black/10 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-lg p-5 flex flex-col items-center justify-center gap-3 shadow-sm hover:border-black/30 dark:hover:border-white/30 transition-colors relative z-20"
+                  >
+                    <Lock className="w-6 h-6 text-black/60 dark:text-white/60" />
+                    <span className="text-[13px] font-medium text-black dark:text-white leading-tight text-center">Deposit Funds</span>
+                  </motion.div>
                 </div>
-              </motion.div>
 
-              {/* Step 3 */}
-              <motion.div
-                variants={FADE_UP}
-                whileHover={{ y: -4, scale: 1.02 }}
-                transition={SPRING}
-                className="relative group"
-              >
-                <div className="absolute -inset-1 bg-gradient-to-br from-emerald-400/20 to-teal-500/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                <div className="relative bg-white/60 dark:bg-black/60 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-xl">
-                  <div className="text-xs font-mono text-black/40 dark:text-white/40 mb-3">03</div>
-                  <h3 className="text-2xl font-serif font-bold text-black dark:text-white mb-3">
-                    AI delivers
-                  </h3>
-                  <p className="text-sm text-black/60 dark:text-white/60 leading-relaxed mb-4">
-                    Claude analyzes both sides. Issues binding decision. Smart contract executes automatically.
-                  </p>
-                  <div className="aspect-square rounded-2xl bg-gradient-to-br from-emerald-50 to-teal-100 dark:from-emerald-950/30 dark:to-teal-950/30 border border-emerald-200/50 dark:border-emerald-800/30 flex items-center justify-center relative">
-                    <motion.div
-                      whileHover={{ rotate: 10, scale: 1.1 }}
-                      transition={SPRING}
-                      className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center shadow-xl"
-                    >
-                      <Sparkles className="w-8 h-8 text-white" />
-                    </motion.div>
-                    {/* Floating particles */}
-                    {[...Array(4)].map((_, i) => (
-                      <motion.div
-                        key={i}
-                        initial={{ scale: 0, opacity: 0 }}
-                        animate={{
-                          scale: [0, 1, 0],
-                          opacity: [0, 1, 0],
-                          y: [0, -20],
-                        }}
-                        transition={{
-                          delay: i * 0.3,
-                          duration: 2,
-                          repeat: Infinity,
-                          repeatDelay: 0.5,
-                        }}
-                        className="absolute w-2 h-2 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500"
-                        style={{
-                          left: `${30 + i * 15}%`,
-                          top: "20%",
-                        }}
-                      />
-                    ))}
-                  </div>
+                {/* Connector 1 to 2 */}
+                <div className="w-12 h-[1px] bg-black/10 dark:bg-white/10 relative z-0"></div>
+
+                {/* --- Category 2: Submit Work --- */}
+                <div className="flex flex-col justify-center relative z-10 w-44">
+                  <div className="absolute -top-10 left-0 text-[10px] font-mono text-black/40 dark:text-white/40 uppercase tracking-widest font-semibold mb-2">2. Upload</div>
+                  <motion.div 
+                    variants={FADE_UP}
+                    className="w-full bg-white/10 dark:bg-black/10 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-lg p-5 flex flex-col items-center justify-center gap-3 shadow-sm hover:border-black/30 dark:hover:border-white/30 transition-colors relative z-20"
+                  >
+                    <Database className="w-6 h-6 text-black/60 dark:text-white/60" />
+                    <span className="text-[13px] font-medium text-black dark:text-white leading-tight text-center">Deliver Work</span>
+                  </motion.div>
                 </div>
-              </motion.div>
+
+                {/* Connector 2 to 3 */}
+                <div className="w-12 h-[1px] bg-black/10 dark:bg-white/10 relative z-0"></div>
+
+                {/* --- Category 3: Orchestrator AI --- */}
+                <div className="flex flex-col justify-center relative z-10 w-44">
+                  <div className="absolute -top-10 left-0 text-[10px] font-mono text-black/40 dark:text-white/40 uppercase tracking-widest font-semibold mb-2">3. Orchestrate</div>
+                  <motion.div 
+                    variants={FADE_UP}
+                    className="w-full bg-white/10 dark:bg-black/10 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-lg p-5 flex flex-col items-center justify-center gap-3 shadow-sm hover:border-black/30 dark:hover:border-white/30 transition-colors relative z-20"
+                  >
+                    <Sparkles className="w-6 h-6 text-black/60 dark:text-white/60" />
+                    <span className="text-[13px] font-medium text-black dark:text-white leading-tight text-center">Master Agent</span>
+                  </motion.div>
+                </div>
+
+                {/* Fork Connector */}
+                <div className="relative z-0 w-12 h-[260px]">
+                  {/* Central input segment */}
+                  <div className="absolute left-0 top-1/2 w-4 h-[1px] bg-black/10 dark:bg-white/10 -translate-y-1/2"></div>
+                  {/* Vertical spine */}
+                  <div className="absolute left-4 top-[24px] bottom-[24px] w-[1px] bg-black/10 dark:bg-white/10"></div>
+                  {/* Top branch */}
+                  <div className="absolute left-4 top-[24px] w-8 h-[1px] bg-black/10 dark:bg-white/10"></div>
+                  {/* Middle branch */}
+                  <div className="absolute left-4 top-1/2 w-8 h-[1px] bg-black/10 dark:bg-white/10 -translate-y-1/2"></div>
+                  {/* Bottom branch */}
+                  <div className="absolute left-4 bottom-[24px] w-8 h-[1px] bg-black/10 dark:bg-white/10"></div>
+                </div>
+
+                {/* --- Sub-Agents Column --- */}
+                <div className="flex flex-col justify-between h-[260px] relative z-10">
+                  <div className="absolute -top-10 left-0 text-[10px] font-mono text-black/40 dark:text-white/40 uppercase tracking-widest font-semibold mb-2">Evaluate</div>
+                  
+                  {/* Agent 1 */}
+                  <motion.div variants={FADE_UP} className="w-44 bg-white/10 dark:bg-black/10 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-lg py-5 px-3 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-black/30 dark:hover:border-white/30 transition-colors relative z-20">
+                    <Zap className="w-5 h-5 text-black/60 dark:text-white/60" />
+                    <span className="text-[13px] font-medium text-black dark:text-white leading-tight text-center">Review Agent</span>
+                  </motion.div>
+
+                  {/* Agent 2 */}
+                  <motion.div variants={FADE_UP} className="w-44 bg-white/10 dark:bg-black/10 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-lg py-5 px-3 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-black/30 dark:hover:border-white/30 transition-colors relative z-20">
+                    <Zap className="w-5 h-5 text-black/60 dark:text-white/60" />
+                    <span className="text-[13px] font-medium text-black dark:text-white leading-tight text-center">Review Agent</span>
+                  </motion.div>
+
+                  {/* Agent 3 */}
+                  <motion.div variants={FADE_UP} className="w-44 bg-white/10 dark:bg-black/10 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-lg py-5 px-3 flex flex-col items-center justify-center gap-2 shadow-sm hover:border-black/30 dark:hover:border-white/30 transition-colors relative z-20">
+                    <Zap className="w-5 h-5 text-black/60 dark:text-white/60" />
+                    <span className="text-[13px] font-medium text-black dark:text-white leading-tight text-center">Review Agent</span>
+                  </motion.div>
+                </div>
+
+                {/* Merge Connector */}
+                <div className="relative z-0 w-12 h-[260px]">
+                  {/* Vertical merger */}
+                  <div className="absolute right-4 top-[24px] bottom-[24px] w-[1px] bg-black/10 dark:bg-white/10"></div>
+                  {/* Input branch Top */}
+                  <div className="absolute right-4 top-[24px] w-8 h-[1px] bg-black/10 dark:bg-white/10"></div>
+                  {/* Input branch Middle */}
+                  <div className="absolute right-4 top-1/2 w-8 h-[1px] bg-black/10 dark:bg-white/10 -translate-y-1/2"></div>
+                  {/* Input branch Bottom */}
+                  <div className="absolute right-4 bottom-[24px] w-8 h-[1px] bg-black/10 dark:bg-white/10"></div>
+                  {/* Central output segment */}
+                  <div className="absolute right-0 top-1/2 w-4 h-[1px] bg-black/10 dark:bg-white/10 -translate-y-1/2"></div>
+                </div>
+
+                {/* --- Category 4: Auto-Settlement --- */}
+                <div className="flex flex-col justify-center relative z-10 w-44">
+                  <div className="absolute -top-10 left-0 text-[10px] font-mono text-black/40 dark:text-white/40 uppercase tracking-widest font-semibold mb-2">4. Settle</div>
+                  <motion.div 
+                    variants={FADE_UP}
+                    className="w-full bg-white/10 dark:bg-black/10 backdrop-blur-2xl border border-black/10 dark:border-white/10 rounded-lg p-5 flex flex-col items-center justify-center gap-3 shadow-sm hover:border-black/30 dark:hover:border-white/30 transition-colors relative z-20"
+                  >
+                    <ArrowRight className="w-6 h-6 text-black/60 dark:text-white/60" />
+                    <span className="text-[13px] font-medium text-black dark:text-white leading-tight text-center">Payment Sent</span>
+                  </motion.div>
+                </div>
+
+              </div>
+            </div>
+          </motion.div>
+        </section>
+
+        {/* CTA Section */}
+        <section className="py-16 px-6 lg:px-12 max-w-[1200px] mx-auto">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ type: "spring", damping: 20, stiffness: 100 }}
+            className="border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] rounded-3xl p-8 lg:p-12 text-center"
+          >
+            <div className="max-w-xl mx-auto space-y-6">
+              <h2 className="text-3xl lg:text-4xl font-serif font-bold text-black dark:text-white">
+                Ready to find verified services?
+              </h2>
+              <p className="text-base text-black/60 dark:text-white/60">
+                Join the network of verified professionals and clients building trustless agreements today.
+              </p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
+                <Button 
+                  className="w-full sm:w-auto rounded-full px-8 text-base bg-black dark:bg-white text-white dark:text-black hover:bg-black/90 dark:hover:bg-white/90 transition-all"
+                  onClick={() => router.push('/browse')}
+                >
+                  Browse Services
+                </Button>
+                {mounted && isConnected && (
+                  <Button 
+                    variant="outline"
+                    className="w-full sm:w-auto rounded-full px-8 text-base border-black/10 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+                    onClick={() => setShowPublishModal(true)}
+                  >
+                    Publish Service
+                  </Button>
+                )}
+              </div>
             </div>
           </motion.div>
         </section>
 
         {/* Footer */}
-        <footer className="py-16 px-6 lg:px-12 max-w-[1800px] mx-auto mt-32">
+        <footer className="py-12 px-6 lg:px-12 max-w-[1400px] mx-auto mt-20">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="relative bg-white/50 dark:bg-black/50 backdrop-blur-2xl rounded-3xl p-12 border border-white/20 dark:border-white/10 shadow-xl"
+            className="flex flex-col md:flex-row items-center justify-between gap-4 border-t border-black/10 dark:border-white/10 pt-8"
           >
-            <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-              <div className="flex items-center gap-3">
-                <div className="text-sm text-black/50 dark:text-white/50">
-                  © 2026 Verif<span className="font-serif italic">AI</span>
-                </div>
-                <div className="w-px h-4 bg-black/10 dark:bg-white/10"></div>
-                <div className="text-xs text-black/30 dark:text-white/30">
-                  Built with love on Base
-                </div>
-              </div>
-              <div className="flex items-center gap-6">
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  transition={SPRING}
-                  className="px-4 py-2 rounded-full bg-cyan-500/10 dark:bg-cyan-400/10 border border-cyan-500/20 dark:border-cyan-400/20 backdrop-blur-xl"
-                >
-                  <span className="text-xs font-semibold text-cyan-600 dark:text-cyan-400">Base Sepolia</span>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  transition={SPRING}
-                  className="px-4 py-2 rounded-full bg-purple-500/10 dark:bg-purple-400/10 border border-purple-500/20 dark:border-purple-400/20 backdrop-blur-xl"
-                >
-                  <span className="text-xs font-semibold text-purple-600 dark:text-purple-400">Claude AI</span>
-                </motion.div>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  transition={SPRING}
-                  className="px-4 py-2 rounded-full bg-emerald-500/10 dark:bg-emerald-400/10 border border-emerald-500/20 dark:border-emerald-400/20 backdrop-blur-xl"
-                >
-                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">IPFS</span>
-                </motion.div>
-              </div>
+            <div className="text-sm font-medium text-black/80 dark:text-white/80">
+              © 2026 Verif<span className="font-serif italic font-bold">AI</span>
+            </div>
+            <div className="text-sm text-black/50 dark:text-white/50">
+              Trustless Arbitration
             </div>
           </motion.div>
         </footer>

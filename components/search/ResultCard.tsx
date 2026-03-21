@@ -76,6 +76,7 @@ export function ResultCard({ data, index }: ResultCardProps) {
         stiffness: 100,
       }}
       whileHover={{ y: -8, scale: 1.02 }}
+      onClick={() => setShowDetails(true)}
       className="group relative cursor-pointer h-full"
     >
       {/* Featured Glow */}
@@ -221,7 +222,10 @@ export function ResultCard({ data, index }: ResultCardProps) {
             </div>
             <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }} transition={SPRING}>
               <button
-                onClick={() => setShowDetails(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowDetails(true);
+                }}
                 className="btn-macos !py-2 !px-4 !text-xs"
               >
                 View Details

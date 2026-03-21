@@ -261,7 +261,7 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenuItem
-                    className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+                    className="cursor-pointer flex items-center text-black dark:text-white focus:text-black dark:focus:text-white hover:text-black dark:hover:text-white focus:bg-black/5 dark:focus:bg-white/5 hover:bg-black/5 dark:hover:bg-white/5 font-medium"
                     onClick={copyAddress}
                   >
                     {copied ? (
@@ -278,7 +278,7 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
               </Tooltip>
             </TooltipProvider>
             <DropdownMenuItem
-              className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+              className="cursor-pointer flex items-center text-black dark:text-white focus:text-black dark:focus:text-white hover:text-black dark:hover:text-white focus:bg-black/5 dark:focus:bg-white/5 hover:bg-black/5 dark:hover:bg-white/5 font-medium"
               onClick={openExplorer}
             >
               <ExternalLink className="mr-2 h-4 w-4" />
@@ -286,14 +286,14 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
             </DropdownMenuItem>
             <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
             <DropdownMenuItem
-              className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+              className="cursor-pointer flex items-center text-black dark:text-white focus:text-black dark:focus:text-white hover:text-black dark:hover:text-white focus:bg-black/5 dark:focus:bg-white/5 hover:bg-black/5 dark:hover:bg-white/5 font-medium"
               onClick={onMyServicesClick}
             >
               <Package className="mr-2 h-4 w-4" />
               My Services
             </DropdownMenuItem>
             <DropdownMenuItem
-              className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+              className="cursor-pointer flex items-center text-black dark:text-white focus:text-black dark:focus:text-white hover:text-black dark:hover:text-white focus:bg-black/5 dark:focus:bg-white/5 hover:bg-black/5 dark:hover:bg-white/5 font-medium"
               onClick={onMyPendingWorksClick}
             >
               <Briefcase className="mr-2 h-4 w-4" />
@@ -303,7 +303,7 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
             {onThemeToggle && (
               <>
                 <DropdownMenuItem
-                  className="cursor-pointer flex items-center justify-between text-black dark:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
+                  className="cursor-pointer flex items-center justify-between text-black dark:text-white focus:text-black dark:focus:text-white hover:text-black dark:hover:text-white focus:bg-black/5 dark:focus:bg-white/5 hover:bg-black/5 dark:hover:bg-white/5 font-medium"
                   onSelect={(e) => {
                     e.preventDefault();
                     onThemeToggle();
@@ -336,11 +336,10 @@ export default function WalletConnect({ onMyServicesClick, onMyPendingWorksClick
                     />
                   </button>
                 </DropdownMenuItem>
-                <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
               </>
             )}
             <DropdownMenuItem
-              className="cursor-pointer flex items-center text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-500/20 font-medium"
+              className="cursor-pointer flex items-center text-rose-600 dark:text-rose-400 focus:text-rose-700 dark:focus:text-rose-300 hover:text-rose-700 dark:hover:text-rose-300 focus:bg-rose-500/10 hover:bg-rose-500/10 font-medium"
               onClick={() => disconnect()}
             >
               <LogOut className="mr-2 h-4 w-4" />
