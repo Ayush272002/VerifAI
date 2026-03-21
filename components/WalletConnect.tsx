@@ -208,51 +208,48 @@ export default function WalletConnect() {
       {isConnected && address ? (
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="outline"
-              className="border border-[#B5D8FF] bg-white hover:bg-slate-200 text-sky-300 font-medium rounded-lg px-4 py-2 shadow-sm transition-all"
-            >
-              <div className="flex items-center">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></div>
-                <span className="mr-2 text-black">
+            <button className="glass-macos glass-macos-hover font-medium rounded-full px-4 py-2.5 transition-all">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 dark:bg-emerald-400 animate-pulse"></div>
+                <span className="text-black dark:text-white font-semibold text-sm">
                   {formatAddress(address)}
                 </span>
-                <span className="font-mono text-[#0CACC4]">
+                <span className="font-mono text-cyan-600 dark:text-cyan-400 text-sm font-semibold">
                   {balance
                     ? Number.parseFloat(formatUnits(balance.value, balance.decimals)).toFixed(4)
                     : '0.0000'}{' '}
                   {balance?.symbol}
                 </span>
-                <ChevronDown className="ml-2 h-4 w-4 text-gray-500" />
+                <ChevronDown className="h-4 w-4 text-black dark:text-white" />
               </div>
-            </Button>
+            </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 bg-[#EAF4FF] border border-[#B5D8FF] text-gray-800 shadow-md rounded-xl">
-            <div className="px-2 py-1.5 text-xs text-[#4A8CFF] font-semibold">
+          <DropdownMenuContent className="w-56 glass-macos rounded-2xl shadow-2xl border-0">
+            <div className="px-2 py-1.5 text-xs text-cyan-600 dark:text-cyan-400 font-bold">
               Connected Wallet
             </div>
-            <DropdownMenuSeparator className="bg-[#D0E7FF]" />
+            <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
             <div className="px-2 py-2">
-              <p className="text-sm font-medium text-gray-700 mb-1">Balance</p>
-              <p className="text-lg font-mono text-[#0CACC4]">
+              <p className="text-sm font-semibold text-black dark:text-white mb-1">Balance</p>
+              <p className="text-lg font-mono font-bold text-cyan-600 dark:text-cyan-400">
                 {balance
                   ? Number.parseFloat(formatUnits(balance.value, balance.decimals)).toFixed(4)
                   : '0.0000'}{' '}
                 {balance?.symbol}
               </p>
             </div>
-            <DropdownMenuSeparator className="bg-[#D0E7FF]" />
+            <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <DropdownMenuItem
-                    className="cursor-pointer flex items-center text-gray-700 hover:text-black hover:bg-[#D8EDFF]"
+                    className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
                     onClick={copyAddress}
                   >
                     {copied ? (
-                      <Check className="mr-2 h-4 w-4 text-green-500" />
+                      <Check className="mr-2 h-4 w-4 text-emerald-500 dark:text-emerald-400" />
                     ) : (
-                      <Copy className="mr-2 h-4 w-4 text-gray-500" />
+                      <Copy className="mr-2 h-4 w-4" />
                     )}
                     {copied ? 'Copied!' : 'Copy Address'}
                   </DropdownMenuItem>
@@ -263,15 +260,15 @@ export default function WalletConnect() {
               </Tooltip>
             </TooltipProvider>
             <DropdownMenuItem
-              className="cursor-pointer flex items-center text-gray-700 hover:text-black hover:bg-[#D8EDFF]"
+              className="cursor-pointer flex items-center text-black dark:text-white hover:text-black dark:hover:text-white hover:bg-black/10 dark:hover:bg-white/10 font-medium"
               onClick={openExplorer}
             >
-              <ExternalLink className="mr-2 h-4 w-4 text-gray-500" />
+              <ExternalLink className="mr-2 h-4 w-4" />
               View on Explorer
             </DropdownMenuItem>
-            <DropdownMenuSeparator className="bg-[#D0E7FF]" />
+            <DropdownMenuSeparator className="bg-black/10 dark:bg-white/10" />
             <DropdownMenuItem
-              className="cursor-pointer flex items-center text-rose-500 hover:text-rose-600 hover:bg-rose-100"
+              className="cursor-pointer flex items-center text-rose-600 dark:text-rose-400 hover:text-rose-700 dark:hover:text-rose-300 hover:bg-rose-500/20 font-medium"
               onClick={() => disconnect()}
             >
               <LogOut className="mr-2 h-4 w-4" />
@@ -281,61 +278,56 @@ export default function WalletConnect() {
         </DropdownMenu>
       ) : (
         <>
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Button
+          <motion.div whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+            <button
               onClick={() => setIsWalletModalOpen(true)}
-              className="bg-[#4A8CFF] text-white hover:bg-[#357ce7] focus:outline-none focus:ring-2 focus:ring-[#4A8CFF] shadow-sm"
+              className="btn-macos flex items-center gap-2"
             >
-              <Wallet className="mr-2 h-4 w-4" />
+              <Wallet className="h-4 w-4" />
               Connect Wallet
-            </Button>
+            </button>
           </motion.div>
 
           <Dialog open={isWalletModalOpen} onOpenChange={setIsWalletModalOpen}>
-            <DialogContent className="bg-white border border-[#B5D8FF] text-gray-800 sm:max-w-md shadow-xl rounded-2xl">
+            <DialogContent className="glass-macos sm:max-w-md shadow-2xl rounded-3xl border-0">
               <DialogHeader>
-                <DialogTitle className="text-xl font-bold text-center text-gray-900">
+                <DialogTitle className="text-xl font-bold text-center text-black dark:text-white">
                   Connect Wallet
                 </DialogTitle>
-                <DialogDescription className="text-gray-500 text-center">
+                <DialogDescription className="text-black/60 dark:text-white/60 text-center">
                   Choose your preferred wallet to connect to Sepolia Testnet
                 </DialogDescription>
               </DialogHeader>
 
               <div className="grid grid-cols-1 gap-4 py-4">
                 {connectors.map((connector) => (
-                  <Button
+                  <button
                     key={connector.uid}
-                    variant="outline"
-                    className={`flex items-center justify-start gap-3 p-4 h-auto text-left rounded-xl transition-all duration-200 ${
-                      connector.name.toLowerCase() === 'metamask'
-                        ? 'border-[#6C8EFC] bg-[#E6F0FF] hover:bg-[#D0E2FF]'
-                        : 'border-[#A5C9FF] hover:border-[#4A8CFF] hover:bg-[#E6F0FF]'
-                    }`}
+                    className="glass-macos glass-macos-hover flex items-center justify-start gap-3 p-4 text-left rounded-xl w-full"
                     onClick={() => handleConnectClick(connector)}
                   >
                     <div className="shrink-0">
                       {getWalletIcon(connector.name)}
                     </div>
                     <div>
-                      <div className="font-medium text-gray-900">
+                      <div className="font-medium text-black dark:text-white">
                         {connector.name}
                       </div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-black/60 dark:text-white/60">
                         Connect using {connector.name}
                       </div>
                     </div>
-                  </Button>
+                  </button>
                 ))}
               </div>
 
-              <div className="text-xs text-gray-500 text-center px-4">
+              <div className="text-xs text-black/60 dark:text-white/60 text-center px-4">
                 By connecting your wallet, you agree to our{' '}
-                <span className="underline cursor-pointer hover:text-gray-700">
+                <span className="underline cursor-pointer hover:text-black dark:hover:text-white">
                   Terms of Service
                 </span>{' '}
                 and{' '}
-                <span className="underline cursor-pointer hover:text-gray-700">
+                <span className="underline cursor-pointer hover:text-black dark:hover:text-white">
                   Privacy Policy
                 </span>
                 .
