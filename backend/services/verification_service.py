@@ -15,7 +15,7 @@ from langchain_ollama import ChatOllama
 
 from ..core.constants import OLLAMA_BASE_URL
 from ..core.constants import OLLAMA_MODEL_CHOICES
-from . import prompts
+from ..core import prompts
 
 
 class VerificationService:
