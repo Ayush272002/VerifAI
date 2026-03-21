@@ -276,6 +276,16 @@ export function ResultCard({ data, index }: ResultCardProps) {
                 </button>
               </motion.div>
             </div>
+            <div className="flex items-center gap-1">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{data.deliveryTime}</span>
+            </div>
+            {data.location && (
+              <div className="flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5" />
+                <span className="truncate">{data.location}</span>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>

@@ -31,12 +31,13 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
   });
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [deliverables, setDeliverables] = useState<string[]>([]);
-  const [deliverableInput, setDeliverableInput] = useState("");
+  const [deliverables, setDeliverables] = useState<{id: string, text: string}[]>([{ id: Math.random().toString(), text: "" }]);
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [classificationError, setClassificationError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const validDeliverables = deliverables.filter(d => d.text.trim() !== "");
 
   useEffect(() => {
     if (formData.category) {
@@ -95,7 +96,7 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
     parseFloat(formData.priceAmount) > 0 &&
     formData.deliveryTime.trim() !== "" &&
     tags.length > 0 &&
-    deliverables.length > 0;
+    validDeliverables.length > 0;
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -122,18 +123,49 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
     setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
-  const handleDeliverableKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && deliverableInput.trim()) {
-      e.preventDefault();
-      if (!deliverables.includes(deliverableInput.trim())) {
-        setDeliverables([...deliverables, deliverableInput.trim()]);
-      }
-      setDeliverableInput("");
-    }
+  const updateDeliverable = (id: string, value: string) => {
+    setDeliverables(deliverables.map(d => d.id === id ? { ...d, text: value } : d));
   };
 
-  const removeDeliverable = (deliverableToRemove: string) => {
-    setDeliverables(deliverables.filter(d => d !== deliverableToRemove));
+  const addDeliverable = () => {
+    setDeliverables([...deliverables, { id: Math.random().toString(), text: "" }]);
+    setTimeout(() => {
+      const inputs = document.querySelectorAll<HTMLInputElement>('input[data-feature="deliverable"]');
+      if (inputs.length > 0) inputs[inputs.length - 1].focus();
+    }, 0);
+  };
+
+  const removeDeliverable = (id: string, index: number) => {
+    let newDeliverables = deliverables.filter(d => d.id !== id);
+    if (newDeliverables.length === 0) {
+      newDeliverables = [{ id: Math.random().toString(), text: "" }];
+    }
+    setDeliverables(newDeliverables);
+  };
+
+  const handleDeliverableKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (deliverables[index].text.trim() !== "") {
+        const newId = Math.random().toString();
+        const newDeliverables = [...deliverables];
+        newDeliverables.splice(index + 1, 0, { id: newId, text: "" });
+        setDeliverables(newDeliverables);
+        
+        setTimeout(() => {
+          const inputs = document.querySelectorAll<HTMLInputElement>('input[data-feature="deliverable"]');
+          if (inputs[index + 1]) inputs[index + 1].focus();
+        }, 0);
+      }
+    } else if (e.key === 'Backspace' && deliverables[index].text === "") {
+        e.preventDefault();
+        const idToRemove = deliverables[index].id;
+        removeDeliverable(idToRemove, index);
+        setTimeout(() => {
+          const inputs = document.querySelectorAll<HTMLInputElement>('input[data-feature="deliverable"]');
+          if (inputs[index - 1]) inputs[index - 1].focus();
+        }, 0);
+    }
   };
 
   const { addService, isPending } = useAddService();
@@ -143,37 +175,36 @@ const handleSubmit = async (e: React.FormEvent) => {
     if (!isFormValid || isPending) return;
 
     try {
-
       const resolvedBackgroundImage =
-      formData.backgroundImage || getRandomPlaceholderImage(formData.category);
+        formData.backgroundImage || getRandomPlaceholderImage(formData.category);
       
-    const deliverablesText = deliverables.map((d, i) => `${i + 1}. ${d}`).join('\n');
-    const fullDescription = `${formData.description}\n\nWhat You'll Get:\n${deliverablesText}\n\nCategory: ${formData.category}\nDelivery Time: ${formData.deliveryTime}\nTags: ${tags.join(", ")}`;
+      const deliverablesText = validDeliverables.map((d, i) => `${i + 1}. ${d.text}`).join('\n');
+      const fullDescription = `${formData.description}\n\nWhat You'll Get:\n${deliverablesText}\n\nCategory: ${formData.category}\nDelivery Time: ${formData.deliveryTime}\nTags: ${tags.join(", ")}`;
 
-    await addService(formData.title, fullDescription, formData.priceAmount);
-    console.log("Service published on-chain:", {
-      ...formData,
-      backgroundImage: resolvedBackgroundImage,
-      tags,
-    });
-    // TODO: Add actual submission logic here (save to backend/contract)
-    setShowConfirmation(true);
-    setTimeout(() => {
-      setShowConfirmation(false);
-      onClose();
-      // Reset form
-      setFormData({
-        title: "",
-        category: "",
-        description: "",
-        priceType: "fixed",
-        priceAmount: "",
-        deliveryTime: "",
-        backgroundImage: null,
+      await addService(formData.title, fullDescription, formData.priceAmount);
+      console.log("Service published on-chain:", {
+        ...formData,
+        backgroundImage: resolvedBackgroundImage,
+        tags,
       });
-      setTags([]);
-      setTagInput("");
-    }, 2500);
+      setShowConfirmation(true);
+      setTimeout(() => {
+        setShowConfirmation(false);
+        onClose();
+        // Reset form
+        setFormData({
+          title: "",
+          category: "",
+          description: "",
+          priceType: "fixed",
+          priceAmount: "",
+          deliveryTime: "",
+          backgroundImage: null,
+        });
+        setTags([]);
+        setTagInput("");
+        setDeliverables([{ id: Math.random().toString(), text: "" }]);
+      }, 2500);
     } catch (err: any) {
       // Handle user-rejected transaction
       if (
@@ -315,46 +346,55 @@ const handleSubmit = async (e: React.FormEvent) => {
                       What You'll Deliver *
                     </label>
                     <div className="space-y-3">
-                      <input
-                        type="text"
-                        value={deliverableInput}
-                        onChange={(e) => setDeliverableInput(e.target.value)}
-                        onKeyDown={handleDeliverableKeyDown}
-                        placeholder="Add a deliverable and press Enter... (e.g., 'Fully functional website')"
-                        className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
-                      />
-                      {deliverables.length > 0 && (
-                        <div className="glass-macos rounded-xl p-4 space-y-2">
+                      <div className="glass-macos rounded-xl p-4 flex flex-col gap-3">
+                        <AnimatePresence initial={false}>
                           {deliverables.map((deliverable, idx) => (
                             <motion.div
-                              key={idx}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: -10 }}
-                              className="flex items-start gap-3 group"
+                              layout
+                              key={deliverable.id}
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, height: 0, overflow: "hidden" }}
+                              transition={{ duration: 0.2 }}
+                              className="flex items-center gap-3 group"
                             >
-                              <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <div className="w-6 h-6 rounded-full bg-cyan-500/20 flex items-center justify-center flex-shrink-0">
                                 <span className="text-xs font-bold text-cyan-600 dark:text-cyan-400">
                                   {idx + 1}
                                 </span>
                               </div>
-                              <p className="flex-1 text-sm text-black dark:text-white pt-0.5">
-                                {deliverable}
-                              </p>
+                              <input
+                                data-feature="deliverable"
+                                type="text"
+                                value={deliverable.text}
+                                onChange={(e) => updateDeliverable(deliverable.id, e.target.value)}
+                                onKeyDown={(e) => handleDeliverableKeyDown(e, idx)}
+                                placeholder="E.g., Fully functional website"
+                                className="flex-1 bg-transparent border-b border-black/5 dark:border-white/5 hover:border-black/20 dark:hover:border-white/20 focus:border-cyan-500 text-sm text-black dark:text-white pt-1 pb-1 outline-none transition-all placeholder:text-black/30 dark:placeholder:text-white/30"
+                              />
                               <button
                                 type="button"
-                                onClick={() => removeDeliverable(deliverable)}
-                                className="opacity-0 group-hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-1 transition-all"
+                                onClick={() => removeDeliverable(deliverable.id, idx)}
+                                className={`opacity-0 group-hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-1 transition-all ${deliverables.length === 1 && deliverable.text === '' ? 'invisible' : ''}`}
                               >
                                 <X className="w-4 h-4 text-black/60 dark:text-white/60" />
                               </button>
                             </motion.div>
                           ))}
-                        </div>
-                      )}
-                      <p className="text-xs text-black/50 dark:text-white/50">
-                        List specific deliverables clients will receive (e.g., source code, documentation, design files)
-                      </p>
+                        </AnimatePresence>
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <button
+                          type="button"
+                          onClick={addDeliverable}
+                          className="text-xs font-semibold text-cyan-600 dark:text-cyan-400 flex items-center gap-1 hover:underline px-1"
+                        >
+                          <Plus className="w-3 h-3" /> Add another item
+                        </button>
+                        <p className="text-xs text-black/50 dark:text-white/50">
+                          Press Enter to add a new line
+                        </p>
+                      </div>
                     </div>
                   </div>
 
