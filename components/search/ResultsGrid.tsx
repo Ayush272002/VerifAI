@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // ---------------------------------------------------------------------------
 
 const STAGGER = {
-  hidden:  { opacity: 0 },
+  hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { staggerChildren: 0.05 } },
 };
 
@@ -31,14 +31,14 @@ const SPRING = { type: "spring", damping: 20, stiffness: 100 } as const;
 
 const CATEGORY_RE = /Category:\s*(.+)/;
 const DELIVERY_RE = /Delivery Time:\s*(.+)/;
-const TAGS_RE     = /Tags:\s*(.+)/;
+const TAGS_RE = /Tags:\s*(.+)/;
 
 interface OnChainService {
-  provider:     string;
+  provider: string;
   serviceIndex: number;
-  title:        string;
-  description:  string;
-  priceWei:     bigint;
+  title: string;
+  description: string;
+  priceWei: bigint;
 }
 
 /**
@@ -48,28 +48,30 @@ interface OnChainService {
  * @returns UI-ready ResultData.
  */
 const mapOnChainService = (svc: OnChainService): ResultData => {
-  const desc         = svc.description ?? "";
-  const category     = CATEGORY_RE.exec(desc)?.[1]?.trim() ?? "Blockchain Service";
+  const desc = svc.description ?? "";
+  const category = CATEGORY_RE.exec(desc)?.[1]?.trim() ?? "Blockchain Service";
   const deliveryTime = DELIVERY_RE.exec(desc)?.[1]?.trim() ?? "Flexible";
-  const rawTags      = TAGS_RE.exec(desc)?.[1]?.trim()     ?? "";
-  const tags         = rawTags ? rawTags.split(",").map((t) => t.trim()) : ["Web3", "Blockchain"];
-  const shortAddr    = `${svc.provider.substring(0, 6)}...${svc.provider.slice(-4)}`;
+  const rawTags = TAGS_RE.exec(desc)?.[1]?.trim() ?? "";
+  const tags = rawTags
+    ? rawTags.split(",").map((t) => t.trim())
+    : ["Web3", "Blockchain"];
+  const shortAddr = `${svc.provider.substring(0, 6)}...${svc.provider.slice(-4)}`;
 
   return {
-    id:       `onchain-${svc.provider}-${svc.serviceIndex}`,
-    title:    svc.title,
+    id: `onchain-${svc.provider}-${svc.serviceIndex}`,
+    title: svc.title,
     provider: { name: shortAddr, avatar: "", level: "Expert", verified: true },
     category,
-    price:    { amount: Number(formatEther(svc.priceWei)), type: "fixed" },
-    rating:       5.0,
-    reviewCount:  0,
+    price: { amount: Number(formatEther(svc.priceWei)), type: "fixed" },
+    rating: 5.0,
+    reviewCount: 0,
     deliveryTime,
-    location:     "On-Chain",
-    thumbnail:    "bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700",
-    icon:         "",
+    location: "On-Chain",
+    thumbnail: "bg-gradient-to-br from-emerald-500 via-teal-600 to-cyan-700",
+    icon: "",
     tags,
-    featured:     true,
-    successRate:  100,
+    featured: true,
+    successRate: 100,
   };
 };
 
@@ -82,7 +84,7 @@ function ResultSkeleton() {
     <div className="relative h-full bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-3xl border border-white/20 dark:border-white/10 shadow-xl overflow-hidden flex flex-col">
       {/* Thumbnail */}
       <Skeleton className="w-full aspect-video rounded-none" />
-      
+
       {/* Content */}
       <div className="p-6 flex-1 flex flex-col space-y-4">
         {/* Provider */}
@@ -96,7 +98,7 @@ function ResultSkeleton() {
 
         {/* Title */}
         <Skeleton className="h-6 w-3/4" />
-        
+
         {/* Category */}
         <Skeleton className="h-4 w-1/3 mb-4" />
 
@@ -141,8 +143,8 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
   const { data: onChainServices, isLoading } = useAllActiveServices();
 
   const [filteredResults, setFilteredResults] = useState<ResultData[]>([]);
-  const [semanticReady, setSemanticReady]     = useState(false);
-  
+  const [semanticReady, setSemanticReady] = useState(false);
+
   // Debounce state
   const [debouncedQuery, setDebouncedQuery] = useState(searchQuery);
   const [isSearching, setIsSearching] = useState(false);
@@ -174,7 +176,7 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
       isFirstMount.current = false;
       return;
     }
-    
+
     setIsSearching(true);
     const handler = setTimeout(() => {
       setDebouncedQuery(searchQuery);
@@ -190,7 +192,7 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
       setIsSearching(false);
       return;
     }
-    
+
     setIsSearching(true);
     const results = await indexRef.current.search(debouncedQuery);
     // If semantic isn't ready and nothing fuzzy-matched (e.g. "diet" vs "cooking"
@@ -201,16 +203,20 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
     setIsSearching(false);
   }, [debouncedQuery, allServices]);
 
-  useEffect(() => { runSearch(); }, [runSearch, semanticReady]);
+  useEffect(() => {
+    runSearch();
+  }, [runSearch, semanticReady]);
 
   const featuredResults = filteredResults.filter((r) => r.featured);
-  const regularResults  = filteredResults.filter((r) => !r.featured);
+  const regularResults = filteredResults.filter((r) => !r.featured);
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-24 gap-4">
         <Loader2 className="w-10 h-10 animate-spin text-cyan-500" />
-        <p className="text-black/60 dark:text-white/60 font-medium">Syncing live blockchain services...</p>
+        <p className="text-black/60 dark:text-white/60 font-medium">
+          Syncing live blockchain services...
+        </p>
       </div>
     );
   }
@@ -220,7 +226,9 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3 mb-6">
-          <h2 className="text-2xl font-serif font-bold text-black dark:text-white">Searching...</h2>
+          <h2 className="text-2xl font-serif font-bold text-black dark:text-white">
+            Searching...
+          </h2>
           <div className="flex-1 h-px bg-gradient-to-r from-cyan-500/30 to-transparent" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
@@ -236,8 +244,12 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
     return (
       <div className="text-center py-16">
         <div className="text-6xl mb-4 opacity-20">🔍</div>
-        <h3 className="text-2xl font-serif font-bold text-black dark:text-white mb-2">No results found</h3>
-        <p className="text-black/60 dark:text-white/60">Try adjusting your search terms or filters</p>
+        <h3 className="text-2xl font-serif font-bold text-black dark:text-white mb-2">
+          No results found
+        </h3>
+        <p className="text-black/60 dark:text-white/60">
+          Try adjusting your search terms or filters
+        </p>
       </div>
     );
   }
@@ -252,14 +264,18 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
           className="flex items-center gap-2 text-xs text-black/40 dark:text-white/40"
         >
           <Sparkles className="w-3.5 h-3.5 animate-pulse text-cyan-500" />
-          <span>Loading semantic search model — showing fuzzy results for now...</span>
+          <span>
+            Loading semantic search model — showing fuzzy results for now...
+          </span>
         </motion.div>
       )}
 
       {featuredResults.length > 0 && (
         <div>
           <div className="flex items-center gap-3 mb-6">
-            <h2 className="text-2xl font-serif font-bold text-black dark:text-white">Featured Services</h2>
+            <h2 className="text-2xl font-serif font-bold text-black dark:text-white">
+              Featured Services
+            </h2>
             <div className="flex-1 h-px bg-gradient-to-r from-amber-500/30 to-transparent" />
           </div>
           <motion.div
@@ -278,7 +294,9 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
       {regularResults.length > 0 && (
         <div className={featuredResults.length > 0 ? "pt-8" : ""}>
           <div className="flex items-center gap-3 mb-6">
-            <h2 className="text-2xl font-serif font-bold text-black dark:text-white">All Results</h2>
+            <h2 className="text-2xl font-serif font-bold text-black dark:text-white">
+              All Results
+            </h2>
             <div className="flex-1 h-px bg-gradient-to-r from-cyan-500/30 to-transparent" />
           </div>
           <motion.div
