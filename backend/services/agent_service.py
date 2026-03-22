@@ -5,6 +5,8 @@ import re
 
 from langchain_ollama import ChatOllama
 
+from backend.core.data_models import GigValidationRequest
+
 from ..core.constants import GIG_CATEGORIES, OLLAMA_BASE_URL, OLLAMA_MODEL_NAME
 
 
@@ -81,49 +83,52 @@ No additional text.
 
         return "Unknown" # Failsafe if parsing fails
 
-    def validate_gig_fields(self, title: str, description: str, tags: list[str] | None = None, category: str | None = None) -> str:
+    def validate_gig_fields(self, gig: GigValidationRequest) -> str:
         """Validate gig title and description fields for content policy compliance.
 
         Args:
-            title: Gig title
-            description: Gig description
-            tags: Optional selected tags
-            category: Optional selected category
+            gig: Gig validation request object
 
         Returns:
             Validation result message
         """
-        tags_text = ", ".join(tags or []) or "(none)"
-        category_text = category or "(none)"
+        tags_text = ", ".join(gig.tags or []) or "(none)"
+        category_text = gig.category or "(none)"
 
         prompt = f"""
-You are a marketplace listing consistency reviewer.
+    You are a semantic consistency checker for marketplace listings.
 
-Evaluate whether the submitted listing data describes one coherent service.
-Use semantic reasoning, not exact keyword matching.
+    Task:
+    Decide whether title, description, tags, and category all describe the same service and do not contradict each other.
 
-Submitted data:
-- Item A (Title): {title}
-- Item B (Description): {description}
-- Item C (Tags): {tags_text}
-- Item D (Category): {category_text}
+    Core rule:
+    If any field clearly conflicts with the others, flag that field as the outlier.
 
-Instructions:
-1. Infer the core service intent from all items together.
-2. Treat terms as relevant if they belong to the same practical domain, output type, or workflow.
-3. If one item belongs to a clearly different domain with no obvious connection, mark it as an outlier.
-4. The category should align with the title, description, and tags. If the category is completely unrelated to the service being offered, mark it as an outlier.
-5. Cross-domain mismatch rule:
-   - Physical capture/content terms (photo, camera, product shoot, portrait, image editing)
-   - Software/automation terms (bot, discord bot, API bot, script automation)
-   If mixed without an explicit bridge in the listing, treat as inconsistent.
-6. Prefer leniency for broad but related terms; be strict only on clear mismatch.
-7. Tags and category should be relevant to the core service described by title and description; irrelevant items can be outliers.
-8. Return exactly one line:
-   - complete
-   - or Outlier field: <Item A|Item B|Item C|Item D> - <short reason>
+    Listing attributes:
+    - title: {gig.title}
+    - description: {gig.description}
+    - tags: {tags_text}
+    - category: {category_text}
 
-No extra text.
+    Evaluation policy:
+    1. Use meaning, not exact word matching.
+    2. Check title against all other fields first; title must not conflict with description, tags, or category.
+    3. Title and description can be specific.
+    4. Tags and category can be broader labels, as long as they are in the same service domain.
+    5. Because categories are limited fixed options, allow near matches and adjacent creative domains.
+    6. Do not flag broad tags/category as outliers if they are still reasonably related.
+    7. Flag an outlier only for clear contradiction or major domain mismatch.
+    8. If there is no contradiction, return complete.
+    9. Example mismatch: sandwich-making vs car-repair category.
+    10. Example acceptable relation: reciting movie scripts with video creation category.
+    11. If more than one field is weak, choose the single most clearly unrelated field.
+
+    Output format (exactly one line):
+    - complete
+    - Outlier field: <Attribute> - <short reason>
+
+    Allowed <Attribute> values:
+    title | description | tags | category
 """.strip()
 
         return self.text_query(prompt)
