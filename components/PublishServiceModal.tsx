@@ -342,7 +342,7 @@ export function PublishServiceModal({
                         setFormData({ ...formData, title: e.target.value })
                       }
                       placeholder="e.g., Full-Stack Web Development - React, Node.js"
-                      className="w-full glass-input px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all"
+                      className="w-full glass-input px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                     />
                   </div>
 
@@ -362,7 +362,7 @@ export function PublishServiceModal({
                         })
                       }
                       placeholder="Describe your service, what you offer, and what makes you stand out..."
-                      className="w-full glass-input px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all resize-none"
+                      className="w-full glass-input px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all resize-none border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                     />
                   </div>
 
@@ -378,7 +378,7 @@ export function PublishServiceModal({
                         onChange={(e) =>
                           setFormData({ ...formData, category: e.target.value })
                         }
-                        className="flex-1 glass-input px-4 py-3 rounded-xl text-black dark:text-white outline-none transition-all"
+                        className="flex-1 glass-input px-4 py-3 rounded-xl text-black dark:text-white outline-none transition-all border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                       >
                         <option value="">Select a category</option>
                         {GIG_CATEGORIES.map((cat) => (
@@ -542,7 +542,7 @@ export function PublishServiceModal({
                             }
                           }}
                           placeholder="0.5"
-                          className="w-full glass-input pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all"
+                          className="w-full glass-input pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                         />
                       </div>
                     </div>
@@ -566,7 +566,7 @@ export function PublishServiceModal({
                           })
                         }
                         placeholder="e.g., 7 days, 2 weeks, Flexible"
-                        className="w-full glass-input pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all"
+                        className="w-full glass-input pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                       />
                     </div>
                   </div>
@@ -583,7 +583,7 @@ export function PublishServiceModal({
                         onChange={(e) => setTagInput(e.target.value)}
                         onKeyDown={handleTagKeyDown}
                         placeholder="Type a tag and press Enter..."
-                        className="w-full glass-input px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all"
+                        className="w-full glass-input px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                       />
                       {tags.length > 0 && (
                         <div className="flex flex-wrap gap-2">
