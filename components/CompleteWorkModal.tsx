@@ -13,6 +13,7 @@ import {
   ChevronRight,
   Lock,
 } from "lucide-react";
+import { toast } from "sonner";
 
 interface VerificationResult {
   modality: string;
@@ -76,6 +77,8 @@ export function CompleteWorkModal({
   const [autoCompleteTriggered, setAutoCompleteTriggered] = useState(false);
   const [settlementCompleted, setSettlementCompleted] = useState(false);
   const [settlementTimeout, setSettlementTimeout] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [currentStage, setCurrentStage] = useState("");
 
   // Refs to hold latest values for the auto-complete effect
   const resultRef = useRef<VerificationResult | null>(null);
@@ -110,10 +113,17 @@ export function CompleteWorkModal({
         clearTimeout(settlementTimeoutRef.current);
         settlementTimeoutRef.current = null;
       }
+      
+      // Show success toast
+      toast.success("Settlement Complete!", {
+        description: `Funds have been released. Transaction confirmed on-chain.`,
+        duration: 5000,
+      });
+      
       // Small delay so the user can see the final state
       const timer = setTimeout(() => {
         onComplete(result, proofCid);
-      }, 1200);
+      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [
@@ -134,6 +144,10 @@ export function CompleteWorkModal({
           ...prev,
           "⚠️ Settlement taking longer than expected. Check blockchain explorer or refresh page.",
         ]);
+        toast.warning("Settlement Delayed", {
+          description: "The transaction is taking longer than expected. It may still complete.",
+          duration: 8000,
+        });
       }, 30000); // 30 seconds
 
       return () => {
@@ -182,12 +196,18 @@ export function CompleteWorkModal({
     setAutoCompleteTriggered(false);
     setSettlementCompleted(false);
     setSettlementTimeout(false);
+    setProgress(0);
+    setCurrentStage("Initializing...");
     
     // Clear any pending settlement timeout
     if (settlementTimeoutRef.current) {
       clearTimeout(settlementTimeoutRef.current);
       settlementTimeoutRef.current = null;
     }
+
+    toast.info("Verification Started", {
+      description: `Analyzing ${files.length} file(s) against ${requirements.length} requirement(s)`,
+    });
 
     try {
       const formData = new FormData();
@@ -247,10 +267,16 @@ export function CompleteWorkModal({
                 if (dataLine.startsWith("data: ")) {
                   try {
                     const data = JSON.parse(dataLine.substring(6));
-                    setLogs((prev) => [
-                      ...prev,
-                      `${data.stage}: ${data.message}`,
-                    ]);
+                    const stageMsg = `${data.stage}: ${data.message}`;
+                    setLogs((prev) => [...prev, stageMsg]);
+                    setCurrentStage(data.message);
+                    
+                    // Update progress based on stage
+                    if (data.stage === "init") setProgress(5);
+                    else if (data.stage === "content_analysis_complete") setProgress(25);
+                    else if (data.stage === "orchestration_complete") setProgress(40);
+                    else if (data.stage === "sub_agent_evaluating") setProgress(60);
+                    else if (data.stage === "aggregation_complete") setProgress(80);
                   } catch (e) {
                     console.error("Failed to parse stage event:", e);
                   }
@@ -319,6 +345,8 @@ export function CompleteWorkModal({
                   try {
                     const report = JSON.parse(dataLine.substring(6));
                     setResult(report);
+                    setProgress(85);
+                    setCurrentStage("Verification complete");
                     setLogs((prev) => [
                       ...prev,
                       `Verification Complete`,
@@ -326,6 +354,11 @@ export function CompleteWorkModal({
                       `   Confidence: ${report.confidence_pct}%`,
                       `   Requirements: ${report.totals?.completed}/${report.totals?.total} passed`,
                     ]);
+                    
+                    const isPassing = report.overall_status?.toLowerCase() === "pass" || report.completion_pct >= 60;
+                    toast.success("Verification Complete", {
+                      description: `${report.overall_status} - ${report.totals?.completed}/${report.totals?.total} requirements met (${report.completion_pct}%)`,
+                    });
                   } catch (e) {
                     console.error("Failed to parse report:", e);
                   }
@@ -339,6 +372,8 @@ export function CompleteWorkModal({
                   try {
                     const data = JSON.parse(dataLine.substring(6));
                     setBlockchainStatus(data.message);
+                    setProgress(90);
+                    setCurrentStage("Stored on blockchain");
                     setLogs((prev) => [...prev, `Blockchain: ${data.tx_hash}`]);
                   } catch (e) {
                     console.error("Failed to parse blockchain event:", e);
@@ -353,6 +388,8 @@ export function CompleteWorkModal({
                   try {
                     const data = JSON.parse(dataLine.substring(6));
                     setProofCid(data.proof_cid);
+                    setProgress(92);
+                    setCurrentStage("Proof uploaded to IPFS");
                     setLogs((prev) => [
                       ...prev,
                       `Proof CID: ${data.proof_cid}`,
@@ -369,6 +406,8 @@ export function CompleteWorkModal({
                 if (dataLine.startsWith("data: ")) {
                   try {
                     const data = JSON.parse(dataLine.substring(6));
+                    setProgress(94);
+                    setCurrentStage("Settlement ready");
                     setLogs((prev) => [
                       ...prev,
                       `Settlement ready: ${data.winner_is_provider ? "Provider wins" : "Client refund"} (${data.completion_pct}%)`,
@@ -386,10 +425,16 @@ export function CompleteWorkModal({
                   try {
                     const data = JSON.parse(dataLine.substring(6));
                     setBlockchainStatus(`🤖 ${data.message}`);
+                    setProgress(96);
+                    setCurrentStage("Releasing funds...");
                     setLogs((prev) => [
                       ...prev,
                       `Settlement initiated: ${data.message}`,
                     ]);
+                    toast.loading("Releasing Funds", {
+                      description: "Submitting transaction to blockchain...",
+                      id: "settlement-toast",
+                    });
                   } catch (e) {
                     console.error(
                       "Failed to parse settlement_initiated event:",
@@ -407,10 +452,16 @@ export function CompleteWorkModal({
                     const data = JSON.parse(dataLine.substring(6));
                     setSettlementCompleted(true);
                     setBlockchainStatus(`✅ ${data.message}`);
+                    setProgress(100);
+                    setCurrentStage("Settlement complete!");
                     setLogs((prev) => [
                       ...prev,
                       `✅ Automatic Settlement Completed: ${data.message}`,
                     ]);
+                    toast.success("Funds Released!", {
+                      description: data.message,
+                      id: "settlement-toast",
+                    });
                   } catch (e) {
                     console.error(
                       "Failed to parse settlement_completed event:",
@@ -432,6 +483,10 @@ export function CompleteWorkModal({
                       ...prev,
                       `⚠️ Automatic Settlement Failed: ${data.error}`,
                     ]);
+                    toast.error("Settlement Failed", {
+                      description: data.error,
+                      id: "settlement-toast",
+                    });
                   } catch (e) {
                     console.error(
                       "Failed to parse settlement_failed event:",
@@ -632,6 +687,40 @@ export function CompleteWorkModal({
                 {/* Verification Progress */}
                 {(isVerifying || logs.length > 0) && (
                   <div className="space-y-3">
+                    {/* Progress Bar */}
+                    {isVerifying && (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs font-semibold text-black/70 dark:text-white/70">
+                            {currentStage || "Processing..."}
+                          </p>
+                          <p className="text-xs font-mono text-black/50 dark:text-white/50">
+                            {progress}%
+                          </p>
+                        </div>
+                        <div className="relative h-2 bg-black/5 dark:bg-white/5 rounded-full overflow-hidden">
+                          <motion.div
+                            className="absolute inset-y-0 left-0 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 0.5, ease: "easeOut" }}
+                          />
+                          {/* Animated shimmer effect */}
+                          <motion.div
+                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                            animate={{
+                              x: ["-100%", "200%"],
+                            }}
+                            transition={{
+                              duration: 1.5,
+                              repeat: Infinity,
+                              ease: "linear",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    
                     <div className="flex items-center gap-2">
                       {isVerifying && (
                         <div className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse" />
@@ -831,7 +920,7 @@ export function CompleteWorkModal({
                       <div className="glass-macos rounded-xl p-3 flex items-center gap-2 border border-emerald-500/20">
                         <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
                         <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                          Settlement complete! Closing modal...
+                          Settlement complete! Refreshing...
                         </p>
                       </div>
                     )}
