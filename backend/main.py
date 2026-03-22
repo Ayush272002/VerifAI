@@ -76,7 +76,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-app.add_middleware(CivicValidationMiddleware)
+# app.add_middleware(CivicValidationMiddleware)
 
 
 app.include_router(contract_router)

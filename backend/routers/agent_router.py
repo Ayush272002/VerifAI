@@ -6,6 +6,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
 from ..core.data_models import GigCategorizationRequest, GigValidationRequest
+from ..core.data_models import PromptGigComparisonRequest, PromptGigComparisonResponse
 from ..core.data_models import ImageReviewRequest
 from ..core.data_models import PythonFilesReviewRequest
 from ..core.data_models import UnifiedVerifyRequest
@@ -43,6 +44,29 @@ def classify_gig(payload: GigCategorizationRequest) -> dict[str, str]:
         "title": payload.title,
         "description": payload.description,
     }
+
+
+@router.post("/compare-prompt-with-gig")
+def compare_prompt_with_gig(payload: PromptGigComparisonRequest) -> PromptGigComparisonResponse:
+    """Compare a prompt with gig information to ensure relevance.
+
+    Validates that the booking prompt aligns with the service's gig details.
+
+    Args:
+        payload: Gig info and prompt text to compare
+
+    Returns:
+        Comparison result with match status, confidence, and explanation
+    """
+    gig_data = GigValidationRequest(
+        title=payload.title,
+        description=payload.description,
+        tags=payload.tags,
+        category=payload.category,
+    )
+    print(f"Comparing prompt with gig data: {gig_data}")
+    result = _ai_service.compare_prompt_with_gig(gig_data, payload.prompt)
+    return PromptGigComparisonResponse(**result)
 
 
 @router.get("/query/{query}")

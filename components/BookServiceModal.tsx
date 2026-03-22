@@ -21,6 +21,9 @@ const SPRING = {
   stiffness: 100,
 } as const;
 
+const BACKEND_BASE_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL ?? "http://localhost:8000";
+  
 export function BookServiceModal({
   isOpen,
   onClose,
@@ -34,6 +37,52 @@ export function BookServiceModal({
   const { requestService, isPending } = useRequestService();
 
   const isFormValid = taskDetails.trim() !== "" && address && service;
+
+  /**
+   * Validate that the prompt matches the gig information
+   */
+  const validatePromptWithGig = async (prompt: string): Promise<boolean> => {
+    if (!service) return false;
+
+    try {
+      const description = service.description || `A ${service.category} service by ${service.provider.name}. Skills: ${service.tags.join(", ")}`;
+
+      const response = await fetch(`${BACKEND_BASE_URL}/agent/compare-prompt-with-gig`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title: service.title,
+          description: description,
+          tags: service.tags,
+          category: service.category,
+          prompt: prompt,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error("Validation API error:", response.status);
+        // If API fails, allow booking to proceed
+        return true;
+      }
+
+      const result = await response.json();
+
+      if (!result.matches) {
+        toast.error(
+          `Service mismatch: ${result.explanation || "The requirements don't match this service."}`
+        );
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Error validating prompt:", err);
+      // If validation fails, allow booking to proceed
+      return true;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +99,13 @@ export function BookServiceModal({
     setIsProcessing(true);
 
     try {
+      // First, validate that the prompt matches the gig
+      const isValid = await validatePromptWithGig(taskDetails);
+      if (!isValid) {
+        setIsProcessing(false);
+        return;
+      }
+
       // Parse service index from id (format: "onchain-providerAddress-serviceIndex")
       const parts = service.id.split("-");
       const serviceIndex = BigInt(parts[parts.length - 1] || "0");

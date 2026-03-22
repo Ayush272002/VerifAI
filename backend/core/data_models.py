@@ -87,3 +87,21 @@ class GigValidationRequest(BaseModel):
     description: str = Field(..., min_length=10)
     tags: list[str] = Field(default_factory=list)
     category: str = Field(...)
+
+
+class PromptGigComparisonRequest(BaseModel):
+    """Request payload for comparing prompt with gig information."""
+
+    title: str = Field(..., min_length=3)
+    description: str = Field(..., min_length=10)
+    tags: list[str] = Field(default_factory=list)
+    category: str = Field(...)
+    prompt: str = Field(..., min_length=1)
+
+
+class PromptGigComparisonResponse(BaseModel):
+    """Response payload for prompt gig comparison."""
+
+    matches: bool
+    confidence: str
+    explanation: str
