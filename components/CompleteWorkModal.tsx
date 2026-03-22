@@ -74,6 +74,7 @@ export function CompleteWorkModal({
   const [blockchainStatus, setBlockchainStatus] = useState<string>("");
   const [proofCid, setProofCid] = useState<string>("");
   const [autoCompleteTriggered, setAutoCompleteTriggered] = useState(false);
+  const [settlementCompleted, setSettlementCompleted] = useState(false);
 
   // Refs to hold latest values for the auto-complete effect
   const resultRef = useRef<VerificationResult | null>(null);
@@ -92,9 +93,15 @@ export function CompleteWorkModal({
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Auto-trigger onComplete when proofCid arrives (after verification stream ends)
+  // Auto-trigger onComplete only after backend confirms settlement completed.
   useEffect(() => {
-    if (proofCid && result && !autoCompleteTriggered && onComplete) {
+    if (
+      settlementCompleted &&
+      proofCid &&
+      result &&
+      !autoCompleteTriggered &&
+      onComplete
+    ) {
       setAutoCompleteTriggered(true);
       // Small delay so the user can see the final state
       const timer = setTimeout(() => {
@@ -102,7 +109,13 @@ export function CompleteWorkModal({
       }, 800);
       return () => clearTimeout(timer);
     }
-  }, [proofCid, result, autoCompleteTriggered, onComplete]);
+  }, [
+    settlementCompleted,
+    proofCid,
+    result,
+    autoCompleteTriggered,
+    onComplete,
+  ]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (filesLocked) return;
@@ -139,6 +152,7 @@ export function CompleteWorkModal({
     setBlockchainStatus("");
     setProofCid("");
     setAutoCompleteTriggered(false);
+    setSettlementCompleted(false);
 
     try {
       const formData = new FormData();
@@ -149,8 +163,11 @@ export function CompleteWorkModal({
       formData.append("requestId", requestId);
       formData.append("buyerAddress", buyerAddress);
 
+      const backendUrl =
+        process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+
       const response = await fetch(
-        "/api/agent/work/complete-and-verify/stream",
+        `${backendUrl}/agent/work/complete-and-verify/stream`,
         {
           method: "POST",
           body: formData,
@@ -353,6 +370,7 @@ export function CompleteWorkModal({
                 if (dataLine.startsWith("data: ")) {
                   try {
                     const data = JSON.parse(dataLine.substring(6));
+                    setSettlementCompleted(true);
                     setBlockchainStatus(`✅ ${data.message}`);
                     setLogs((prev) => [
                       ...prev,
@@ -373,6 +391,7 @@ export function CompleteWorkModal({
                 if (dataLine.startsWith("data: ")) {
                   try {
                     const data = JSON.parse(dataLine.substring(6));
+                    setSettlementCompleted(false);
                     setBlockchainStatus(`⚠️ ${data.message}`);
                     setLogs((prev) => [
                       ...prev,

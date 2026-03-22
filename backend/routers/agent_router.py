@@ -355,7 +355,7 @@ Requirements Passed: {report.get('totals', {}).get('completed', 0)}/{report.get(
                         "data": {
                             "success": False,
                             "error": settlement_result.get("error"),
-                            "message": "Automatic settlement failed - frontend fallback available"
+                            "message": "Automatic settlement failed"
                         }
                     })
 

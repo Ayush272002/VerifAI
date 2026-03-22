@@ -274,6 +274,26 @@ contract VerifAIMarketplace {
         emit ProofSubmitted(requestId, msg.sender, proofCid);
     }
 
+    // Oracle can complete a request on behalf of the provider (backend autonomy)
+    function completeRequestOracle(
+        bytes32 requestId,
+        string calldata proofCid
+    ) external onlyOracle {
+        ServiceRequest storage req = requests[requestId];
+        require(
+            req.status == RequestStatus.Accepted ||
+                req.status == RequestStatus.Pending,
+            "Must be pending or accepted"
+        );
+        require(bytes(proofCid).length > 0, "Proof CID required");
+
+        req.completionProofCid = proofCid;
+        req.status = RequestStatus.PendingReview;
+        // Funds stay in escrow — oracle will decide the winner.
+
+        emit ProofSubmitted(requestId, req.provider, proofCid);
+    }
+
     // Oracle fetches proof from IPFS, evaluates it against clientNote,
     // picks winner, and pays them — all in one transaction.
     function submitRuling(
@@ -283,8 +303,10 @@ contract VerifAIMarketplace {
     ) external onlyOracle {
         ServiceRequest storage req = requests[requestId];
         require(
-            req.status == RequestStatus.PendingReview,
-            "Not pending oracle review"
+            req.status == RequestStatus.Pending ||
+                req.status == RequestStatus.Accepted ||
+                req.status == RequestStatus.PendingReview,
+            "Request not settleable"
         );
         require(!req.fundsReleased, "Funds already released");
         require(
@@ -326,7 +348,9 @@ contract VerifAIMarketplace {
     ) external returns (uint256 messageIndex) {
         ServiceRequest storage req = requests[requestId];
         require(
-            msg.sender == req.client || msg.sender == req.provider || msg.sender == oracle,
+            msg.sender == req.client ||
+                msg.sender == req.provider ||
+                msg.sender == oracle,
             "Not a party to this request"
         );
         require(

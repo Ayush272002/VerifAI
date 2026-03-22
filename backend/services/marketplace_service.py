@@ -9,7 +9,7 @@ from typing import Any
 from web3 import Web3
 from web3.middleware import ExtraDataToPOAMiddleware
 
-from ..core.constants import CONTRACT_ABI, CONTRACT_ADDRESS, RPC_ENDPOINTS
+from ..core.constants import CONTRACT_ADDRESS, RPC_ENDPOINTS, load_contract_abi
 
 logger = logging.getLogger(__name__)
 
@@ -27,10 +27,16 @@ class MarketplaceService:
 
     def __init__(self) -> None:
         self.w3 = self._connect()
+        contract_abi = load_contract_abi()
         self.contract = self.w3.eth.contract(
             address=self.w3.to_checksum_address(CONTRACT_ADDRESS),
-            abi=CONTRACT_ABI,
+            abi=contract_abi,
         )
+        has_oracle_complete = any(
+            item.get("type") == "function" and item.get("name") == "completeRequestOracle"
+            for item in contract_abi
+        )
+        logger.info("ABI loaded. completeRequestOracle available: %s", has_oracle_complete)
         oracle_pk = ORACLE_PRIVATE_KEY.strip()
         self.oracle_account = (
             self.w3.eth.account.from_key(oracle_pk) if oracle_pk else None
@@ -75,6 +81,13 @@ class MarketplaceService:
                 "from": oracle_addr,
                 "nonce": confirmed_nonce,  # Use confirmed nonce to avoid conflicts
             }
+
+            # Preflight simulation to surface clear contract revert reasons before send.
+            try:
+                fn.call({"from": oracle_addr})
+            except Exception as call_error:
+                logger.error("Preflight call reverted: %s", call_error)
+                return {"success": False, "error": f"Preflight revert: {call_error}"}
             
             logger.info("Transaction params prepared: from=%s, nonce=%s", 
                        tx_params["from"], tx_params["nonce"])
@@ -324,4 +337,55 @@ class MarketplaceService:
                 logger.error("Ruling submission failed: %s", result.get("error"))
             return result
         except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def complete_request_oracle(
+        self, request_id: str, proof_cid: str
+    ) -> dict[str, Any]:
+        """Oracle completes a request on behalf of the provider (backend autonomy).
+
+        This allows the backend to transition request status to PendingReview
+        without requiring the provider's signature.
+        """
+        try:
+            if not proof_cid:
+                return {"success": False, "error": "proof_cid is required"}
+
+            # Validate oracle authority before sending tx.
+            try:
+                contract_oracle = self.contract.functions.oracle().call()
+                if not self.oracle_account or contract_oracle.lower() != self.oracle_account.address.lower():
+                    return {
+                        "success": False,
+                        "error": (
+                            f"Oracle mismatch: contract oracle={contract_oracle}, "
+                            f"configured oracle={self.oracle_account.address if self.oracle_account else 'None'}"
+                        ),
+                    }
+            except Exception as oracle_check_error:
+                logger.warning("Could not verify oracle on contract: %s", oracle_check_error)
+
+            request_id_bytes = self._to_bytes32(request_id)
+            fn = self.contract.functions.completeRequestOracle(
+                request_id_bytes,
+                proof_cid,
+            )
+
+            logger.info(
+                "Calling completeRequestOracle: requestId=%s, proof_cid=%s",
+                request_id,
+                proof_cid,
+            )
+
+            result = self._send_oracle_tx(fn)
+            if result["success"]:
+                logger.info(
+                    "✅ Request completed by oracle: tx=%s",
+                    result.get("tx_hash"),
+                )
+            else:
+                logger.error("Oracle completion failed: %s", result.get("error"))
+            return result
+        except Exception as e:
+            logger.exception("Exception in complete_request_oracle:")
             return {"success": False, "error": str(e)}

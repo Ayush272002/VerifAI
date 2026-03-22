@@ -19,6 +19,7 @@ class SettlementState(TypedDict):
     provider_address: str
     client_address: str
     winner: str
+    request_status: int
     status: str  # pending, fetched, winner_determined, completed, failed
     error: str
 
@@ -49,7 +50,8 @@ class SettlementService:
                     }
 
                 logger.info(
-                    "✅ Request fetched: provider=%s, client=%s",
+                    "✅ Request fetched: status=%s, provider=%s, client=%s",
+                    req.get("status"),
                     req["provider"],
                     req["client"],
                 )
@@ -57,6 +59,7 @@ class SettlementService:
                     **state,
                     "provider_address": req["provider"],
                     "client_address": req["client"],
+                    "request_status": req.get("status", -1),
                     "status": "fetched",
                 }
             except Exception as e:
@@ -72,6 +75,15 @@ class SettlementService:
             try:
                 if state["status"] != "fetched":
                     return state
+
+                # Already settled on-chain.
+                if state.get("request_status") == 4:
+                    logger.info("Request already resolved, skipping settlement")
+                    return {
+                        **state,
+                        "status": "settled",
+                        "error": "",
+                    }
 
                 logger.info("🎯 Determining winner from verification result...")
                 report = state["cached_result"].get("report", {})
@@ -114,13 +126,18 @@ class SettlementService:
                     state["winner"],
                 )
                 report = state["cached_result"].get("report", {})
-                ruling_text = json.dumps(report)
+                ruling_text = str(report)  # Simplified for hash
 
                 result = self._marketplace_svc.submit_ruling(
                     state["request_id"], ruling_text, state["winner"]
                 )
 
                 if not result.get("success"):
+                    if state.get("request_status") != 3:
+                        logger.error(
+                            "Ruling failed: request status=%s (submitRuling expects PendingReview=3)",
+                            state.get("request_status"),
+                        )
                     logger.error("Ruling failed: %s", result.get("error"))
                     return {
                         **state,
@@ -135,7 +152,7 @@ class SettlementService:
                 )
                 return {
                     **state,
-                    "status": "completed",
+                    "status": "settled",
                     "error": "",
                 }
             except Exception as e:
@@ -170,6 +187,7 @@ class SettlementService:
                 "provider_address": "",
                 "client_address": "",
                 "winner": "",
+                "request_status": -1,
                 "status": "pending",
                 "error": "",
             }
@@ -177,11 +195,11 @@ class SettlementService:
             # Run the workflow
             final_state = self._graph.invoke(initial_state)
 
-            if final_state["status"] == "completed":
+            if final_state["status"] == "settled":
                 logger.info("✅ Settlement succeeded for %s", request_id)
                 return {
                     "success": True,
-                    "status": "completed",
+                    "status": "settled",
                     "winner": final_state["winner"],
                     "request_id": request_id,
                 }

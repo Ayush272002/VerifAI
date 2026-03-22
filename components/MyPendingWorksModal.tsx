@@ -23,7 +23,6 @@ import {
   useAcceptRequest,
   useRejectRequest,
   usePostMessage,
-  useCompleteRequest,
 } from "@/lib/marketplace";
 import { formatEther, createPublicClient, http } from "viem";
 import { sepolia } from "viem/chains";
@@ -103,7 +102,9 @@ export function MyPendingWorksModal({
     "all" | "client" | "provider" | "completed" | "history"
   >("provider");
   const [selectedWork, setSelectedWork] = useState<PendingWork | null>(null);
-  const [selectedHistoryGroup, setSelectedHistoryGroup] = useState<string | null>(null);
+  const [selectedHistoryGroup, setSelectedHistoryGroup] = useState<
+    string | null
+  >(null);
   const [messageInput, setMessageInput] = useState("");
   const [mounted, setMounted] = useState(false);
   const [works, setWorks] = useState<PendingWork[]>([]);
@@ -119,23 +120,22 @@ export function MyPendingWorksModal({
     true,
   );
   // All requests (including resolved) for the Completed tab
-  const { data: allClientIds } = useGetClientRequests(
-    address as `0x${string}`,
-  );
+  const { data: allClientIds } = useGetClientRequests(address as `0x${string}`);
   const { data: allProviderIds } = useGetProviderRequests(
     address as `0x${string}`,
   );
   const { acceptRequest, isPending: isAccepting } = useAcceptRequest();
   const { rejectRequest, isPending: isRejecting } = useRejectRequest();
   const { postMessage, isPending: isSendingMessage } = usePostMessage();
-  const { completeRequest } = useCompleteRequest();
-
   const [isCompleting, setIsCompleting] = useState(false);
   const [isConfirmingAccept, setIsConfirmingAccept] = useState(false);
   const [isConfirmingReject, setIsConfirmingReject] = useState(false);
   const [showCompleteWorkModal, setShowCompleteWorkModal] = useState(false);
-  const [completedVerification, setCompletedVerification] =
-    useState<{ result: VerificationResult; proofCid: string; txHash?: string } | null>(null);
+  const [completedVerification, setCompletedVerification] = useState<{
+    result: VerificationResult;
+    proofCid: string;
+    txHash?: string;
+  } | null>(null);
 
   // Fetch messages for the selected work
   const { data: messagesData } = useRequestMessages(
@@ -447,14 +447,10 @@ export function MyPendingWorksModal({
 
         const resolvedProviderIds = (
           (allProviderIds as string[] | undefined) ?? []
-        ).filter(
-          (id) => !activeProviderSet.has(id.toString().toLowerCase()),
-        );
+        ).filter((id) => !activeProviderSet.has(id.toString().toLowerCase()));
         const resolvedClientIds = (
           (allClientIds as string[] | undefined) ?? []
-        ).filter(
-          (id) => !activeClientSet.has(id.toString().toLowerCase()),
-        );
+        ).filter((id) => !activeClientSet.has(id.toString().toLowerCase()));
 
         // Fetch resolved provider requests
         for (const requestId of resolvedProviderIds) {
@@ -472,15 +468,23 @@ export function MyPendingWorksModal({
               const provider =
                 (requestDataArray as any).provider ?? requestDataArray[1] ?? "";
               const serviceIndex =
-                (requestDataArray as any).serviceIndex ?? requestDataArray[2] ?? BigInt(0);
+                (requestDataArray as any).serviceIndex ??
+                requestDataArray[2] ??
+                BigInt(0);
               const escrowAmount =
-                (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
+                (requestDataArray as any).escrowAmount ??
+                requestDataArray[4] ??
+                BigInt(0);
               const clientNote =
-                (requestDataArray as any).clientNote ?? requestDataArray[3] ?? "";
+                (requestDataArray as any).clientNote ??
+                requestDataArray[3] ??
+                "";
               const contractStatus =
                 (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
               const completionProofCid =
-                (requestDataArray as any).completionProofCid ?? requestDataArray[6] ?? "";
+                (requestDataArray as any).completionProofCid ??
+                requestDataArray[6] ??
+                "";
 
               // Only include resolved (status 4)
               if (contractStatus !== 4) continue;
@@ -494,7 +498,8 @@ export function MyPendingWorksModal({
                   args: [provider as `0x${string}`, serviceIndex],
                 })) as any;
                 if (serviceData?.title) serviceTitle = serviceData.title;
-                else if (Array.isArray(serviceData)) serviceTitle = serviceData[0] || "Service Request";
+                else if (Array.isArray(serviceData))
+                  serviceTitle = serviceData[0] || "Service Request";
               } catch (e) {
                 console.warn("Failed to fetch service title:", e);
               }
@@ -508,7 +513,9 @@ export function MyPendingWorksModal({
                 providerAddress: provider,
                 serviceTitle: serviceTitle || "Service Request",
                 otherParty:
-                  clientAddr.substring(0, 6) + "..." + clientAddr.substring(clientAddr.length - 4),
+                  clientAddr.substring(0, 6) +
+                  "..." +
+                  clientAddr.substring(clientAddr.length - 4),
                 amount: parseFloat(escrowAmountEth),
                 status: "completed",
                 role: "provider",
@@ -520,7 +527,11 @@ export function MyPendingWorksModal({
               });
             }
           } catch (e) {
-            console.error("Error fetching resolved provider request:", requestId, e);
+            console.error(
+              "Error fetching resolved provider request:",
+              requestId,
+              e,
+            );
           }
         }
 
@@ -540,15 +551,23 @@ export function MyPendingWorksModal({
               const provider =
                 (requestDataArray as any).provider ?? requestDataArray[1] ?? "";
               const serviceIndex =
-                (requestDataArray as any).serviceIndex ?? requestDataArray[2] ?? BigInt(0);
+                (requestDataArray as any).serviceIndex ??
+                requestDataArray[2] ??
+                BigInt(0);
               const escrowAmount =
-                (requestDataArray as any).escrowAmount ?? requestDataArray[4] ?? BigInt(0);
+                (requestDataArray as any).escrowAmount ??
+                requestDataArray[4] ??
+                BigInt(0);
               const clientNote =
-                (requestDataArray as any).clientNote ?? requestDataArray[3] ?? "";
+                (requestDataArray as any).clientNote ??
+                requestDataArray[3] ??
+                "";
               const contractStatus =
                 (requestDataArray as any).status ?? requestDataArray[5] ?? 0;
               const completionProofCid =
-                (requestDataArray as any).completionProofCid ?? requestDataArray[6] ?? "";
+                (requestDataArray as any).completionProofCid ??
+                requestDataArray[6] ??
+                "";
 
               if (contractStatus !== 4) continue;
 
@@ -561,7 +580,8 @@ export function MyPendingWorksModal({
                   args: [provider as `0x${string}`, serviceIndex],
                 })) as any;
                 if (serviceData?.title) serviceTitle = serviceData.title;
-                else if (Array.isArray(serviceData)) serviceTitle = serviceData[0] || "My Service Request";
+                else if (Array.isArray(serviceData))
+                  serviceTitle = serviceData[0] || "My Service Request";
               } catch (e) {
                 console.warn("Failed to fetch service title:", e);
               }
@@ -578,7 +598,9 @@ export function MyPendingWorksModal({
                 providerAddress: provider,
                 serviceTitle: serviceTitle || "My Service Request",
                 otherParty:
-                  providerAddr.substring(0, 6) + "..." + providerAddr.substring(providerAddr.length - 4),
+                  providerAddr.substring(0, 6) +
+                  "..." +
+                  providerAddr.substring(providerAddr.length - 4),
                 amount: parseFloat(escrowAmountEth),
                 status: "completed",
                 role: "client",
@@ -590,7 +612,11 @@ export function MyPendingWorksModal({
               });
             }
           } catch (e) {
-            console.error("Error fetching resolved client request:", requestId, e);
+            console.error(
+              "Error fetching resolved client request:",
+              requestId,
+              e,
+            );
           }
         }
 
@@ -609,7 +635,14 @@ export function MyPendingWorksModal({
     if (isOpen) {
       fetchPendingWorks();
     }
-  }, [address, providerPendingIds, clientPendingIds, allProviderIds, allClientIds, isOpen]);
+  }, [
+    address,
+    providerPendingIds,
+    clientPendingIds,
+    allProviderIds,
+    allClientIds,
+    isOpen,
+  ]);
 
   const filteredWorks = works.filter((work) => {
     if (activeTab === "all") return work.status !== "completed";
@@ -779,77 +812,6 @@ export function MyPendingWorksModal({
     }
   };
 
-  const submitRulingToOracle = async (report: VerificationResult) => {
-    if (!selectedWork) return;
-
-    try {
-      setIsCompleting(true);
-      const isSuccess =
-        report.overall_status.toLowerCase() === "pass" ||
-        report.completion_pct >= 60;
-
-      const winnerAddress = isSuccess
-        ? selectedWork.providerAddress
-        : selectedWork.clientAddress;
-
-      toast.info(
-        `Submitting Oracle Ruling... ${isSuccess ? "Paying Provider" : "Refunding Client"}`,
-        { id: "oracle-ruling" },
-      );
-
-      const res = await fetch(
-        `${BACKEND_BASE_URL}/marketplace/oracle/submit-ruling`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            request_id: selectedWork.id,
-            ruling_text: JSON.stringify(report),
-            winner: winnerAddress,
-          }),
-        },
-      );
-
-      if (!res.ok) {
-        const errorBody = await res.json().catch(() => null);
-        throw new Error(
-          errorBody?.error || errorBody?.detail || `Oracle API rejected the task (${res.status}).`,
-        );
-      }
-
-      const oracleData = await res.json();
-      if (!oracleData.success) {
-        if (
-          oracleData.error &&
-          oracleData.error.includes("Not pending oracle review")
-        ) {
-          toast.warning("Request already resolved on-chain.", {
-            id: "oracle-ruling",
-          });
-        } else {
-          throw new Error(oracleData.error);
-        }
-      } else {
-        toast.success("Transaction Resolved On-Chain!", {
-          id: "oracle-ruling",
-        });
-      }
-
-      const newStatus = "completed";
-      setSelectedWork({ ...selectedWork, status: newStatus as any });
-      setWorks((prev) =>
-        prev.map((w) =>
-          w.id === selectedWork.id ? { ...w, status: newStatus as any } : w,
-        ),
-      );
-    } catch (err: any) {
-      console.error(err);
-      toast.error("Oracle Failed: " + (err.message || "Unknown error"));
-    } finally {
-      setIsCompleting(false);
-    }
-  };
-
   const handleWorkComplete = async (
     report: VerificationResult,
     proofCid: string,
@@ -859,97 +821,29 @@ export function MyPendingWorksModal({
     try {
       setIsCompleting(true);
 
-      // Step 1: Call completeRequest() on-chain to transition status → PendingReview
-      toast.info("Locking evidence on-chain...", { id: "complete-flow" });
-      const txHash = await completeRequest(
-        selectedWork.id as `0x${string}`,
-        proofCid,
-      );
-      const receipt = await publicClient.waitForTransactionReceipt({
-        hash: txHash,
+      // Backend now owns complete+settle entirely via LangGraph workflow.
+      setCompletedVerification({ result: report, proofCid });
+      setSelectedWork({
+        ...selectedWork,
+        status: "completed" as any,
+        completionProofCid: proofCid,
       });
-
-      if (receipt.status !== "success") {
-        throw new Error("completeRequest transaction reverted");
-      }
-
-      toast.success("Evidence locked on-chain!", { id: "complete-flow" });
-
-      // Update local state to reflect PendingReview
-      setSelectedWork({ ...selectedWork, status: "pending_review" as any, completionProofCid: proofCid });
       setWorks((prev) =>
         prev.map((w) =>
           w.id === selectedWork.id
-            ? { ...w, status: "pending_review" as any, completionProofCid: proofCid }
+            ? { ...w, status: "completed" as any, completionProofCid: proofCid }
             : w,
         ),
       );
-
-      // Store verification result for display in detail panel
-      setCompletedVerification({ result: report, proofCid, txHash: txHash });
-
-      // Step 2: Auto-settle via backend (backend determines winner from cached report)
-      toast.info("Submitting Oracle Ruling...", { id: "oracle-ruling" });
-      try {
-        const res = await fetch(
-          `${BACKEND_BASE_URL}/marketplace/oracle/auto-settle`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ request_id: selectedWork.id }),
-          },
-        );
-
-        if (!res.ok) {
-          const errorBody = await res.json().catch(() => null);
-          throw new Error(
-            errorBody?.detail || `Oracle API rejected the task (${res.status}).`,
-          );
-        }
-
-        const oracleData = await res.json();
-        if (!oracleData.success) {
-          if (
-            oracleData.error &&
-            oracleData.error.includes("Not pending oracle review")
-          ) {
-            toast.warning("Request already resolved on-chain.", {
-              id: "oracle-ruling",
-            });
-          } else {
-            throw new Error(oracleData.error);
-          }
-        } else {
-          toast.success("Transaction Resolved On-Chain!", {
-            id: "oracle-ruling",
-          });
-        }
-
-        setSelectedWork({ ...selectedWork, status: "completed" as any });
-        setWorks((prev) =>
-          prev.map((w) =>
-            w.id === selectedWork.id ? { ...w, status: "completed" as any } : w,
-          ),
-        );
-      } catch (settleErr: any) {
-        console.error("Auto-settle error:", settleErr);
-        toast.error("Oracle Failed: " + (settleErr.message || "Unknown error"));
-        // Fall back to manual oracle submission
-        await submitRulingToOracle(report);
-      }
+      toast.success(
+        "Verification complete. Settlement handled by backend oracle.",
+      );
     } catch (err: any) {
-      if (
-        err?.message?.includes("User rejected the request") ||
-        err?.code === 4001
-      ) {
-        toast.error("Transaction cancelled by user.");
-      } else {
-        console.error("Complete flow error:", err);
-        toast.error(
-          "Failed to complete on-chain: " +
-            (err.shortMessage || err.message || "Unknown error"),
-        );
-      }
+      console.error("Complete flow error:", err);
+      toast.error(
+        "Failed to update completion state: " +
+          (err.shortMessage || err.message || "Unknown error"),
+      );
     } finally {
       setIsCompleting(false);
     }
@@ -960,7 +854,12 @@ export function MyPendingWorksModal({
   const [isRecovering, setIsRecovering] = useState(false);
 
   useEffect(() => {
-    if (!selectedWork || selectedWork.status !== "in_progress" || selectedWork.role !== "provider") return;
+    if (
+      !selectedWork ||
+      selectedWork.status !== "in_progress" ||
+      selectedWork.role !== "provider"
+    )
+      return;
     if (completedVerification) return; // Already have results
 
     let cancelled = false;
@@ -981,7 +880,9 @@ export function MyPendingWorksModal({
             proofCid: data.proof_cid,
           });
           // Auto-trigger the complete flow
-          toast.info("Recovered verification results, triggering on-chain completion...");
+          toast.info(
+            "Recovered verification results, triggering on-chain completion...",
+          );
           handleWorkComplete(data.report, data.proof_cid);
         } else if (data.status === "in_progress") {
           toast.info("Verification still in progress on backend...");
@@ -1005,8 +906,7 @@ export function MyPendingWorksModal({
   }, [selectedWork?.id, selectedWork?.status, selectedWork?.role]);
 
   // Note: The old Lock Evidence and handleVerifySubmit flows have been removed.
-  // Verification now happens exclusively through CompleteWorkModal,
-  // which calls handleWorkComplete → completeRequest → auto-settle.
+  // Verification now happens through CompleteWorkModal and settlement is backend-owned.
 
   return (
     <AnimatePresence mode="wait">
@@ -1088,7 +988,10 @@ export function MyPendingWorksModal({
                       {loading ? (
                         <div className="space-y-3">
                           {[1, 2, 3].map((i) => (
-                            <div key={i} className="w-full glass-macos rounded-2xl p-4">
+                            <div
+                              key={i}
+                              className="w-full glass-macos rounded-2xl p-4"
+                            >
                               <Skeleton className="h-4 w-3/4 mb-2" />
                               <Skeleton className="h-3 w-1/2 mb-4" />
                               <Skeleton className="h-4 w-1/4" />
@@ -1141,7 +1044,10 @@ export function MyPendingWorksModal({
                                           </h3>
                                         </div>
                                         <div className="px-2 py-1 rounded-lg text-xs font-bold bg-cyan-500/15 text-cyan-700 dark:text-cyan-400">
-                                          {group.transactionCount} order{group.transactionCount !== 1 ? "s" : ""}
+                                          {group.transactionCount} order
+                                          {group.transactionCount !== 1
+                                            ? "s"
+                                            : ""}
                                         </div>
                                       </div>
                                       <div className="flex flex-wrap gap-1 mb-3">
@@ -1212,7 +1118,10 @@ export function MyPendingWorksModal({
                                           </h3>
                                         </div>
                                         <div className="px-2 py-1 rounded-lg text-xs font-bold bg-purple-500/15 text-purple-700 dark:text-purple-400">
-                                          {group.transactionCount} gig{group.transactionCount !== 1 ? "s" : ""}
+                                          {group.transactionCount} gig
+                                          {group.transactionCount !== 1
+                                            ? "s"
+                                            : ""}
                                         </div>
                                       </div>
                                       <div className="flex flex-wrap gap-1 mb-3">
@@ -1372,7 +1281,9 @@ export function MyPendingWorksModal({
                           </div>
                           <div className="glass-macos rounded-xl p-3 text-center">
                             <p className="text-[10px] uppercase tracking-wider text-black/50 dark:text-white/50 mb-1">
-                              {selectedGroup.role === "client" ? "Total Spent" : "Total Earned"}
+                              {selectedGroup.role === "client"
+                                ? "Total Spent"
+                                : "Total Earned"}
                             </p>
                             <div className="flex items-center justify-center gap-1">
                               <EthIcon className="w-4 h-4" />
@@ -1624,27 +1535,30 @@ export function MyPendingWorksModal({
                           selectedWork.status === "completed") && (
                           <div className="p-6 border-b border-black/5 dark:border-white/5 bg-white/30 dark:bg-black/30">
                             {/* Submit Work Button */}
-                            {selectedWork.status === "in_progress" && !isRecovering && (
-                              <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 rounded-xl border border-blue-200 dark:border-blue-800">
-                                <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
-                                  Submit Your Work
-                                </p>
-                                <p className="text-xs text-blue-800 dark:text-blue-200 mb-4">
-                                  Upload your deliverables for AI-powered MoA
-                                  (Mixture-of-Agents) verification. Evidence
-                                  will be locked on-chain and funds released
-                                  automatically.
-                                </p>
-                                <motion.button
-                                  whileHover={{ scale: 1.02 }}
-                                  whileTap={{ scale: 0.98 }}
-                                  onClick={() => setShowCompleteWorkModal(true)}
-                                  className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-sm rounded-lg transition-all"
-                                >
-                                  Submit Work with Advanced Verification
-                                </motion.button>
-                              </div>
-                            )}
+                            {selectedWork.status === "in_progress" &&
+                              !isRecovering && (
+                                <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 rounded-xl border border-blue-200 dark:border-blue-800">
+                                  <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
+                                    Submit Your Work
+                                  </p>
+                                  <p className="text-xs text-blue-800 dark:text-blue-200 mb-4">
+                                    Upload your deliverables for AI-powered MoA
+                                    (Mixture-of-Agents) verification. Evidence
+                                    will be locked on-chain and funds released
+                                    automatically.
+                                  </p>
+                                  <motion.button
+                                    whileHover={{ scale: 1.02 }}
+                                    whileTap={{ scale: 0.98 }}
+                                    onClick={() =>
+                                      setShowCompleteWorkModal(true)
+                                    }
+                                    className="w-full px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold text-sm rounded-lg transition-all"
+                                  >
+                                    Submit Work with Advanced Verification
+                                  </motion.button>
+                                </div>
+                              )}
 
                             {/* Recovery indicator */}
                             {isRecovering && (
@@ -1661,7 +1575,8 @@ export function MyPendingWorksModal({
                               <div className="flex flex-col items-center justify-center gap-2 p-4 text-cyan-600 dark:text-cyan-400 glass-macos rounded-xl border border-cyan-500/20">
                                 <Loader2 className="w-6 h-6 animate-spin" />
                                 <span className="text-sm font-semibold tracking-wide">
-                                  Locking evidence &amp; submitting oracle ruling...
+                                  Locking evidence &amp; submitting oracle
+                                  ruling...
                                 </span>
                               </div>
                             )}
@@ -1678,21 +1593,38 @@ export function MyPendingWorksModal({
 
                                   <div className="grid grid-cols-3 gap-2 text-center">
                                     <div className="glass-macos rounded-lg p-2">
-                                      <p className="text-[10px] opacity-60">Status</p>
+                                      <p className="text-[10px] opacity-60">
+                                        Status
+                                      </p>
                                       <p className="font-semibold capitalize text-sm">
-                                        {completedVerification.result.overall_status}
+                                        {
+                                          completedVerification.result
+                                            .overall_status
+                                        }
                                       </p>
                                     </div>
                                     <div className="glass-macos rounded-lg p-2">
-                                      <p className="text-[10px] opacity-60">Completion</p>
+                                      <p className="text-[10px] opacity-60">
+                                        Completion
+                                      </p>
                                       <p className="font-semibold text-sm">
-                                        {completedVerification.result.completion_pct}%
+                                        {
+                                          completedVerification.result
+                                            .completion_pct
+                                        }
+                                        %
                                       </p>
                                     </div>
                                     <div className="glass-macos rounded-lg p-2">
-                                      <p className="text-[10px] opacity-60">Confidence</p>
+                                      <p className="text-[10px] opacity-60">
+                                        Confidence
+                                      </p>
                                       <p className="font-semibold text-sm">
-                                        {completedVerification.result.confidence_pct}%
+                                        {
+                                          completedVerification.result
+                                            .confidence_pct
+                                        }
+                                        %
                                       </p>
                                     </div>
                                   </div>
@@ -1701,7 +1633,8 @@ export function MyPendingWorksModal({
                                     {completedVerification.result.summary}
                                   </div>
 
-                                  {completedVerification.result.requirement_checks?.length > 0 && (
+                                  {completedVerification.result
+                                    .requirement_checks?.length > 0 && (
                                     <div className="space-y-1 max-h-40 overflow-y-auto pr-1 custom-scrollbar">
                                       {completedVerification.result.requirement_checks.map(
                                         (req, idx) => (
@@ -1738,7 +1671,8 @@ export function MyPendingWorksModal({
 
                                   {completedVerification.proofCid && (
                                     <div className="glass-macos rounded-lg p-2 text-xs font-mono text-black/60 dark:text-white/60 break-all">
-                                      Proof CID: {completedVerification.proofCid}
+                                      Proof CID:{" "}
+                                      {completedVerification.proofCid}
                                     </div>
                                   )}
                                 </div>
@@ -1753,11 +1687,13 @@ export function MyPendingWorksModal({
                                     Resolved
                                   </h4>
                                   <p className="text-xs text-black/60 dark:text-white/60 mt-1">
-                                    This request has been resolved and funds have been settled.
+                                    This request has been resolved and funds
+                                    have been settled.
                                   </p>
                                   {selectedWork.completionProofCid && (
                                     <div className="glass-macos rounded-lg p-2 text-xs font-mono text-black/60 dark:text-white/60 break-all mt-2">
-                                      Proof CID: {selectedWork.completionProofCid}
+                                      Proof CID:{" "}
+                                      {selectedWork.completionProofCid}
                                     </div>
                                   )}
                                 </div>
@@ -1773,7 +1709,8 @@ export function MyPendingWorksModal({
                                     Pending Oracle Review
                                   </h4>
                                   <p className="text-xs text-black/60 dark:text-white/60 mt-1">
-                                    Evidence has been locked on-chain. Awaiting oracle ruling.
+                                    Evidence has been locked on-chain. Awaiting
+                                    oracle ruling.
                                   </p>
                                 </div>
                               )}
