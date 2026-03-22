@@ -59,6 +59,19 @@ RPC_ENDPOINTS = [
     "https://base-sepolia-rpc.publicnode.com",
 ]
 
-# Load Contract ABI from file
-with open(PROJECT_ROOT / "ABI.json", "r", encoding="utf-8") as f:
-    CONTRACT_ABI = json.load(f)
+def load_contract_abi() -> list[dict]:
+    """Load contract ABI, preferring backend-local copy and falling back to root copy."""
+    candidates = [
+        BACKEND_DIR / "ABI.json",
+        PROJECT_ROOT / "ABI.json",
+    ]
+
+    for abi_path in candidates:
+        if abi_path.exists():
+            with open(abi_path, "r", encoding="utf-8") as f:
+                return json.load(f)
+
+    raise FileNotFoundError("Could not find ABI.json in backend/ or project root")
+
+
+CONTRACT_ABI = load_contract_abi()

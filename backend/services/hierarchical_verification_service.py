@@ -31,7 +31,8 @@ class SubAgentOutput(TypedDict):
 class VerificationGraphState(TypedDict):
     """Master state for the verification graph."""
 
-    requirements_list: list[str]
+    raw_job_description: str  # Original job description from client
+    requirements_list: list[str]  # Parsed structured requirements
     seller_profile: str
     what_they_offer: str
     files: list[dict[str, Any]]
@@ -70,13 +71,15 @@ class HierarchicalVerificationService:
         builder = StateGraph(VerificationGraphState)
 
         # Add nodes
+        builder.add_node("requirements_parser", self._node_requirements_parser)
         builder.add_node("content_analysis", self._node_content_analysis)
         builder.add_node("orchestrator", self._node_orchestrator)
         builder.add_node("specialized_agent", self._node_specialized_agent)
         builder.add_node("aggregator", self._node_aggregator)
 
         # Define edges
-        builder.add_edge(START, "content_analysis")
+        builder.add_edge(START, "requirements_parser")
+        builder.add_edge("requirements_parser", "content_analysis")
         builder.add_edge("content_analysis", "orchestrator")
         builder.add_conditional_edges(
             "orchestrator", self._route_to_agents, ["specialized_agent"]
@@ -87,6 +90,68 @@ class HierarchicalVerificationService:
         return builder.compile()
 
     # --- Node Logic ---
+
+    def _node_requirements_parser(self, state: VerificationGraphState) -> dict[str, Any]:
+        """Parse raw job description into structured requirements list."""
+        raw_description = state.get("raw_job_description", "")
+        
+        # If requirements_list is already populated (legacy flow), use it
+        if state.get("requirements_list") and len(state["requirements_list"]) > 0:
+            return {"requirements_list": state["requirements_list"]}
+        
+        # Otherwise, parse the raw job description
+        if not raw_description or not raw_description.strip():
+            return {"requirements_list": ["Complete the requested work"]}
+        
+        prompt = f"""You are a requirements extraction agent. Your job is to parse a client's job description and extract clear, actionable requirements.
+
+Job Description:
+{raw_description}
+
+Extract all specific requirements, deliverables, and expectations from this description. Each requirement should be:
+- Clear and specific
+- Actionable and verifiable
+- Focused on a single aspect
+
+Return a JSON object with this structure:
+{{
+  "requirements": [
+    "First specific requirement",
+    "Second specific requirement",
+    ...
+  ]
+}}
+
+If the description is vague or general, extract the implied requirements. For example:
+- "I need a logo" → ["Design a professional logo", "Provide logo in multiple formats (PNG, SVG)", "Include source files"]
+- "Build me a website" → ["Create a functional website", "Ensure mobile responsiveness", "Include basic SEO optimization"]
+
+Extract requirements now:"""
+
+        try:
+            parsed = self.base_service._invoke_json(self.code_model, prompt)
+            requirements = parsed.get("requirements", [])
+            
+            # Validate and clean requirements
+            if not requirements or not isinstance(requirements, list):
+                # Fallback: split by sentences if parsing fails
+                requirements = [
+                    line.strip()
+                    for line in raw_description.split(".")
+                    if line.strip() and len(line.strip()) > 10
+                ]
+            
+            # Ensure we have at least one requirement
+            if not requirements:
+                requirements = [raw_description.strip()]
+            
+            logging.info(f"Parsed {len(requirements)} requirements from job description")
+            return {"requirements_list": requirements}
+            
+        except Exception as exc:
+            logging.error(f"Requirements parsing failed: {exc}")
+            # Fallback: use raw description as single requirement
+            return {"requirements_list": [raw_description.strip()]}
 
     def _node_content_analysis(self, state: VerificationGraphState) -> dict[str, Any]:
         """Analyse content iteratively using the base VerificationService."""
@@ -223,10 +288,16 @@ class HierarchicalVerificationService:
     ) -> Generator[str, None, None]:
         """Run the LangGraph MoA pipeline and yield SSE events."""
         reqs = payload_dict.get("requirements_list", [])
+        raw_description = payload_dict.get("raw_job_description", "")
+        
+        # Convert requirements to list of strings
+        requirements_list = [
+            r["requirement"] if isinstance(r, dict) else r for r in reqs
+        ]
+        
         initial_state = VerificationGraphState(
-            requirements_list=[
-                r["requirement"] if isinstance(r, dict) else r for r in reqs
-            ],
+            raw_job_description=raw_description,
+            requirements_list=requirements_list,
             seller_profile=payload_dict.get("seller_profile", ""),
             what_they_offer=payload_dict.get("what_they_offer", ""),
             files=payload_dict.get("files", []),
@@ -244,7 +315,22 @@ class HierarchicalVerificationService:
         try:
             # stream_mode="updates" yields State changes after each Node completes
             for event in self.graph.stream(initial_state, stream_mode="updates"):
-                if "content_analysis" in event:
+                if "requirements_parser" in event:
+                    parsed_reqs = event["requirements_parser"].get("requirements_list", [])
+                    yield self.base_service._format_sse(
+                        "stage",
+                        {
+                            "stage": "requirements_parsed",
+                            "message": f"Extracted {len(parsed_reqs)} requirement(s) from job description.",
+                        },
+                    )
+                    # Optionally yield the parsed requirements for frontend display
+                    yield self.base_service._format_sse(
+                        "requirements_extracted",
+                        {"requirements": parsed_reqs},
+                    )
+
+                elif "content_analysis" in event:
                     analyses = event["content_analysis"].get("file_analyses", [])
                     yield self.base_service._format_sse(
                         "stage",
@@ -278,6 +364,11 @@ class HierarchicalVerificationService:
                                 "message": f"Agent verified branch: {agent_name}",
                             },
                         )
+                        # Stream full agent output with requirement checks
+                        yield self.base_service._format_sse("agent_result", {
+                            "agent_name": agent_name,
+                            "requirement_checks": out.get("requirement_checks", []),
+                        })
 
                 elif "aggregator" in event:
                     report = event["aggregator"].get("final_report", {})

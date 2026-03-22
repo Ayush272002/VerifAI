@@ -704,19 +704,20 @@ class VerificationService:
 
         total = len(requirements_list)
         completion_ratio = 0 if total == 0 else (completed / total)
-        if completion_ratio == 1:
+        
+        # Determine overall status based on completion ratio
+        # ONLY 100% completion = pass (provider gets paid)
+        # Anything less = fail (client gets refund)
+        if completion_ratio == 1.0:
             overall_status = "pass"
-        elif completion_ratio >= 0.6:
-            overall_status = "needs_revision"
         else:
             overall_status = "fail"
 
+        # Allow model to override to fail if it detected critical issues
         model_status = str(parsed.get("overall_status", "")).strip().lower()
-        if model_status in {"pass", "needs_revision", "fail"}:
-            if model_status == "fail" and overall_status != "pass":
-                overall_status = "fail"
-            elif model_status == "needs_revision" and overall_status == "pass":
-                overall_status = "needs_revision"
+        if model_status == "fail":
+            # Model detected critical issues
+            overall_status = "fail"
 
         return {
             "modality": modality,

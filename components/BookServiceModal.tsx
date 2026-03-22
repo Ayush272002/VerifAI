@@ -8,11 +8,19 @@ import { EthIcon } from "@/components/EthIcon";
 import { useRequestService } from "@/lib/marketplace";
 import { useAccount } from "wagmi";
 import { toast } from "sonner";
+import { createPublicClient, http } from "viem";
+import { sepolia } from "viem/chains";
+
+const publicClient = createPublicClient({
+  chain: sepolia,
+  transport: http(),
+});
 
 interface BookServiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   service: ResultData | null;
+  onSuccess?: () => void;
 }
 
 const SPRING = {
@@ -25,10 +33,10 @@ export function BookServiceModal({
   isOpen,
   onClose,
   service,
+  onSuccess,
 }: BookServiceModalProps) {
   const [taskDetails, setTaskDetails] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [mounted, setMounted] = useState(false);
   const { address } = useAccount();
   const { requestService, isPending } = useRequestService();
@@ -82,18 +90,21 @@ export function BookServiceModal({
         timestamp: new Date().toISOString(),
       });
 
+      toast.info("Transaction submitted, waiting for confirmation...");
+      const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+
       setIsProcessing(false);
-      setShowConfirmation(true);
 
-      toast.success(
-        "Service request created! Funds locked in escrow. Status: Pending",
-      );
-
-      setTimeout(() => {
-        setShowConfirmation(false);
+      if (receipt.status === "success") {
+        toast.success(
+          "Service request created! Funds locked in escrow. Status: Pending",
+        );
         onClose();
+        if (onSuccess) onSuccess();
         setTaskDetails("");
-      }, 2500);
+      } else {
+        toast.error("Transaction failed on chain.");
+      }
     } catch (err: any) {
       setIsProcessing(false);
 
@@ -219,7 +230,7 @@ export function BookServiceModal({
                       rows={10}
                       value={taskDetails}
                       onChange={(e) => setTaskDetails(e.target.value)}
-                      placeholder="Example:
+                      placeholder={`Example:
 
 PROJECT: Essay on Climate Change Impact
 
@@ -240,7 +251,7 @@ TIMELINE:
 
 ADDITIONAL NOTES:
 - Target audience: University level (undergraduate)
-- Prefer recent sources (last 5 years)"
+- Prefer recent sources (last 5 years)`}
                       className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/40 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all resize-none font-mono text-sm"
                     />
                     <p className="text-xs text-black/50 dark:text-white/50 mt-2">
@@ -324,31 +335,6 @@ ADDITIONAL NOTES:
             </motion.div>
           </div>
 
-          {/* Confirmation Toast */}
-          <AnimatePresence>
-            {showConfirmation && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                transition={SPRING}
-                className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[104] glass-macos rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3 min-w-[300px]"
-              >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-black dark:text-white text-sm">
-                    Request Created - Pending!
-                  </p>
-                  <p className="text-xs text-black/60 dark:text-white/60">
-                    {service?.price.amount} ETH locked in escrow. Awaiting
-                    provider response.
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </>
       )}
     </AnimatePresence>
