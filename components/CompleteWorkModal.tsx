@@ -75,10 +75,12 @@ export function CompleteWorkModal({
   const [proofCid, setProofCid] = useState<string>("");
   const [autoCompleteTriggered, setAutoCompleteTriggered] = useState(false);
   const [settlementCompleted, setSettlementCompleted] = useState(false);
+  const [settlementTimeout, setSettlementTimeout] = useState(false);
 
   // Refs to hold latest values for the auto-complete effect
   const resultRef = useRef<VerificationResult | null>(null);
   const proofCidRef = useRef<string>("");
+  const settlementTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Keep refs in sync
   useEffect(() => {
@@ -103,10 +105,15 @@ export function CompleteWorkModal({
       onComplete
     ) {
       setAutoCompleteTriggered(true);
+      // Clear any pending timeout
+      if (settlementTimeoutRef.current) {
+        clearTimeout(settlementTimeoutRef.current);
+        settlementTimeoutRef.current = null;
+      }
       // Small delay so the user can see the final state
       const timer = setTimeout(() => {
         onComplete(result, proofCid);
-      }, 800);
+      }, 1200);
       return () => clearTimeout(timer);
     }
   }, [
@@ -116,6 +123,27 @@ export function CompleteWorkModal({
     autoCompleteTriggered,
     onComplete,
   ]);
+
+  // Fallback: If settlement_initiated received but no completion after 30s, show warning
+  useEffect(() => {
+    if (blockchainStatus.includes("automatically releasing funds") && !settlementCompleted) {
+      // Start a timeout
+      settlementTimeoutRef.current = setTimeout(() => {
+        setSettlementTimeout(true);
+        setLogs((prev) => [
+          ...prev,
+          "⚠️ Settlement taking longer than expected. Check blockchain explorer or refresh page.",
+        ]);
+      }, 30000); // 30 seconds
+
+      return () => {
+        if (settlementTimeoutRef.current) {
+          clearTimeout(settlementTimeoutRef.current);
+          settlementTimeoutRef.current = null;
+        }
+      };
+    }
+  }, [blockchainStatus, settlementCompleted]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (filesLocked) return;
@@ -153,6 +181,13 @@ export function CompleteWorkModal({
     setProofCid("");
     setAutoCompleteTriggered(false);
     setSettlementCompleted(false);
+    setSettlementTimeout(false);
+    
+    // Clear any pending settlement timeout
+    if (settlementTimeoutRef.current) {
+      clearTimeout(settlementTimeoutRef.current);
+      settlementTimeoutRef.current = null;
+    }
 
     try {
       const formData = new FormData();
@@ -764,8 +799,18 @@ export function CompleteWorkModal({
                     )}
 
                     {blockchainStatus && (
-                      <div className="glass-macos rounded-xl p-2 flex items-center gap-2">
-                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                      <div className={`glass-macos rounded-xl p-2 flex items-center gap-2 ${
+                        settlementCompleted 
+                          ? 'border border-emerald-500/20' 
+                          : ''
+                      }`}>
+                        {settlementCompleted ? (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                        ) : blockchainStatus.includes('⚠️') ? (
+                          <X className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                        ) : (
+                          <Loader2 className="w-3.5 h-3.5 text-cyan-500 animate-spin flex-shrink-0" />
+                        )}
                         <p className="text-xs font-mono text-black/60 dark:text-white/60">
                           {blockchainStatus}
                         </p>
@@ -773,11 +818,29 @@ export function CompleteWorkModal({
                     )}
 
                     {/* Auto-complete status indicator */}
-                    {autoCompleteTriggered && (
+                    {autoCompleteTriggered && !settlementCompleted && (
                       <div className="glass-macos rounded-xl p-3 flex items-center gap-2 border border-cyan-500/20">
                         <Loader2 className="w-4 h-4 text-cyan-500 animate-spin flex-shrink-0" />
                         <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-400">
-                          Triggering wallet transaction automatically...
+                          Completing transaction...
+                        </p>
+                      </div>
+                    )}
+                    
+                    {settlementCompleted && autoCompleteTriggered && (
+                      <div className="glass-macos rounded-xl p-3 flex items-center gap-2 border border-emerald-500/20">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+                        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                          Settlement complete! Closing modal...
+                        </p>
+                      </div>
+                    )}
+                    
+                    {settlementTimeout && !settlementCompleted && (
+                      <div className="glass-macos rounded-xl p-3 flex items-center gap-2 border border-amber-500/20">
+                        <X className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                        <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                          Settlement is taking longer than expected. The transaction may still complete on-chain.
                         </p>
                       </div>
                     )}

@@ -363,10 +363,7 @@ Requirements Passed: {report.get("totals", {}).get("completed", 0)}/{report.get(
                     "winner_is_provider": is_success,
                 }
 
-                settlement_result = _settlement_service.auto_settle(
-                    requestId, settlement_cache
-                )
-
+                # Send settlement_initiated BEFORE starting the settlement
                 yield _logging_service.format_sse_event(
                     {
                         "event": "settlement_initiated",
@@ -375,6 +372,10 @@ Requirements Passed: {report.get("totals", {}).get("completed", 0)}/{report.get(
                             "message": "Backend is automatically releasing funds via oracle...",
                         },
                     }
+                )
+
+                settlement_result = _settlement_service.auto_settle(
+                    requestId, settlement_cache
                 )
 
                 if settlement_result.get("success"):
