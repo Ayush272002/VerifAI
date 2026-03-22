@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, KeyboardEvent } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Plus, Clock, Upload, CheckCircle2, Loader2 } from "lucide-react";
+import { X, Plus, Clock, Loader2 } from "lucide-react";
 import { useAddService } from "@/lib/marketplace";
 import { EthIcon } from "@/components/EthIcon";
 import { GIG_CATEGORIES, getRandomPlaceholderImage } from "@/lib/gigCategories";
+import { usePublicClient } from "wagmi";
 
 interface PublishServiceModalProps {
   isOpen: boolean;
@@ -19,7 +20,10 @@ const SPRING = {
   stiffness: 100,
 } as const;
 
-export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProps) {
+export function PublishServiceModal({
+  isOpen,
+  onClose,
+}: PublishServiceModalProps) {
   const [formData, setFormData] = useState({
     title: "",
     category: "",
@@ -27,31 +31,27 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
     priceType: "fixed" as "fixed" | "hourly",
     priceAmount: "",
     deliveryTime: "",
-    backgroundImage: null as string | null,
   });
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
-  const [deliverables, setDeliverables] = useState<{id: string, text: string}[]>([{ id: Math.random().toString(), text: "" }]);
-  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [deliverables, setDeliverables] = useState<
+    { id: string; text: string }[]
+  >([{ id: Math.random().toString(), text: "" }]);
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [classificationError, setClassificationError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const validDeliverables = deliverables.filter(d => d.text.trim() !== "");
+  const validDeliverables = deliverables.filter((d) => d.text.trim() !== "");
 
-  useEffect(() => {
-    if (formData.category) {
-      const placeholderImage = getRandomPlaceholderImage(formData.category);
-      setFormData((prev) => ({
-        ...prev,
-        backgroundImage: placeholderImage,
-      }));
-    }
-  }, [formData.category]);
+  // Auto-generate background image based on category
+  const backgroundImage = formData.category
+    ? getRandomPlaceholderImage(formData.category)
+    : null;
 
   const handleAutoCategorize = async () => {
     if (!formData.title.trim() || !formData.description.trim()) {
-      setClassificationError("Title and description are required for classification.");
+      setClassificationError(
+        "Title and description are required for classification.",
+      );
       return;
     }
 
@@ -98,15 +98,8 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
     tags.length > 0 &&
     validDeliverables.length > 0;
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, backgroundImage: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
   const handleTagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -119,74 +112,89 @@ export function PublishServiceModal({ isOpen, onClose }: PublishServiceModalProp
     }
   };
 
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove));
-  };
-
   const updateDeliverable = (id: string, value: string) => {
-    setDeliverables(deliverables.map(d => d.id === id ? { ...d, text: value } : d));
+    setDeliverables(
+      deliverables.map((d) => (d.id === id ? { ...d, text: value } : d)),
+    );
   };
 
   const addDeliverable = () => {
-    setDeliverables([...deliverables, { id: Math.random().toString(), text: "" }]);
+    setDeliverables([
+      ...deliverables,
+      { id: Math.random().toString(), text: "" },
+    ]);
     setTimeout(() => {
-      const inputs = document.querySelectorAll<HTMLInputElement>('input[data-feature="deliverable"]');
+      const inputs = document.querySelectorAll<HTMLInputElement>(
+        'input[data-feature="deliverable"]',
+      );
       if (inputs.length > 0) inputs[inputs.length - 1].focus();
     }, 0);
   };
 
   const removeDeliverable = (id: string, index: number) => {
-    let newDeliverables = deliverables.filter(d => d.id !== id);
+    let newDeliverables = deliverables.filter((d) => d.id !== id);
     if (newDeliverables.length === 0) {
       newDeliverables = [{ id: Math.random().toString(), text: "" }];
     }
     setDeliverables(newDeliverables);
   };
 
-  const handleDeliverableKeyDown = (e: KeyboardEvent<HTMLInputElement>, index: number) => {
-    if (e.key === 'Enter') {
+  const handleDeliverableKeyDown = (
+    e: KeyboardEvent<HTMLInputElement>,
+    index: number,
+  ) => {
+    if (e.key === "Enter") {
       e.preventDefault();
       if (deliverables[index].text.trim() !== "") {
         const newId = Math.random().toString();
         const newDeliverables = [...deliverables];
         newDeliverables.splice(index + 1, 0, { id: newId, text: "" });
         setDeliverables(newDeliverables);
-        
+
         setTimeout(() => {
-          const inputs = document.querySelectorAll<HTMLInputElement>('input[data-feature="deliverable"]');
+          const inputs = document.querySelectorAll<HTMLInputElement>(
+            'input[data-feature="deliverable"]',
+          );
           if (inputs[index + 1]) inputs[index + 1].focus();
         }, 0);
       }
-    } else if (e.key === 'Backspace' && deliverables[index].text === "") {
-        e.preventDefault();
-        const idToRemove = deliverables[index].id;
-        removeDeliverable(idToRemove, index);
-        setTimeout(() => {
-          const inputs = document.querySelectorAll<HTMLInputElement>('input[data-feature="deliverable"]');
-          if (inputs[index - 1]) inputs[index - 1].focus();
-        }, 0);
+    } else if (e.key === "Backspace" && deliverables[index].text === "") {
+      e.preventDefault();
+      const idToRemove = deliverables[index].id;
+      removeDeliverable(idToRemove, index);
+      setTimeout(() => {
+        const inputs = document.querySelectorAll<HTMLInputElement>(
+          'input[data-feature="deliverable"]',
+        );
+        if (inputs[index - 1]) inputs[index - 1].focus();
+      }, 0);
     }
   };
 
   const { addService, isPending } = useAddService();
+  const publicClient = usePublicClient();
+  const [isConfirming, setIsConfirming] = useState(false);
 
-const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!isFormValid || isPending) return;
+    if (!isFormValid || isPending || isConfirming) return;
 
     try {
       // Step 1: Verify form with Toast's endpoint
       console.log("Verifying service form...");
-      const verifyRes = await fetch("http://localhost:8000/agent/verify/form/service", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: formData.title,
-          description: formData.description,
-          tags,
-          category: formData.category,
-        }),
-      });
+      const verifyRes = await fetch(
+        "http://localhost:8000/agent/verify/form/service",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: formData.title,
+            description: formData.description,
+            tags,
+            category: formData.category,
+          }),
+        },
+      );
 
       if (!verifyRes.ok) {
         try {
@@ -206,35 +214,54 @@ const handleSubmit = async (e: React.FormEvent) => {
 
       // Step 2: Proceed with blockchain submission
       const resolvedBackgroundImage =
-        formData.backgroundImage || getRandomPlaceholderImage(formData.category);
+        backgroundImage ||
+        getRandomPlaceholderImage(formData.category);
 
-      const deliverablesText = validDeliverables.map((d, i) => `${i + 1}. ${d.text}`).join('\n');
+      const deliverablesText = validDeliverables
+        .map((d, i) => `${i + 1}. ${d.text}`)
+        .join("\n");
       const fullDescription = `${formData.description}\n\nWhat You'll Get:\n${deliverablesText}\n\nCategory: ${formData.category}\nDelivery Time: ${formData.deliveryTime}\nTags: ${tags.join(", ")}`;
 
-      await addService(formData.title, fullDescription, formData.priceAmount);
+      setIsConfirming(true);
+      toast.info("Submitting transaction securely...");
+      const txHash = await addService(
+        formData.title,
+        fullDescription,
+        formData.priceAmount,
+      );
+
+      toast.info("Awaiting block confirmation...");
+      if (!publicClient) throw new Error("Public client not available");
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash: txHash,
+      });
+
+      if (receipt.status !== "success") {
+        throw new Error("Transaction reverted on-chain");
+      }
+
       console.log("Service published on-chain:", {
         ...formData,
         backgroundImage: resolvedBackgroundImage,
         tags,
+        receipt,
       });
-      setShowConfirmation(true);
-      setTimeout(() => {
-        setShowConfirmation(false);
-        onClose();
-        // Reset form
-        setFormData({
-          title: "",
-          category: "",
-          description: "",
-          priceType: "fixed",
-          priceAmount: "",
-          deliveryTime: "",
-          backgroundImage: null,
-        });
-        setTags([]);
-        setTagInput("");
-        setDeliverables([{ id: Math.random().toString(), text: "" }]);
-      }, 2500);
+      toast.success("Service Published!", {
+        description: "Your service is now live",
+      });
+      onClose();
+      // Reset form
+      setFormData({
+        title: "",
+        category: "",
+        description: "",
+        priceType: "fixed",
+        priceAmount: "",
+        deliveryTime: "",
+      });
+      setTags([]);
+      setTagInput("");
+      setDeliverables([{ id: Math.random().toString(), text: "" }]);
     } catch (err: any) {
       // Handle user-rejected transaction
       if (
@@ -246,6 +273,8 @@ const handleSubmit = async (e: React.FormEvent) => {
         console.error("Failed to publish service to blockchain:", err);
         toast.error("Failed to publish service: " + (err?.message || err));
       }
+    } finally {
+      setIsConfirming(false);
     }
   };
 
@@ -313,41 +342,8 @@ const handleSubmit = async (e: React.FormEvent) => {
                         setFormData({ ...formData, title: e.target.value })
                       }
                       placeholder="e.g., Full-Stack Web Development - React, Node.js"
-                      className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                      className="w-full glass-input px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                     />
-                  </div>
-
-                  {/* Category */}
-                  <div>
-                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">
-                      Category *
-                    </label>
-                    <div className="flex gap-2 flex-wrap">
-                      <select
-                        required
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                        className="flex-1 glass-search px-4 py-3 rounded-xl text-black dark:text-white outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
-                      >
-                        <option value="">Select a category</option>
-                        {GIG_CATEGORIES.map((cat) => (
-                          <option key={cat} value={cat}>
-                            {cat}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        type="button"
-                        onClick={handleAutoCategorize}
-                        disabled={isCategorizing}
-                        className="btn-macos min-w-[170px] px-3 py-2 text-sm"
-                      >
-                        {isCategorizing ? "Classifying..." : "Auto categorize"}
-                      </button>
-                    </div>
-                    {classificationError && (
-                      <p className="text-xs mt-2 text-red-600 dark:text-red-400">{classificationError}</p>
-                    )}
                   </div>
 
                   {/* Description */}
@@ -366,8 +362,45 @@ const handleSubmit = async (e: React.FormEvent) => {
                         })
                       }
                       placeholder="Describe your service, what you offer, and what makes you stand out..."
-                      className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all resize-none"
+                      className="w-full glass-input px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all resize-none border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                     />
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <label className="block text-sm font-semibold text-black dark:text-white mb-2">
+                      Category *
+                    </label>
+                    <div className="flex gap-2 flex-wrap">
+                      <select
+                        required
+                        value={formData.category}
+                        onChange={(e) =>
+                          setFormData({ ...formData, category: e.target.value })
+                        }
+                        className="flex-1 glass-input px-4 py-3 rounded-xl text-black dark:text-white outline-none transition-all border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
+                      >
+                        <option value="">Select a category</option>
+                        {GIG_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
+                        ))}
+                      </select>
+                      <button
+                        type="button"
+                        onClick={handleAutoCategorize}
+                        disabled={isCategorizing}
+                        className="btn-macos min-w-[170px] px-3 py-2 text-sm"
+                      >
+                        {isCategorizing ? "Classifying..." : "Auto categorise"}
+                      </button>
+                    </div>
+                    {classificationError && (
+                      <p className="text-xs mt-2 text-red-600 dark:text-red-400">
+                        {classificationError}
+                      </p>
+                    )}
                   </div>
 
                   {/* What You'll Deliver */}
@@ -384,7 +417,11 @@ const handleSubmit = async (e: React.FormEvent) => {
                               key={deliverable.id}
                               initial={{ opacity: 0, y: -10 }}
                               animate={{ opacity: 1, y: 0 }}
-                              exit={{ opacity: 0, height: 0, overflow: "hidden" }}
+                              exit={{
+                                opacity: 0,
+                                height: 0,
+                                overflow: "hidden",
+                              }}
                               transition={{ duration: 0.2 }}
                               className="flex items-center gap-3 group"
                             >
@@ -397,15 +434,24 @@ const handleSubmit = async (e: React.FormEvent) => {
                                 data-feature="deliverable"
                                 type="text"
                                 value={deliverable.text}
-                                onChange={(e) => updateDeliverable(deliverable.id, e.target.value)}
-                                onKeyDown={(e) => handleDeliverableKeyDown(e, idx)}
+                                onChange={(e) =>
+                                  updateDeliverable(
+                                    deliverable.id,
+                                    e.target.value,
+                                  )
+                                }
+                                onKeyDown={(e) =>
+                                  handleDeliverableKeyDown(e, idx)
+                                }
                                 placeholder="E.g., Fully functional website"
                                 className="flex-1 bg-transparent border-b border-black/5 dark:border-white/5 hover:border-black/20 dark:hover:border-white/20 focus:border-cyan-500 text-sm text-black dark:text-white pt-1 pb-1 outline-none transition-all placeholder:text-black/30 dark:placeholder:text-white/30"
                               />
                               <button
                                 type="button"
-                                onClick={() => removeDeliverable(deliverable.id, idx)}
-                                className={`opacity-0 group-hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-1 transition-all ${deliverables.length === 1 && deliverable.text === '' ? 'invisible' : ''}`}
+                                onClick={() =>
+                                  removeDeliverable(deliverable.id, idx)
+                                }
+                                className={`opacity-0 group-hover:opacity-100 hover:bg-black/10 dark:hover:bg-white/10 rounded-full p-1 transition-all ${deliverables.length === 1 && deliverable.text === "" ? "invisible" : ""}`}
                               >
                                 <X className="w-4 h-4 text-black/60 dark:text-white/60" />
                               </button>
@@ -496,7 +542,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                             }
                           }}
                           placeholder="0.5"
-                          className="w-full glass-search pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                          className="w-full glass-input pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                         />
                       </div>
                     </div>
@@ -520,7 +566,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                           })
                         }
                         placeholder="e.g., 7 days, 2 weeks, Flexible"
-                        className="w-full glass-search pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                        className="w-full glass-input pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                       />
                     </div>
                   </div>
@@ -537,7 +583,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                         onChange={(e) => setTagInput(e.target.value)}
                         onKeyDown={handleTagKeyDown}
                         placeholder="Type a tag and press Enter..."
-                        className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                        className="w-full glass-input px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all border border-black/10 dark:border-white/10 focus:border-black/20 dark:focus:border-white/20"
                       />
                       {tags.length > 0 && (
                         <div className="flex flex-wrap gap-2">
@@ -566,121 +612,6 @@ const handleSubmit = async (e: React.FormEvent) => {
                       </p>
                     </div>
                   </div>
-
-                  {/* Background Image Upload */}
-                  <div>
-                    <label className="block text-sm font-semibold text-black dark:text-white mb-3">
-                      Background Image
-                    </label>
-                    <div className="space-y-3">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                      <div className="flex gap-3">
-                        <motion.button
-                          type="button"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex-1 glass-macos glass-macos-hover px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-black dark:text-white font-semibold"
-                        >
-                          <Upload className="w-5 h-5" />
-                          Upload Background Image
-                        </motion.button>
-                        {formData.backgroundImage && (
-                          <motion.button
-                            type="button"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() =>
-                              setFormData({
-                                ...formData,
-                                backgroundImage: null,
-                              })
-                            }
-                            className="glass-macos glass-macos-hover px-4 py-3 rounded-xl text-red-600 dark:text-red-400 font-semibold"
-                          >
-                            <X className="w-5 h-5" />
-                          </motion.button>
-                        )}
-                      </div>
-                      {formData.backgroundImage && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          className="glass-macos rounded-xl p-4 flex items-center gap-3"
-                        >
-                          <div className="w-24 h-16 rounded-xl overflow-hidden bg-black/5 dark:bg-white/5">
-                            <img
-                              src={formData.backgroundImage}
-                              alt="Background preview"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-black dark:text-white">
-                              Background uploaded
-                            </p>
-                            <p className="text-xs text-black/60 dark:text-white/60">
-                              This will be the card background
-                            </p>
-                          </div>
-                        </motion.div>
-                      )}
-                      {!formData.backgroundImage && (
-                        <p className="text-xs text-black/50 dark:text-white/50">
-                          Upload a widescreen image (recommended: 800x450px or
-                          larger)
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Preview */}
-                  <div>
-                    <label className="block text-sm font-semibold text-black dark:text-white mb-3">
-                      Preview
-                    </label>
-                    <div className="glass-macos rounded-2xl p-4">
-                      <div className="aspect-video rounded-xl bg-linear-to-br from-slate-700 via-gray-800 to-zinc-900 flex items-center justify-center mb-3 overflow-hidden relative">
-                        {formData.backgroundImage ? (
-                          <img
-                            src={formData.backgroundImage}
-                            alt="Background"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="text-white/20 text-sm font-medium">
-                            No background image
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-black dark:text-white text-sm mb-1">
-                        {formData.title || "Your service title"}
-                      </h3>
-                      <p className="text-xs text-black/60 dark:text-white/60">
-                        {formData.category || "Category"}
-                      </p>
-                      {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-2 py-0.5 rounded-lg bg-black/5 dark:bg-white/5 text-xs font-medium text-black/70 dark:text-white/70"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </div>
 
                 {/* Footer */}
@@ -696,53 +627,38 @@ const handleSubmit = async (e: React.FormEvent) => {
                   </motion.button>
                   <motion.button
                     type="submit"
-                    disabled={!isFormValid || isPending}
+                    disabled={!isFormValid || isPending || isConfirming}
                     whileHover={
-                      isFormValid && !isPending ? { scale: 1.02 } : {}
+                      isFormValid && !isPending && !isConfirming
+                        ? { scale: 1.02 }
+                        : {}
                     }
-                    whileTap={isFormValid && !isPending ? { scale: 0.98 } : {}}
+                    whileTap={
+                      isFormValid && !isPending && !isConfirming
+                        ? { scale: 0.98 }
+                        : {}
+                    }
                     className={`px-8 py-2.5 rounded-2xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                      isFormValid && !isPending
+                      isFormValid && !isPending && !isConfirming
                         ? "btn-macos"
                         : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
                     }`}
                   >
-                    {isPending ? (
+                    {isPending || isConfirming ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <Plus className="w-4 h-4" />
                     )}
-                    {isPending ? "Confirming..." : "Publish Service"}
+                    {isPending
+                      ? "Confirming in Wallet..."
+                      : isConfirming
+                        ? "Confirming on-chain..."
+                        : "Publish Service"}
                   </motion.button>
                 </div>
               </form>
             </motion.div>
           </div>
-
-          {/* Confirmation Toast */}
-          <AnimatePresence>
-            {showConfirmation && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                transition={SPRING}
-                className="absolute bottom-8 left-1/2 -translate-x-1/2 glass-macos rounded-2xl px-6 py-4 shadow-2xl flex items-center gap-3 min-w-75"
-              >
-                <div className="w-10 h-10 rounded-full bg-linear-to-br from-emerald-400 to-teal-500 flex items-center justify-center">
-                  <CheckCircle2 className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1">
-                  <p className="font-bold text-black dark:text-white text-sm">
-                    Service Published!
-                  </p>
-                  <p className="text-xs text-black/60 dark:text-white/60">
-                    Your service is now live
-                  </p>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </>
       )}
     </AnimatePresence>

@@ -388,22 +388,21 @@ export default function WalletConnect({
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <button
               onClick={() => setIsWalletModalOpen(true)}
-              className="relative group flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all overflow-hidden"
+              className="relative group flex items-center gap-2 px-5 py-2.5 rounded-full font-semibold text-sm transition-all overflow-hidden text-cyan-600 dark:text-cyan-400"
               style={{
-                background: "rgba(249, 115, 22, 0.15)",
+                background: "rgba(6, 182, 212, 0.1)",
                 backdropFilter: "blur(40px)",
                 WebkitBackdropFilter: "blur(40px)",
-                border: "1px solid rgba(249, 115, 22, 0.3)",
-                color: "#f97316",
+                border: "1px solid rgba(6, 182, 212, 0.2)",
                 boxShadow:
-                  "0 4px 20px rgba(249, 115, 22, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+                  "0 4px 20px rgba(6, 182, 212, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
               }}
             >
               {/* Animated gradient background on hover */}
-              <div className="absolute inset-0 bg-linear-to-r from-orange-400/20 to-amber-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              <div className="absolute inset-0 bg-linear-to-r from-cyan-400/20 to-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
 
               {/* Pulse animation */}
-              <div className="absolute inset-0 rounded-full bg-orange-400/30 animate-pulse opacity-50"></div>
+              <div className="absolute inset-0 rounded-full bg-cyan-400/20 animate-pulse opacity-50"></div>
 
               <Wallet className="h-4 w-4 relative z-10" />
               <span className="relative z-10">Connect Wallet</span>

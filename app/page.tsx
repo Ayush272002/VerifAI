@@ -6,17 +6,13 @@
 
 import {
   ArrowRight,
-  Search,
-  ChevronRight,
   Lock,
   Database,
   Sparkles,
   Zap,
-  Plus,
-  Grid3x3,
 } from "lucide-react";
 import Link from "next/link";
-import { motion, useScroll, useTransform } from "motion/react";
+import { motion, useScroll, useTransform, animate } from "motion/react";
 import { useState, useRef, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useRouter } from "next/navigation";
@@ -27,6 +23,8 @@ import { Button } from "@/components/ui/button";
 import { PublishServiceModal } from "@/components/PublishServiceModal";
 import { MyServicesModal } from "@/components/MyServicesModal";
 import { MyPendingWorksModal } from "@/components/MyPendingWorksModal";
+import SearchBar from "@/components/SearchBar";
+import SiteNav from "@/components/SiteNav";
 
 const FADE_UP = {
   hidden: { opacity: 0, y: 40 },
@@ -56,11 +54,11 @@ const SPRING = {
 };
 
 const LandingPage = (): React.JSX.Element => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [showPublishModal, setShowPublishModal] = useState(false);
   const [showMyServicesModal, setShowMyServicesModal] = useState(false);
   const [showMyPendingWorksModal, setShowMyPendingWorksModal] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [progress, setProgress] = useState(0);
   const { isConnected } = useAccount();
   const { theme, setTheme } = useTheme();
   const router = useRouter();
@@ -75,19 +73,16 @@ const LandingPage = (): React.JSX.Element => {
 
   useEffect(() => {
     setMounted(true);
+
+    const controls = animate(0, 100, {
+      delay: 1.3,
+      duration: 2.2,
+      ease: [0.16, 1, 0.3, 1], // premium easeOutQuart/Expo
+      onUpdate: (v) => setProgress(Math.floor(v)),
+    });
+
+    return () => controls.stop();
   }, []);
-
-  const handleSearch = () => {
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
 
   return (
     <main className="min-h-screen bg-white dark:bg-[#0a0a0a] relative overflow-hidden">
@@ -108,7 +103,7 @@ const LandingPage = (): React.JSX.Element => {
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-gradient-to-br from-cyan-400/10 to-blue-500/10 dark:from-cyan-400/20 dark:to-blue-500/20 blur-3xl"
+          className="absolute top-1/4 left-1/4 w-96 h-96 rounded-full bg-linear-to-br from-cyan-400/10 to-blue-500/10 dark:from-cyan-400/20 dark:to-blue-500/20 blur-3xl"
         ></motion.div>
         <motion.div
           animate={{
@@ -121,56 +116,21 @@ const LandingPage = (): React.JSX.Element => {
             repeat: Infinity,
             ease: "easeInOut",
           }}
-          className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full bg-gradient-to-br from-purple-400/10 to-pink-500/10 dark:from-purple-400/20 dark:to-pink-500/20 blur-3xl"
+          className="absolute bottom-1/4 right-1/4 w-125 h-125 rounded-full bg-linear-to-br from-purple-400/10 to-pink-500/10 dark:from-purple-400/20 dark:to-pink-500/20 blur-3xl"
         ></motion.div>
       </div>
 
       <div className="relative z-10">
         {/* Navigation */}
-        <motion.nav
-          className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-3xl border-b border-white/20 dark:border-white/10 shadow-lg shadow-black/5"
-          initial={{ y: -100 }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <div className="max-w-[1800px] mx-auto px-6 lg:px-12 h-24 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="group">
-                <motion.span
-                  whileHover={{ scale: 1.05 }}
-                  transition={SPRING}
-                  className="inline-block text-3xl font-bold tracking-tight text-black dark:text-white"
-                >
-                  Verif<span className="font-serif italic text-cyan-600 dark:text-cyan-400">AI</span>
-                </motion.span>
-              </Link>
-            </div>
-            <div className="flex items-center gap-6">
-              <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
-                <Link href="/browse" className="text-sm font-medium text-black/80 dark:text-white/80 hover:text-black dark:hover:text-white transition-colors">
-                  Browse
-                </Link>
-              </motion.div>
-              {mounted && isConnected && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={SPRING}
-                  onClick={() => setShowPublishModal(true)}
-                  className="rounded-lg px-4 py-1.5 text-sm font-medium border border-black/10 dark:border-white/10 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all"
-                >
-                  Publish
-                </motion.button>
-              )}
-              <WalletConnect
-                onMyServicesClick={() => setShowMyServicesModal(true)}
-                onMyPendingWorksClick={() => setShowMyPendingWorksModal(true)}
-                theme={theme}
-                onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              />
-            </div>
-          </div>
-        </motion.nav>
+        <SiteNav
+          isConnected={isConnected}
+          mounted={mounted}
+          theme={theme}
+          onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onPublishClick={() => setShowPublishModal(true)}
+          onMyServicesClick={() => setShowMyServicesModal(true)}
+          onMyPendingWorksClick={() => setShowMyPendingWorksModal(true)}
+        />
 
         {/* Hero */}
         <section ref={heroRef} className="pt-48 pb-32 px-6 lg:px-12 max-w-[1800px] mx-auto">
@@ -184,10 +144,6 @@ const LandingPage = (): React.JSX.Element => {
             {/* Left */}
             <div className="space-y-12">
               <motion.div variants={FADE_UP} className="space-y-6">
-                <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-black/10 dark:border-white/10">
-                  <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse"></div>
-                  <span className="text-sm font-mono text-black/70 dark:text-white/70">Live on Base</span>
-                </div>
                 <h1 className="text-7xl lg:text-8xl xl:text-9xl font-serif font-bold tracking-tight leading-[0.9] text-black dark:text-white">
                   Trustless
                   <br />
@@ -198,36 +154,14 @@ const LandingPage = (): React.JSX.Element => {
                 </p>
               </motion.div>
 
-              <motion.div variants={FADE_UP} className="space-y-6">
-                <div className="relative max-w-2xl">
-                  <div className="flex items-center pl-6 pr-2 py-2 rounded-full border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] transition-colors focus-within:border-black/20 dark:focus-within:border-white/20">
-                    <Search className="w-5 h-5 text-black/50 dark:text-white/50 mr-3 flex-shrink-0" />
-                    <input
-                      type="text"
-                      placeholder="Search for freelancers, services, or disputes..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={handleKeyDown}
-                      className="flex-1 bg-transparent text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none text-sm font-medium"
-                    />
-                    <motion.button
-                      onClick={handleSearch}
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.98 }}
-                      transition={SPRING}
-                      className="bg-black dark:bg-white text-white dark:text-black text-sm font-medium ml-2 py-2 px-6 rounded-full hover:bg-black/90 dark:hover:bg-white/90 transition-colors"
-                    >
-                      Search
-                    </motion.button>
-                  </div>
-                </div>
+              <motion.div variants={FADE_UP}>
+                <SearchBar maxWidth="max-w-2xl" />
               </motion.div>
             </div>
 
-            {/* Right - Blockchain Flow */}
             <motion.div
               variants={FADE_UP}
-              className="relative h-[600px] flex items-center justify-center"
+              className="relative h-195 flex items-center justify-center"
             >
               {/* Connected nodes showing dispute flow */}
               <div className="relative w-full max-w-md flex flex-col justify-center gap-6">
@@ -238,10 +172,10 @@ const LandingPage = (): React.JSX.Element => {
                   transition={{ delay: 0.3, ...SPRING }}
                   className="relative ml-auto w-64"
                 >
-                  <div className="absolute -inset-1 bg-gradient-to-r from-cyan-400 to-blue-500 rounded-3xl blur-xl opacity-40"></div>
+                  <div className="absolute -inset-1 bg-linear-to-r from-cyan-400 to-blue-500 rounded-3xl blur-xl opacity-40"></div>
                   <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-2xl">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-linear-to-br from-cyan-400 to-cyan-600 flex items-center justify-center">
                         <Lock className="w-5 h-5 text-white" />
                       </div>
                       <div>
@@ -257,7 +191,7 @@ const LandingPage = (): React.JSX.Element => {
                   initial={{ scaleY: 0 }}
                   animate={{ scaleY: 1 }}
                   transition={{ delay: 0.5, duration: 0.5 }}
-                  className="w-0.5 h-8 bg-gradient-to-b from-cyan-400 to-purple-500 mx-auto origin-top"
+                  className="w-0.5 h-8 bg-linear-to-b from-cyan-400 to-purple-500 mx-auto origin-top"
                 ></motion.div>
 
                 {/* Node 2: Evidence */}
@@ -267,10 +201,10 @@ const LandingPage = (): React.JSX.Element => {
                   transition={{ delay: 0.7, ...SPRING }}
                   className="relative mr-auto w-64"
                 >
-                  <div className="absolute -inset-1 bg-gradient-to-r from-purple-400 to-pink-500 rounded-3xl blur-xl opacity-40"></div>
+                  <div className="absolute -inset-1 bg-linear-to-r from-purple-400 to-pink-500 rounded-3xl blur-xl opacity-40"></div>
                   <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-2xl">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-linear-to-br from-purple-400 to-purple-600 flex items-center justify-center">
                         <Database className="w-5 h-5 text-white" />
                       </div>
                       <div>
@@ -286,7 +220,7 @@ const LandingPage = (): React.JSX.Element => {
                   initial={{ scaleY: 0 }}
                   animate={{ scaleY: 1 }}
                   transition={{ delay: 0.9, duration: 0.5 }}
-                  className="w-0.5 h-8 bg-gradient-to-b from-purple-400 to-emerald-500 mx-auto origin-top"
+                  className="w-0.5 h-8 bg-linear-to-b from-purple-400 to-emerald-500 mx-auto origin-top"
                 ></motion.div>
 
                 {/* Node 3: AI Ruling */}
@@ -296,10 +230,10 @@ const LandingPage = (): React.JSX.Element => {
                   transition={{ delay: 1.1, ...SPRING }}
                   className="relative ml-auto w-64"
                 >
-                  <div className="absolute -inset-1 bg-gradient-to-r from-emerald-400 to-teal-500 rounded-3xl blur-xl opacity-40"></div>
+                  <div className="absolute -inset-1 bg-linear-to-r from-emerald-400 to-teal-500 rounded-3xl blur-xl opacity-40"></div>
                   <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-2xl">
                     <div className="flex items-center gap-3 mb-3">
-                      <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
+                      <div className="w-10 h-10 rounded-2xl bg-linear-to-br from-emerald-400 to-emerald-600 flex items-center justify-center">
                         <Sparkles className="w-5 h-5 text-white" />
                       </div>
                       <div>
@@ -310,13 +244,40 @@ const LandingPage = (): React.JSX.Element => {
                     <div className="flex items-center gap-2">
                       <div className="flex-1 h-1 bg-black/10 dark:bg-white/10 rounded-full overflow-hidden">
                         <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: "100%" }}
-                          transition={{ delay: 1.3, duration: 1.5 }}
-                          className="h-full bg-gradient-to-r from-emerald-400 to-teal-500"
+                          style={{ width: `${progress}%` }}
+                          className="h-full bg-linear-to-r from-emerald-400 to-teal-500"
                         ></motion.div>
                       </div>
-                      <div className="text-xs font-mono text-black/60 dark:text-white/60">98%</div>
+                      <div className="text-xs font-mono text-black/60 dark:text-white/60">{progress}%</div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Connection line */}
+                <motion.div
+                  initial={{ scaleY: 0 }}
+                  animate={{ scaleY: 1 }}
+                  transition={{ delay: 3.6, duration: 0.5 }}
+                  className="w-0.5 h-8 bg-linear-to-b from-teal-500 to-amber-500 mx-auto origin-top"
+                ></motion.div>
+
+                {/* Node 4: Payout */}
+                <motion.div
+                  initial={{ opacity: 0, x: -50 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 3.8, ...SPRING }}
+                  className="relative mr-auto w-64"
+                >
+                  <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 to-orange-500 rounded-3xl blur-xl opacity-40"></div>
+                  <div className="relative bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-[2rem] p-6 border border-white/20 dark:border-white/10 shadow-2xl">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+                        <Zap className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-sm text-black dark:text-white">Payout Released</div>
+                        <div className="text-xs text-black/60 dark:text-white/60">Smart contract executed</div>
+                      </div>
                     </div>
                   </div>
                 </motion.div>
@@ -337,7 +298,7 @@ const LandingPage = (): React.JSX.Element => {
               <h2 className="text-5xl lg:text-7xl font-serif font-bold text-black dark:text-white mb-6">
                 How it works
               </h2>
-              <p className="text-xl text-black/60 dark:text-white/60 max-w-2xl mx-auto">
+              <p className="text-xl text-black/60 dark:text-white/60 max-w-3xl mx-auto">
                 A transparent, branched workflow from initial escrow to smart contract settlement.
               </p>
             </motion.div>
@@ -392,7 +353,7 @@ const LandingPage = (): React.JSX.Element => {
                 </div>
 
                 {/* Fork Connector */}
-                <div className="relative z-0 w-12 h-[260px]">
+                <div className="relative z-0 w-12 h-65">
                   {/* Central input segment */}
                   <div className="absolute left-0 top-1/2 w-4 h-[1px] bg-black/10 dark:bg-white/10 -translate-y-1/2"></div>
                   {/* Vertical spine */}
@@ -406,7 +367,7 @@ const LandingPage = (): React.JSX.Element => {
                 </div>
 
                 {/* --- Sub-Agents Column --- */}
-                <div className="flex flex-col justify-between h-[260px] relative z-10">
+                <div className="flex flex-col justify-between h-65 relative z-10">
                   <div className="absolute -top-10 left-0 text-[10px] font-mono text-black/40 dark:text-white/40 uppercase tracking-widest font-semibold mb-2">Evaluate</div>
                   
                   {/* Agent 1 */}
@@ -429,7 +390,7 @@ const LandingPage = (): React.JSX.Element => {
                 </div>
 
                 {/* Merge Connector */}
-                <div className="relative z-0 w-12 h-[260px]">
+                <div className="relative z-0 w-12 h-65">
                   {/* Vertical merger */}
                   <div className="absolute right-4 top-[24px] bottom-[24px] w-[1px] bg-black/10 dark:bg-white/10"></div>
                   {/* Input branch Top */}

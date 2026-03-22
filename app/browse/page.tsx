@@ -10,11 +10,10 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter } from "next/navigation";
 import { useAccount } from "wagmi";
 import { useTheme } from "@/hooks/useTheme";
-import Link from "next/link";
-import { Search, SlidersHorizontal, Plus, Grid3x3 } from "lucide-react";
+import { Search, SlidersHorizontal } from "lucide-react";
 import { FilterBar } from "@/components/search/FilterBar";
 import { ResultsGrid } from "@/components/search/ResultsGrid";
-import WalletConnect from "@/components/WalletConnect";
+import SiteNav from "@/components/SiteNav";
 import { PublishServiceModal } from "@/components/PublishServiceModal";
 import { MyServicesModal } from "@/components/MyServicesModal";
 import { MyPendingWorksModal } from "@/components/MyPendingWorksModal";
@@ -83,51 +82,15 @@ function BrowsePageContent() {
 
       <div className="relative z-10">
         {/* Navigation */}
-        <motion.nav
-          className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-3xl border-b border-white/20 dark:border-white/10 shadow-lg shadow-black/5"
-          initial={{ y: -100 }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        >
-          <div className="max-w-[1800px] mx-auto px-6 lg:px-12 h-24 flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Link href="/" className="group">
-                <motion.span
-                  whileHover={{ scale: 1.05 }}
-                  transition={SPRING}
-                  className="inline-block text-3xl font-bold tracking-tight text-black dark:text-white"
-                >
-                  Verif<span className="font-serif italic text-cyan-600 dark:text-cyan-400">AI</span>
-                </motion.span>
-              </Link>
-            </div>
-            <div className="flex items-center gap-4">
-              <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
-                <Link href="/browse" className="text-sm font-medium text-cyan-600 dark:text-cyan-400 transition-colors flex items-center gap-2">
-                  <Grid3x3 className="w-4 h-4" />
-                  <span className="hidden md:inline">Browse All</span>
-                </Link>
-              </motion.div>
-              {mounted && isConnected && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  transition={SPRING}
-                  onClick={() => setShowPublishModal(true)}
-                  className="rounded-lg px-4 py-1.5 text-sm font-medium border border-black/10 dark:border-white/10 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all"
-                >
-                  Publish
-                </motion.button>
-              )}
-              <WalletConnect
-                onMyServicesClick={() => setShowMyServicesModal(true)}
-                onMyPendingWorksClick={() => setShowMyPendingWorksModal(true)}
-                theme={theme}
-                onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-              />
-            </div>
-          </div>
-        </motion.nav>
+        <SiteNav
+          isConnected={isConnected}
+          mounted={mounted}
+          theme={theme}
+          onThemeToggle={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+          onPublishClick={() => setShowPublishModal(true)}
+          onMyServicesClick={() => setShowMyServicesModal(true)}
+          onMyPendingWorksClick={() => setShowMyPendingWorksModal(true)}
+        />
 
         {/* Main Content */}
         <div className="pt-32 pb-16 px-6 lg:px-12 max-w-[1800px] mx-auto">

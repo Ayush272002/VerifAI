@@ -66,11 +66,19 @@ class FilePayload(BaseModel):
 class UnifiedVerifyRequest(BaseModel):
     """Request payload for unified multi-file verification."""
 
-    requirements_list: list[RequirementItem] = Field(..., min_length=1)
+    requirements_list: list[RequirementItem] = Field(default_factory=list)
+    raw_job_description: str = Field(default="")
     seller_profile: str = Field(..., min_length=1)
     what_they_offer: str = Field(..., min_length=1)
     seller_description: str = Field(..., min_length=1)
     files: list[FilePayload] = Field(..., min_length=1)
+
+    def model_post_init(self, __context):
+        """Validate that either requirements_list or raw_job_description is provided."""
+        if not self.requirements_list and not self.raw_job_description.strip():
+            raise ValueError(
+                "Either requirements_list or raw_job_description must be provided"
+            )
 
 
 class GigCategorizationRequest(BaseModel):
