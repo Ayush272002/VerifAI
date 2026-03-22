@@ -79,3 +79,11 @@ class GigCategorizationRequest(BaseModel):
     title: str = Field(..., min_length=3)
     description: str = Field(..., min_length=10)
     tags: list[str] = Field(default_factory=list)
+
+class GigValidationRequest(BaseModel):
+    """Request payload for gig category classification."""
+
+    title: str = Field(..., min_length=3)
+    description: str = Field(..., min_length=10)
+    tags: list[str] = Field(default_factory=list)
+    category: str = Field(...)

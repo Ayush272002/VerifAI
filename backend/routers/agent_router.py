@@ -9,7 +9,11 @@ from typing import Any, Generator
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
-from ..core.data_models import FilePayload, GigCategorizationRequest
+from ..core.data_models import (
+    FilePayload,
+    GigCategorizationRequest,
+    GigValidationRequest,
+)
 from ..core.data_models import ImageReviewRequest
 from ..core.data_models import PythonFilesReviewRequest
 from ..core.data_models import RequirementItem
@@ -147,16 +151,20 @@ async def stream_complete_work_with_verification(
     """
     # Duplicate prevention
     if requestId in _verification_in_progress:
-        raise HTTPException(status_code=409, detail="Verification already in progress for this request")
+        raise HTTPException(
+            status_code=409, detail="Verification already in progress for this request"
+        )
     if requestId in _verification_cache:
-        raise HTTPException(status_code=409, detail="Verification already completed for this request")
+        raise HTTPException(
+            status_code=409, detail="Verification already completed for this request"
+        )
 
     def _generator() -> Generator[str, None, None]:
         _verification_in_progress.add(requestId)
         try:
             # Parse requirements from JSON string
             requirements_list = json.loads(requirements)
-            
+
             # Convert UploadFile objects to FilePayload objects
             file_payloads: list[FilePayload] = []
             for file in files:
@@ -164,12 +172,12 @@ async def stream_complete_work_with_verification(
                     # Read file content
                     content_bytes = file.file.read()
                     file.file.seek(0)  # Reset for potential re-reads
-                    
+
                     # Determine MIME type
                     mime_type, _ = mimetypes.guess_type(file.filename)
                     if not mime_type:
                         mime_type = "application/octet-stream"
-                    
+
                     # Handle different file types
                     if mime_type.startswith("image/"):
                         # For images, use base64 encoding
@@ -181,47 +189,57 @@ async def stream_complete_work_with_verification(
                         except UnicodeDecodeError:
                             # Fall back to base64 if not valid UTF-8
                             content = base64.b64encode(content_bytes).decode("utf-8")
-                    
-                    file_payloads.append(FilePayload(
-                        file_name=file.filename or "unnamed",
-                        content=content,
-                        content_type=mime_type,
-                    ))
+
+                    file_payloads.append(
+                        FilePayload(
+                            file_name=file.filename or "unnamed",
+                            content=content,
+                            content_type=mime_type,
+                        )
+                    )
                     logger.info("📄 Processed file: %s (%s)", file.filename, mime_type)
                 except Exception as e:
                     logger.error("Failed to process file %s: %s", file.filename, e)
-                    yield _logging_service.format_sse_event({
-                        "event": "file_error",
-                        "data": {"file": file.filename, "error": str(e)}
-                    })
+                    yield _logging_service.format_sse_event(
+                        {
+                            "event": "file_error",
+                            "data": {"file": file.filename, "error": str(e)},
+                        }
+                    )
                     continue
-            
+
             if not file_payloads:
-                yield _logging_service.format_sse_event({
-                    "event": "error",
-                    "data": {"error": "No valid files were processed"}
-                })
+                yield _logging_service.format_sse_event(
+                    {
+                        "event": "error",
+                        "data": {"error": "No valid files were processed"},
+                    }
+                )
                 return
-            
+
             # Create unified verification request
             verify_request = UnifiedVerifyRequest(
-                requirements_list=[RequirementItem(requirement=r) for r in requirements_list],
+                requirements_list=[
+                    RequirementItem(requirement=r) for r in requirements_list
+                ],
                 seller_profile="Seller",  # Could be enhanced with actual profile data
                 what_they_offer="Service",  # Could be enhanced with actual service data
                 seller_description="Submitting work for verification",
                 files=file_payloads,
             )
-            
+
             verification_log = {
                 "files_submitted": [f.file_name for f in file_payloads],
                 "requirements": requirements_list,
                 "final_report": None,
             }
-            
+
             # Stream verification results to frontend
-            for sse_line in _moa_service.stream_hierarchical_verify(verify_request.model_dump()):
+            for sse_line in _moa_service.stream_hierarchical_verify(
+                verify_request.model_dump()
+            ):
                 yield sse_line
-                
+
                 # Parse SSE to capture verification data for blockchain storage
                 if "event: report" in sse_line:
                     logger.info("✅ Verification complete, storing on-chain...")
@@ -231,45 +249,51 @@ async def stream_complete_work_with_verification(
                         verification_log["final_report"] = json.loads(report_json)
                     except Exception as e:
                         logger.warning("Could not parse final report: %s", e)
-                        
+
             # If verification succeeded, store on-chain
             if verification_log.get("final_report"):
                 report = verification_log["final_report"]
-                
+
                 # Format verification summary for blockchain
                 verification_summary = f"""[VERIFICATION COMPLETED]
 Request ID: {requestId}
-Files: {', '.join(verification_log['files_submitted'])}
-Modality: {report.get('modality', 'unknown')}
-Status: {report.get('overall_status', 'unknown')}
-Completion: {report.get('completion_pct', 0)}%
-Confidence: {report.get('confidence_pct', 0)}%
-Summary: {report.get('summary', 'No summary')}
-Requirements Passed: {report.get('totals', {}).get('completed', 0)}/{report.get('totals', {}).get('total', 0)}"""
+Files: {", ".join(verification_log["files_submitted"])}
+Modality: {report.get("modality", "unknown")}
+Status: {report.get("overall_status", "unknown")}
+Completion: {report.get("completion_pct", 0)}%
+Confidence: {report.get("confidence_pct", 0)}%
+Summary: {report.get("summary", "No summary")}
+Requirements Passed: {report.get("totals", {}).get("completed", 0)}/{report.get("totals", {}).get("total", 0)}"""
 
                 try:
                     blockchain_result = _marketplace_service.post_verification_log(
-                        verification_summary,
-                        requestId
+                        verification_summary, requestId
                     )
-                    yield _logging_service.format_sse_event({
-                        "event": "blockchain_stored",
-                        "data": {
-                            "success": blockchain_result.get("success", False),
-                            "tx_hash": blockchain_result.get("tx_hash", ""),
-                            "message": "Verification results stored on-chain ✓"
+                    yield _logging_service.format_sse_event(
+                        {
+                            "event": "blockchain_stored",
+                            "data": {
+                                "success": blockchain_result.get("success", False),
+                                "tx_hash": blockchain_result.get("tx_hash", ""),
+                                "message": "Verification results stored on-chain ✓",
+                            },
                         }
-                    })
-                    logger.info("✅ Verification stored on blockchain: %s", blockchain_result.get("tx_hash"))
+                    )
+                    logger.info(
+                        "✅ Verification stored on blockchain: %s",
+                        blockchain_result.get("tx_hash"),
+                    )
                 except Exception as e:
                     logger.error("Failed to store verification on-chain: %s", e)
-                    yield _logging_service.format_sse_event({
-                        "event": "blockchain_error",
-                        "data": {
-                            "error": str(e),
-                            "message": "Could not store verification on-chain, but frontend verification complete"
+                    yield _logging_service.format_sse_event(
+                        {
+                            "event": "blockchain_error",
+                            "data": {
+                                "error": str(e),
+                                "message": "Could not store verification on-chain, but frontend verification complete",
+                            },
                         }
-                    })
+                    )
 
                 # Upload verification summary to IPFS to get a proof CID for completeRequest()
                 proof_cid = ""
@@ -284,34 +308,42 @@ Requirements Passed: {report.get('totals', {}).get('completed', 0)}/{report.get(
                         logger.info("✅ Verification uploaded to IPFS: %s", proof_cid)
                     else:
                         # Fallback: use tx_hash as proof identifier
-                        proof_cid = blockchain_result.get("tx_hash", "no-ipfs-configured")
-                        logger.warning("IPFS not configured, using tx_hash as proof_cid")
+                        proof_cid = blockchain_result.get(
+                            "tx_hash", "no-ipfs-configured"
+                        )
+                        logger.warning(
+                            "IPFS not configured, using tx_hash as proof_cid"
+                        )
                 except Exception as e:
                     logger.error("Failed to upload verification to IPFS: %s", e)
                     proof_cid = blockchain_result.get("tx_hash", "ipfs-upload-failed")
 
-                yield _logging_service.format_sse_event({
-                    "event": "proof_cid",
-                    "data": {
-                        "proof_cid": proof_cid,
-                        "message": "Proof CID available for on-chain completion"
+                yield _logging_service.format_sse_event(
+                    {
+                        "event": "proof_cid",
+                        "data": {
+                            "proof_cid": proof_cid,
+                            "message": "Proof CID available for on-chain completion",
+                        },
                     }
-                })
+                )
 
                 # Backend-driven winner determination
                 is_success = (
                     report.get("overall_status", "").lower() == "pass"
                     or report.get("completion_pct", 0) >= 60
                 )
-                yield _logging_service.format_sse_event({
-                    "event": "settlement_ready",
-                    "data": {
-                        "proof_cid": proof_cid,
-                        "winner_is_provider": is_success,
-                        "completion_pct": report.get("completion_pct", 0),
-                        "overall_status": report.get("overall_status", ""),
+                yield _logging_service.format_sse_event(
+                    {
+                        "event": "settlement_ready",
+                        "data": {
+                            "proof_cid": proof_cid,
+                            "winner_is_provider": is_success,
+                            "completion_pct": report.get("completion_pct", 0),
+                            "overall_status": report.get("overall_status", ""),
+                        },
                     }
-                })
+                )
 
                 # Cache the result for recovery on page refresh
                 _verification_cache[requestId] = {
@@ -321,50 +353,64 @@ Requirements Passed: {report.get('totals', {}).get('completed', 0)}/{report.get(
                 }
 
                 # AUTOMATIC SETTLEMENT: Trigger fund release via LangGraph
-                logger.info("🚀 Starting automatic settlement workflow for request %s", requestId)
+                logger.info(
+                    "🚀 Starting automatic settlement workflow for request %s",
+                    requestId,
+                )
                 settlement_cache = {
                     "report": report,
                     "proof_cid": proof_cid,
                     "winner_is_provider": is_success,
                 }
-                
-                settlement_result = _settlement_service.auto_settle(requestId, settlement_cache)
-                
-                yield _logging_service.format_sse_event({
-                    "event": "settlement_initiated",
-                    "data": {
-                        "status": "processing",
-                        "message": "Backend is automatically releasing funds via oracle..."
+
+                settlement_result = _settlement_service.auto_settle(
+                    requestId, settlement_cache
+                )
+
+                yield _logging_service.format_sse_event(
+                    {
+                        "event": "settlement_initiated",
+                        "data": {
+                            "status": "processing",
+                            "message": "Backend is automatically releasing funds via oracle...",
+                        },
                     }
-                })
+                )
 
                 if settlement_result.get("success"):
-                    logger.info("✅ Automatic settlement succeeded: %s", settlement_result)
-                    yield _logging_service.format_sse_event({
-                        "event": "settlement_completed",
-                        "data": {
-                            "success": True,
-                            "winner": settlement_result.get("winner"),
-                            "message": f"Funds automatically released to {settlement_result.get('winner')}"
+                    logger.info(
+                        "✅ Automatic settlement succeeded: %s", settlement_result
+                    )
+                    yield _logging_service.format_sse_event(
+                        {
+                            "event": "settlement_completed",
+                            "data": {
+                                "success": True,
+                                "winner": settlement_result.get("winner"),
+                                "message": f"Funds automatically released to {settlement_result.get('winner')}",
+                            },
                         }
-                    })
+                    )
                 else:
-                    logger.error("❌ Automatic settlement failed: %s", settlement_result)
-                    yield _logging_service.format_sse_event({
-                        "event": "settlement_failed",
-                        "data": {
-                            "success": False,
-                            "error": settlement_result.get("error"),
-                            "message": "Automatic settlement failed"
+                    logger.error(
+                        "❌ Automatic settlement failed: %s", settlement_result
+                    )
+                    yield _logging_service.format_sse_event(
+                        {
+                            "event": "settlement_failed",
+                            "data": {
+                                "success": False,
+                                "error": settlement_result.get("error"),
+                                "message": "Automatic settlement failed",
+                            },
                         }
-                    })
+                    )
 
         except Exception as e:
             logger.error("Work completion verification failed: %s", e)
-            yield _logging_service.format_sse_event({
-                "event": "error",
-                "data": {"error": str(e)}
-            })
+            yield _logging_service.format_sse_event(
+                {"event": "error", "data": {"error": str(e)}}
+            )
         finally:
             _verification_in_progress.discard(requestId)
 
@@ -482,3 +528,32 @@ def stream_verify_image_delivery(
         media_type="text/event-stream",
         headers={"Cache-Control": "no-cache"},
     )
+
+
+@router.post("/verify/form/service")
+def verify_gig_form(payload: GigValidationRequest) -> dict[str, str]:
+    """Validate gig form fields for consistency and coherence.
+
+    Args:
+        payload: Gig categorization request with title, description, and tags
+
+    Returns:
+        Success message if valid
+
+    Raises:
+        HTTPException: 422 if fields are inconsistent or unrelated
+    """
+
+    print(payload)
+
+    validation_result = _ai_service.validate_gig_fields(payload)
+    print(f"Validation result: {validation_result}")
+
+    # Check if validation failed (contains "Outlier" or is not "complete")
+    if (
+        "outlier" in validation_result.lower()
+        or "complete" not in validation_result.strip().lower()
+    ):
+        raise HTTPException(status_code=422, detail=validation_result)
+
+    return {"msg": "Service fields validated successfully", "result": validation_result}
