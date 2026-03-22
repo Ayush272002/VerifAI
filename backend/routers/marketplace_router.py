@@ -44,13 +44,19 @@ def oracle_auto_settle(body: AutoSettleBody) -> dict[str, Any]:
     """
     from ..routers.agent_router import _verification_cache
 
+    logger.info("Auto-settle request: %s", body.request_id)
+    logger.info("Cache keys available: %s", list(_verification_cache.keys()))
+
     cached = _verification_cache.get(body.request_id)
     if not cached:
-        raise HTTPException(status_code=404, detail="No cached verification result for this request")
+        logger.error("No cached verification for request_id=%s. Available keys: %s", 
+                    body.request_id, list(_verification_cache.keys()))
+        raise HTTPException(status_code=404, detail=f"No cached verification result for request={body.request_id}. Available: {list(_verification_cache.keys())}")
 
     # Fetch on-chain request to get addresses
     req = _svc.get_request(body.request_id)
     if not req.get("success"):
+        logger.error("Failed to fetch request from contract: %s", req.get('error'))
         raise HTTPException(status_code=500, detail=f"Failed to fetch request from contract: {req.get('error')}")
 
     provider_address = req["provider"]
@@ -62,9 +68,10 @@ def oracle_auto_settle(body: AutoSettleBody) -> dict[str, Any]:
     ruling_text = json.dumps(report)
 
     logger.info(
-        "Auto-settle request=%s winner_is_provider=%s winner=%s",
+        "🎯 Auto-settle request=%s winner_is_provider=%s winner=%s",
         body.request_id, winner_is_provider, winner,
     )
 
     result = _svc.submit_ruling(body.request_id, ruling_text, winner)
+    logger.info("Auto-settle result: success=%s, details=%s", result.get("success"), result)
     return result

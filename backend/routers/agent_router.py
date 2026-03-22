@@ -34,7 +34,7 @@ _logging_service = VerificationLoggingService()
 # Verification result cache keyed by requestId
 _verification_cache: dict[str, dict] = {}
 # Set of requestIds currently being verified (duplicate prevention)
-_verification_in_progress: set[str] = {}
+_verification_in_progress: set[str] = set()
 
 
 @router.get("/health")
