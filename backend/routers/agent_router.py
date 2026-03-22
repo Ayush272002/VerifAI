@@ -18,6 +18,7 @@ from ..services.agent_service import OllamaAgentService
 from ..services.hierarchical_verification_service import HierarchicalVerificationService
 from ..services.ipfs_service import IPFSService
 from ..services.marketplace_service import MarketplaceService
+from ..services.settlement_service import SettlementService
 from ..services.verification_logging_service import VerificationLoggingService
 from ..services.verification_service import VerificationService
 
@@ -30,6 +31,7 @@ _moa_service = HierarchicalVerificationService()
 _marketplace_service = MarketplaceService()
 _ipfs_service = IPFSService()
 _logging_service = VerificationLoggingService()
+_settlement_service = SettlementService()
 
 # Verification result cache keyed by requestId
 _verification_cache: dict[str, dict] = {}
@@ -317,6 +319,45 @@ Requirements Passed: {report.get('totals', {}).get('completed', 0)}/{report.get(
                     "proof_cid": proof_cid,
                     "winner_is_provider": is_success,
                 }
+
+                # AUTOMATIC SETTLEMENT: Trigger fund release via LangGraph
+                logger.info("🚀 Starting automatic settlement workflow for request %s", requestId)
+                settlement_cache = {
+                    "report": report,
+                    "proof_cid": proof_cid,
+                    "winner_is_provider": is_success,
+                }
+                
+                settlement_result = _settlement_service.auto_settle(requestId, settlement_cache)
+                
+                yield _logging_service.format_sse_event({
+                    "event": "settlement_initiated",
+                    "data": {
+                        "status": "processing",
+                        "message": "Backend is automatically releasing funds via oracle..."
+                    }
+                })
+
+                if settlement_result.get("success"):
+                    logger.info("✅ Automatic settlement succeeded: %s", settlement_result)
+                    yield _logging_service.format_sse_event({
+                        "event": "settlement_completed",
+                        "data": {
+                            "success": True,
+                            "winner": settlement_result.get("winner"),
+                            "message": f"Funds automatically released to {settlement_result.get('winner')}"
+                        }
+                    })
+                else:
+                    logger.error("❌ Automatic settlement failed: %s", settlement_result)
+                    yield _logging_service.format_sse_event({
+                        "event": "settlement_failed",
+                        "data": {
+                            "success": False,
+                            "error": settlement_result.get("error"),
+                            "message": "Automatic settlement failed - frontend fallback available"
+                        }
+                    })
 
         except Exception as e:
             logger.error("Work completion verification failed: %s", e)

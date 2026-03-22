@@ -160,7 +160,10 @@ export function CompleteWorkModal({
       if (!response.ok) {
         if (response.status === 409) {
           const errorData = await response.json().catch(() => null);
-          throw new Error(errorData?.detail || "Verification already in progress or completed for this request");
+          throw new Error(
+            errorData?.detail ||
+              "Verification already in progress or completed for this request",
+          );
         }
         throw new Error(`Server error: ${response.statusText}`);
       }
@@ -239,9 +242,13 @@ export function CompleteWorkModal({
                 const dataLine = lines[i];
                 if (dataLine.startsWith("data: ")) {
                   try {
-                    const data = JSON.parse(dataLine.substring(6)) as AgentResultData;
+                    const data = JSON.parse(
+                      dataLine.substring(6),
+                    ) as AgentResultData;
                     setAgentResults((prev) => [...prev, data]);
-                    const passCount = data.requirement_checks.filter((c) => c.checked).length;
+                    const passCount = data.requirement_checks.filter(
+                      (c) => c.checked,
+                    ).length;
                     const totalCount = data.requirement_checks.length;
                     setLogs((prev) => [
                       ...prev,
@@ -280,10 +287,7 @@ export function CompleteWorkModal({
                   try {
                     const data = JSON.parse(dataLine.substring(6));
                     setBlockchainStatus(data.message);
-                    setLogs((prev) => [
-                      ...prev,
-                      `Blockchain: ${data.tx_hash}`,
-                    ]);
+                    setLogs((prev) => [...prev, `Blockchain: ${data.tx_hash}`]);
                   } catch (e) {
                     console.error("Failed to parse blockchain event:", e);
                   }
@@ -319,6 +323,66 @@ export function CompleteWorkModal({
                     ]);
                   } catch (e) {
                     console.error("Failed to parse settlement_ready event:", e);
+                  }
+                }
+              }
+            } else if (eventType === "settlement_initiated") {
+              i++;
+              if (i < lines.length - 1) {
+                const dataLine = lines[i];
+                if (dataLine.startsWith("data: ")) {
+                  try {
+                    const data = JSON.parse(dataLine.substring(6));
+                    setBlockchainStatus(`🤖 ${data.message}`);
+                    setLogs((prev) => [
+                      ...prev,
+                      `Settlement initiated: ${data.message}`,
+                    ]);
+                  } catch (e) {
+                    console.error(
+                      "Failed to parse settlement_initiated event:",
+                      e,
+                    );
+                  }
+                }
+              }
+            } else if (eventType === "settlement_completed") {
+              i++;
+              if (i < lines.length - 1) {
+                const dataLine = lines[i];
+                if (dataLine.startsWith("data: ")) {
+                  try {
+                    const data = JSON.parse(dataLine.substring(6));
+                    setBlockchainStatus(`✅ ${data.message}`);
+                    setLogs((prev) => [
+                      ...prev,
+                      `✅ Automatic Settlement Completed: ${data.message}`,
+                    ]);
+                  } catch (e) {
+                    console.error(
+                      "Failed to parse settlement_completed event:",
+                      e,
+                    );
+                  }
+                }
+              }
+            } else if (eventType === "settlement_failed") {
+              i++;
+              if (i < lines.length - 1) {
+                const dataLine = lines[i];
+                if (dataLine.startsWith("data: ")) {
+                  try {
+                    const data = JSON.parse(dataLine.substring(6));
+                    setBlockchainStatus(`⚠️ ${data.message}`);
+                    setLogs((prev) => [
+                      ...prev,
+                      `⚠️ Automatic Settlement Failed: ${data.error}`,
+                    ]);
+                  } catch (e) {
+                    console.error(
+                      "Failed to parse settlement_failed event:",
+                      e,
+                    );
                   }
                 }
               }
@@ -542,11 +606,14 @@ export function CompleteWorkModal({
                 {agentResults.length > 0 && (
                   <div className="space-y-2">
                     <p className="text-xs font-semibold text-black/70 dark:text-white/70">
-                      AGENT FINDINGS ({agentResults.length} agent{agentResults.length !== 1 ? "s" : ""})
+                      AGENT FINDINGS ({agentResults.length} agent
+                      {agentResults.length !== 1 ? "s" : ""})
                     </p>
                     {agentResults.map((agent) => {
                       const isExpanded = expandedAgents.has(agent.agent_name);
-                      const passCount = agent.requirement_checks.filter((c) => c.checked).length;
+                      const passCount = agent.requirement_checks.filter(
+                        (c) => c.checked,
+                      ).length;
                       const totalCount = agent.requirement_checks.length;
                       return (
                         <div
@@ -712,12 +779,8 @@ export function CompleteWorkModal({
                 </motion.button>
                 {!filesLocked && (
                   <motion.button
-                    whileHover={
-                      files.length > 0 ? { scale: 1.02 } : {}
-                    }
-                    whileTap={
-                      files.length > 0 ? { scale: 0.98 } : {}
-                    }
+                    whileHover={files.length > 0 ? { scale: 1.02 } : {}}
+                    whileTap={files.length > 0 ? { scale: 0.98 } : {}}
                     onClick={handleSubmit}
                     disabled={isVerifying || files.length === 0}
                     className={`px-6 py-2.5 rounded-2xl font-semibold text-sm flex items-center gap-2 transition-all ${
