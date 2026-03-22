@@ -2,45 +2,54 @@
  * API route: POST /api/agent/work/complete-and-verify/stream
  *
  * Proxies file uploads and verification requests to the backend
- * FastAPI endpoint at POST /agent/work/complete-and-verify/stream
+ * FastAPI endpoint at POST /agent/work/complete-and-verify/stream.
+ *
+ * Streams the raw request body through to avoid FormData re-serialization
+ * issues in Next.js Turbopack (which can drop file content or break
+ * multipart boundaries).
  */
 
 import type { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
+  const backendUrl =
+    process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
+  const endpoint = `${backendUrl}/agent/work/complete-and-verify/stream`;
+
   try {
-    // Get form data from request
-    const formData = await request.formData();
-
-    // Forward to backend
-    const backendUrl =
-      process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
-    const endpoint = `${backendUrl}/agent/work/complete-and-verify/stream`;
-
-    console.log(`Proxying to backend: ${endpoint}`);
+    // Pass the raw request body + original Content-Type straight through
+    // so the multipart boundaries and file data are preserved exactly.
+    const contentType = request.headers.get("Content-Type") || "";
 
     const response = await fetch(endpoint, {
       method: "POST",
-      body: formData,
-      // Don't set Content-Type header - let fetch handle it with FormData
+      headers: { "Content-Type": contentType },
+      body: request.body,
+      // @ts-expect-error -- duplex is required for streaming request bodies in Node >=18
+      duplex: "half",
     });
 
     if (!response.ok) {
-      console.error(`Backend error: ${response.status} ${response.statusText}`);
-      // Forward the backend's response body so error details (e.g. 409 duplicate) are preserved
+      console.error(
+        `Backend error: ${response.status} ${response.statusText}`,
+      );
       const errorBody = await response.text().catch(() => "");
       return new Response(
-        errorBody || JSON.stringify({
-          error: `Backend error: ${response.status} ${response.statusText}`,
-        }),
+        errorBody ||
+          JSON.stringify({
+            error: `Backend error: ${response.status} ${response.statusText}`,
+          }),
         {
           status: response.status,
-          headers: { "Content-Type": response.headers.get("Content-Type") || "application/json" },
+          headers: {
+            "Content-Type":
+              response.headers.get("Content-Type") || "application/json",
+          },
         },
       );
     }
 
-    // Stream the response
+    // Stream the SSE response back to the client
     return new Response(response.body, {
       status: 200,
       headers: {
@@ -50,7 +59,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("API error:", error);
+    console.error("Proxy error:", error);
     return new Response(
       JSON.stringify({
         error: error instanceof Error ? error.message : "Unknown error",
