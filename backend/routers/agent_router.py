@@ -164,6 +164,15 @@ async def stream_complete_work_with_verification(
         try:
             # Parse requirements from JSON string
             requirements_list = json.loads(requirements)
+            
+            # Check if this is a raw job description (single string) or pre-parsed requirements
+            if len(requirements_list) == 1 and isinstance(requirements_list[0], str):
+                # This is likely a raw job description, pass it as such
+                raw_job_description = requirements_list[0]
+                requirements_list = []  # Let the parser handle it
+            else:
+                # Pre-parsed requirements (legacy flow)
+                raw_job_description = ""
 
             # Convert UploadFile objects to FilePayload objects
             file_payloads: list[FilePayload] = []
@@ -221,23 +230,26 @@ async def stream_complete_work_with_verification(
             verify_request = UnifiedVerifyRequest(
                 requirements_list=[
                     RequirementItem(requirement=r) for r in requirements_list
-                ],
+                ] if requirements_list else [],
+                raw_job_description=raw_job_description,
                 seller_profile="Seller",  # Could be enhanced with actual profile data
                 what_they_offer="Service",  # Could be enhanced with actual service data
                 seller_description="Submitting work for verification",
                 files=file_payloads,
             )
 
+            # Pass the request directly - raw_job_description is now part of the model
+            payload = verify_request.model_dump()
+
             verification_log = {
                 "files_submitted": [f.file_name for f in file_payloads],
+                "raw_job_description": raw_job_description,
                 "requirements": requirements_list,
                 "final_report": None,
             }
 
             # Stream verification results to frontend
-            for sse_line in _moa_service.stream_hierarchical_verify(
-                verify_request.model_dump()
-            ):
+            for sse_line in _moa_service.stream_hierarchical_verify(payload):
                 yield sse_line
 
                 # Parse SSE to capture verification data for blockchain storage
@@ -329,10 +341,9 @@ Requirements Passed: {report.get("totals", {}).get("completed", 0)}/{report.get(
                 )
 
                 # Backend-driven winner determination
-                is_success = (
-                    report.get("overall_status", "").lower() == "pass"
-                    or report.get("completion_pct", 0) >= 60
-                )
+                # Provider wins ONLY if status is "pass" (100% completion)
+                is_success = report.get("overall_status", "").lower() == "pass"
+                
                 yield _logging_service.format_sse_event(
                     {
                         "event": "settlement_ready",

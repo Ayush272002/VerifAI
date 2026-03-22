@@ -779,15 +779,9 @@ export function CompleteWorkModal({
                               </span>
                             </div>
                             <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                                passCount === totalCount
-                                  ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                  : passCount > 0
-                                    ? "bg-amber-500/20 text-amber-600 dark:text-amber-400"
-                                    : "bg-red-500/20 text-red-600 dark:text-red-400"
-                              }`}
+                              className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-600 dark:text-cyan-400"
                             >
-                              {passCount}/{totalCount} passed
+                              {totalCount} {totalCount === 1 ? "check" : "checks"}
                             </span>
                           </button>
                           {isExpanded && (
@@ -802,13 +796,9 @@ export function CompleteWorkModal({
                                       {check.requirement || "Unnamed check"}
                                     </span>
                                     <span
-                                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                                        check.checked
-                                          ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                          : "bg-red-500/20 text-red-600 dark:text-red-400"
-                                      }`}
+                                      className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 bg-cyan-500/20 text-cyan-600 dark:text-cyan-400"
                                     >
-                                      {check.checked ? "Pass" : "Fail"}
+                                      Checked
                                     </span>
                                   </div>
                                   {check.evidence && (
@@ -861,29 +851,69 @@ export function CompleteWorkModal({
                     </div>
 
                     {result.requirement_checks?.length > 0 && (
-                      <div className="space-y-1 max-h-40 overflow-y-auto custom-scrollbar">
-                        {result.requirement_checks.map((req, idx) => (
-                          <div
-                            key={`${req.requirement}-${idx}`}
-                            className="glass-macos rounded-lg p-2 flex justify-between items-center gap-2"
-                          >
-                            <span
-                              className="text-xs truncate font-medium text-black dark:text-white"
-                              title={req.requirement}
-                            >
-                              {req.requirement}
-                            </span>
-                            <span
-                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                                req.checked
-                                  ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
-                                  : "bg-red-500/20 text-red-600 dark:text-red-400"
-                              }`}
-                            >
-                              {req.checked ? "Pass" : "Fail"}
-                            </span>
-                          </div>
-                        ))}
+                      <div className="space-y-2">
+                        {(() => {
+                          const failedChecks = result.requirement_checks.filter(
+                            (req) => !req.checked
+                          );
+                          const passedChecks = result.requirement_checks.filter(
+                            (req) => req.checked
+                          );
+
+                          if (failedChecks.length > 0) {
+                            return (
+                              <div className="glass-macos rounded-xl p-4 border border-red-500/20">
+                                <div className="flex items-start gap-2 mb-3">
+                                  <X className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-red-600 dark:text-red-400 mb-1">
+                                      Work Not Completed Properly
+                                    </p>
+                                    <p className="text-xs text-black/60 dark:text-white/60">
+                                      The service provider did not meet the following {failedChecks.length} requirement{failedChecks.length !== 1 ? "s" : ""}:
+                                    </p>
+                                  </div>
+                                </div>
+                                <ul className="space-y-2 pl-6">
+                                  {failedChecks.map((req, idx) => (
+                                    <li
+                                      key={`failed-${idx}`}
+                                      className="text-xs text-black/70 dark:text-white/70 list-disc"
+                                    >
+                                      <span className="font-medium">{req.requirement}</span>
+                                      {req.evidence && req.evidence !== "No evidence provided" && (
+                                        <p className="text-[11px] text-black/50 dark:text-white/50 mt-1 leading-relaxed">
+                                          {req.evidence}
+                                        </p>
+                                      )}
+                                      {(!req.evidence || req.evidence === "No evidence provided") && (
+                                        <p className="text-[11px] text-red-500/70 dark:text-red-400/70 mt-1 leading-relaxed italic">
+                                          This requirement was not addressed in the deliverables
+                                        </p>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            );
+                          } else {
+                            return (
+                              <div className="glass-macos rounded-xl p-4 border border-emerald-500/20">
+                                <div className="flex items-start gap-2">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0 mt-0.5" />
+                                  <div className="flex-1">
+                                    <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mb-1">
+                                      All Requirements Met
+                                    </p>
+                                    <p className="text-xs text-black/60 dark:text-white/60">
+                                      The service provider successfully completed all {passedChecks.length} requirement{passedChecks.length !== 1 ? "s" : ""}.
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                        })()}
                       </div>
                     )}
 

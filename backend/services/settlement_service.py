@@ -87,9 +87,10 @@ class SettlementService:
 
                 logger.info("🎯 Determining winner from verification result...")
                 report = state["cached_result"].get("report", {})
-                is_success = (
-                    report.get("overall_status", "").lower() == "pass"
-                ) or (report.get("completion_pct", 0) >= 60)
+                
+                # Provider wins ONLY if status is "pass" (100% completion)
+                # Otherwise client gets refund
+                is_success = report.get("overall_status", "").lower() == "pass"
 
                 winner = (
                     state["provider_address"]

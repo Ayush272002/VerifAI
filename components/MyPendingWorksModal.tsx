@@ -1865,9 +1865,7 @@ export function MyPendingWorksModal({
           onClose={() => setShowCompleteWorkModal(false)}
           onComplete={handleWorkComplete}
           requestId={selectedWork.id}
-          requirements={selectedWork.taskDetails
-            .split("\n")
-            .filter((line: string) => line.trim().length > 0)}
+          requirements={[selectedWork.taskDetails]}
           buyerAddress={selectedWork.clientAddress}
         />
       )}
