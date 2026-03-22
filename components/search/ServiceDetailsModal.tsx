@@ -5,12 +5,13 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { X, MapPin, Clock, CheckCircle2 } from "lucide-react";
 import type { ResultData } from "./ResultCard";
 import { EthIcon } from "@/components/EthIcon";
 import { BookServiceModal } from "@/components/BookServiceModal";
+import { generateServiceOverlay } from "@/lib/generateServiceImage";
 
 interface ServiceDetailsModalProps {
   isOpen: boolean;
@@ -53,6 +54,10 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
   };
 
   const avatarGradient = getGradientFromText(service.provider.address || service.provider.name);
+  const overlay = useMemo(
+    () => generateServiceOverlay(service.title, service.category),
+    [service.title, service.category],
+  );
 
   return (
     <AnimatePresence>
@@ -104,22 +109,25 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
                 {/* Service Image */}
                 {service.thumbnail && (
                   <div className="aspect-video rounded-2xl overflow-hidden relative">
+                    {/* Base: Unsplash photo */}
                     {service.thumbnail.startsWith("http") ? (
                       <img
                         src={service.thumbnail}
-                        alt={`${service.category} placeholder`}
+                        alt={service.title}
                         className="absolute inset-0 w-full h-full object-cover"
                       />
                     ) : (
                       <div className={`absolute inset-0 ${service.thumbnail || "bg-slate-200"}`}></div>
                     )}
-                    
-                    {/* Overlay Layers */}
-                    <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none">
-                      <div className="absolute top-0 left-0 w-32 h-32 bg-white/30 dark:bg-white/20 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '3s' }}></div>
-                        <img src={service.thumbnail}/>
-                      <div className="absolute bottom-0 right-0 w-40 h-40 bg-black/20 dark:bg-white/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s', animationDelay: '0.5s' }}></div>
-                    </div>
+
+                    {/* Generated gradient + pattern overlay */}
+                    {overlay && (
+                      <img
+                        src={overlay}
+                        alt=""
+                        className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay pointer-events-none"
+                      />
+                    )}
                   </div>
                 )}
 

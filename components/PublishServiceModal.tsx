@@ -43,7 +43,7 @@ export function PublishServiceModal({
   const validDeliverables = deliverables.filter((d) => d.text.trim() !== "");
 
   // Auto-generate background image based on category
-  const backgroundImage = formData.category 
+  const backgroundImage = formData.category
     ? getRandomPlaceholderImage(formData.category)
     : null;
 

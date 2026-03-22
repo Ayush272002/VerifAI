@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "motion/react";
 import {
   MapPin,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ServiceDetailsModal } from "./ServiceDetailsModal";
 import { EthIcon } from "@/components/EthIcon";
+import { generateServiceOverlay } from "@/lib/generateServiceImage";
 
 const SPRING = {
   type: "spring",
@@ -81,6 +82,10 @@ const getGradientFromText = (text: string): string => {
 export function ResultCard({ data, index }: ResultCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const avatarGradient = getGradientFromText(data.provider.address || data.provider.name);
+  const overlay = useMemo(
+    () => generateServiceOverlay(data.title, data.category),
+    [data.title, data.category],
+  );
 
   return (
     <>
@@ -112,10 +117,11 @@ export function ResultCard({ data, index }: ResultCardProps) {
 
           {/* Thumbnail */}
           <div className="relative aspect-video overflow-hidden">
+            {/* Base: Unsplash photo */}
             {(data.thumbnail || "").startsWith("http") ? (
               <img
                 src={data.thumbnail}
-                alt={`${data.category} placeholder`}
+                alt={data.title}
                 className="absolute inset-0 w-full h-full object-cover"
               />
             ) : (
@@ -124,42 +130,32 @@ export function ResultCard({ data, index }: ResultCardProps) {
               ></div>
             )}
 
-            {/* Overlay Layers */}
-            <div className="absolute inset-0">
-              {/* Animated gradient mesh */}
-              <div className="absolute inset-0 opacity-40 mix-blend-overlay pointer-events-none">
-                <div
-                  className="absolute top-0 left-0 w-32 h-32 bg-white/30 dark:bg-white/20 rounded-full blur-3xl animate-pulse"
-                  style={{ animationDuration: "3s" }}
-                ></div>
-                <div
-                  className="absolute bottom-0 right-0 w-40 h-40 bg-black/20 dark:bg-white/15 rounded-full blur-3xl animate-pulse"
-                  style={{ animationDuration: "4s", animationDelay: "0.5s" }}
-                ></div>
-                <div
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-36 h-36 bg-white/25 dark:bg-white/18 rounded-full blur-2xl animate-pulse"
-                  style={{ animationDuration: "5s", animationDelay: "1s" }}
-                ></div>
-              </div>
+            {/* Generated gradient + pattern overlay */}
+            {overlay && (
+              <img
+                src={overlay}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover opacity-50 mix-blend-overlay pointer-events-none"
+              />
+            )}
 
-              {/* Icon overlay content */}
-              <div className="w-full h-full flex items-center justify-center relative">
-                {data.icon && (
-                  <div className="relative z-10 w-20 h-20 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-xl border border-white/30 dark:border-white/20 flex items-center justify-center shadow-xl overflow-hidden">
-                    {data.icon.startsWith("data:") ||
-                    data.icon.startsWith("http") ? (
-                      <img
-                        src={data.icon}
-                        alt="Service icon"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-4xl">{data.icon}</div>
-                    )}
-                  </div>
-                )}
+            {/* Icon overlay content */}
+            {data.icon && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="relative z-10 w-20 h-20 rounded-2xl bg-white/20 dark:bg-black/20 backdrop-blur-xl border border-white/30 dark:border-white/20 flex items-center justify-center shadow-xl overflow-hidden">
+                  {data.icon.startsWith("data:") ||
+                  data.icon.startsWith("http") ? (
+                    <img
+                      src={data.icon}
+                      alt="Service icon"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="text-4xl">{data.icon}</div>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Content */}
