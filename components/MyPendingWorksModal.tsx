@@ -9,6 +9,9 @@ import {
   XCircle,
   Clock,
   Send,
+  Users,
+  ShoppingBag,
+  Briefcase,
 } from "lucide-react";
 import { EthIcon } from "@/components/EthIcon";
 import { useAccount } from "wagmi";
@@ -97,9 +100,10 @@ export function MyPendingWorksModal({
   onClose,
 }: MyPendingWorksModalProps) {
   const [activeTab, setActiveTab] = useState<
-    "all" | "client" | "provider" | "completed"
+    "all" | "client" | "provider" | "completed" | "history"
   >("provider");
   const [selectedWork, setSelectedWork] = useState<PendingWork | null>(null);
+  const [selectedHistoryGroup, setSelectedHistoryGroup] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState("");
   const [mounted, setMounted] = useState(false);
   const [works, setWorks] = useState<PendingWork[]>([]);
@@ -610,8 +614,64 @@ export function MyPendingWorksModal({
   const filteredWorks = works.filter((work) => {
     if (activeTab === "all") return work.status !== "completed";
     if (activeTab === "completed") return work.status === "completed";
+    if (activeTab === "history") return false; // history tab uses its own view
     return work.role === activeTab && work.status !== "completed";
   });
+
+  // Aggregate completed works into history groups by counterparty
+  const historyGroups = (() => {
+    const completedWorks = works.filter((w) => w.status === "completed");
+
+    // Group by role + counterparty address
+    const groupMap = new Map<
+      string,
+      {
+        address: string;
+        displayAddress: string;
+        role: "client" | "provider";
+        totalAmount: number;
+        transactionCount: number;
+        services: string[];
+        works: PendingWork[];
+      }
+    >();
+
+    for (const w of completedWorks) {
+      const counterparty =
+        w.role === "client" ? w.providerAddress : w.clientAddress;
+      const key = `${w.role}-${counterparty.toLowerCase()}`;
+
+      if (!groupMap.has(key)) {
+        const addr = counterparty || "Unknown";
+        groupMap.set(key, {
+          address: counterparty,
+          displayAddress:
+            addr.substring(0, 6) + "..." + addr.substring(addr.length - 4),
+          role: w.role,
+          totalAmount: 0,
+          transactionCount: 0,
+          services: [],
+          works: [],
+        });
+      }
+
+      const group = groupMap.get(key)!;
+      group.totalAmount += w.amount;
+      group.transactionCount += 1;
+      if (!group.services.includes(w.serviceTitle)) {
+        group.services.push(w.serviceTitle);
+      }
+      group.works.push(w);
+    }
+
+    return Array.from(groupMap.values());
+  })();
+
+  const clientHistory = historyGroups.filter((g) => g.role === "client");
+  const providerHistory = historyGroups.filter((g) => g.role === "provider");
+  const selectedGroup = historyGroups.find(
+    (g) => `${g.role}-${g.address.toLowerCase()}` === selectedHistoryGroup,
+  );
 
   const handleAccept = async (workId: string) => {
     try {
@@ -903,6 +963,7 @@ export function MyPendingWorksModal({
                     { id: "client", label: "As Client" },
                     { id: "provider", label: "As Provider" },
                     { id: "completed", label: "Completed" },
+                    { id: "history", label: "History" },
                   ].map((tab) => (
                     <motion.button
                       key={tab.id}
@@ -923,9 +984,175 @@ export function MyPendingWorksModal({
 
               {/* Content */}
               <div className="flex-1 overflow-hidden flex">
-                {/* Works List */}
+                {/* Works List / History List */}
                 <div className="w-2/5 border-r border-black/5 dark:border-white/5 overflow-y-auto custom-scrollbar">
-                  {loading ? (
+                  {activeTab === "history" ? (
+                    /* --- History Left Panel --- */
+                    <div className="p-4 space-y-4">
+                      {loading ? (
+                        <div className="space-y-3">
+                          {[1, 2, 3].map((i) => (
+                            <div key={i} className="w-full glass-macos rounded-2xl p-4">
+                              <Skeleton className="h-4 w-3/4 mb-2" />
+                              <Skeleton className="h-3 w-1/2 mb-4" />
+                              <Skeleton className="h-4 w-1/4" />
+                            </div>
+                          ))}
+                        </div>
+                      ) : historyGroups.length === 0 ? (
+                        <div className="p-8 text-center">
+                          <div className="text-6xl mb-4 opacity-20">📜</div>
+                          <p className="text-black/60 dark:text-white/60 text-sm">
+                            No completed activity yet
+                          </p>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Services Purchased (as Client) */}
+                          {clientHistory.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-3 px-1">
+                                <ShoppingBag className="w-3.5 h-3.5 text-cyan-500" />
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-black/50 dark:text-white/50">
+                                  Services Purchased
+                                </h4>
+                              </div>
+                              <div className="space-y-2">
+                                {clientHistory.map((group) => {
+                                  const key = `${group.role}-${group.address.toLowerCase()}`;
+                                  return (
+                                    <motion.button
+                                      key={key}
+                                      whileHover={{ scale: 1.01 }}
+                                      whileTap={{ scale: 0.99 }}
+                                      onClick={() => {
+                                        setSelectedHistoryGroup(key);
+                                        setSelectedWork(null);
+                                      }}
+                                      className={`w-full glass-macos rounded-2xl p-4 text-left transition-all ${
+                                        selectedHistoryGroup === key
+                                          ? "ring-2 ring-cyan-500/50"
+                                          : ""
+                                      }`}
+                                    >
+                                      <div className="flex items-start justify-between mb-2">
+                                        <div className="flex-1">
+                                          <p className="text-xs text-black/50 dark:text-white/50 mb-1">
+                                            Provider
+                                          </p>
+                                          <h3 className="font-bold text-black dark:text-white text-sm font-mono">
+                                            {group.displayAddress}
+                                          </h3>
+                                        </div>
+                                        <div className="px-2 py-1 rounded-lg text-xs font-bold bg-cyan-500/15 text-cyan-700 dark:text-cyan-400">
+                                          {group.transactionCount} order{group.transactionCount !== 1 ? "s" : ""}
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1 mb-3">
+                                        {group.services.slice(0, 3).map((s) => (
+                                          <span
+                                            key={s}
+                                            className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/5 dark:bg-white/10 text-black/70 dark:text-white/70 truncate max-w-[140px]"
+                                          >
+                                            {s}
+                                          </span>
+                                        ))}
+                                        {group.services.length > 3 && (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/5 dark:bg-white/10 text-black/50 dark:text-white/50">
+                                            +{group.services.length - 3} more
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1.5 pt-2 border-t border-black/5 dark:border-white/5">
+                                        <EthIcon className="w-3.5 h-3.5" />
+                                        <span className="text-sm font-bold text-black dark:text-white">
+                                          {group.totalAmount.toFixed(4)}
+                                        </span>
+                                        <span className="text-[10px] text-black/50 dark:text-white/50 ml-1">
+                                          total spent
+                                        </span>
+                                      </div>
+                                    </motion.button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Clients Served (as Provider) */}
+                          {providerHistory.length > 0 && (
+                            <div>
+                              <div className="flex items-center gap-2 mb-3 px-1">
+                                <Briefcase className="w-3.5 h-3.5 text-purple-500" />
+                                <h4 className="text-xs font-bold uppercase tracking-wider text-black/50 dark:text-white/50">
+                                  Clients Served
+                                </h4>
+                              </div>
+                              <div className="space-y-2">
+                                {providerHistory.map((group) => {
+                                  const key = `${group.role}-${group.address.toLowerCase()}`;
+                                  return (
+                                    <motion.button
+                                      key={key}
+                                      whileHover={{ scale: 1.01 }}
+                                      whileTap={{ scale: 0.99 }}
+                                      onClick={() => {
+                                        setSelectedHistoryGroup(key);
+                                        setSelectedWork(null);
+                                      }}
+                                      className={`w-full glass-macos rounded-2xl p-4 text-left transition-all ${
+                                        selectedHistoryGroup === key
+                                          ? "ring-2 ring-purple-500/50"
+                                          : ""
+                                      }`}
+                                    >
+                                      <div className="flex items-start justify-between mb-2">
+                                        <div className="flex-1">
+                                          <p className="text-xs text-black/50 dark:text-white/50 mb-1">
+                                            Client
+                                          </p>
+                                          <h3 className="font-bold text-black dark:text-white text-sm font-mono">
+                                            {group.displayAddress}
+                                          </h3>
+                                        </div>
+                                        <div className="px-2 py-1 rounded-lg text-xs font-bold bg-purple-500/15 text-purple-700 dark:text-purple-400">
+                                          {group.transactionCount} gig{group.transactionCount !== 1 ? "s" : ""}
+                                        </div>
+                                      </div>
+                                      <div className="flex flex-wrap gap-1 mb-3">
+                                        {group.services.slice(0, 3).map((s) => (
+                                          <span
+                                            key={s}
+                                            className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/5 dark:bg-white/10 text-black/70 dark:text-white/70 truncate max-w-[140px]"
+                                          >
+                                            {s}
+                                          </span>
+                                        ))}
+                                        {group.services.length > 3 && (
+                                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-black/5 dark:bg-white/10 text-black/50 dark:text-white/50">
+                                            +{group.services.length - 3} more
+                                          </span>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-1.5 pt-2 border-t border-black/5 dark:border-white/5">
+                                        <EthIcon className="w-3.5 h-3.5" />
+                                        <span className="text-sm font-bold text-black dark:text-white">
+                                          {group.totalAmount.toFixed(4)}
+                                        </span>
+                                        <span className="text-[10px] text-black/50 dark:text-white/50 ml-1">
+                                          total earned
+                                        </span>
+                                      </div>
+                                    </motion.button>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  ) : loading ? (
                     <div className="p-4 space-y-3">
                       {[1, 2, 3].map((i) => (
                         <div
@@ -1006,9 +1233,149 @@ export function MyPendingWorksModal({
                   )}
                 </div>
 
-                {/* Work Details */}
+                {/* Work Details / History Details */}
                 <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
-                  {loading ? (
+                  {activeTab === "history" ? (
+                    /* --- History Right Panel --- */
+                    selectedGroup ? (
+                      <div className="p-6 space-y-5">
+                        {/* Header */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-1">
+                            {selectedGroup.role === "client" ? (
+                              <ShoppingBag className="w-5 h-5 text-cyan-500" />
+                            ) : (
+                              <Briefcase className="w-5 h-5 text-purple-500" />
+                            )}
+                            <h3 className="text-lg font-serif font-bold text-black dark:text-white">
+                              {selectedGroup.role === "client"
+                                ? "Purchase History"
+                                : "Client Engagement"}
+                            </h3>
+                          </div>
+                          <p className="text-sm text-black/60 dark:text-white/60">
+                            {selectedGroup.role === "client"
+                              ? "Provider"
+                              : "Client"}
+                            :{" "}
+                            <span className="font-mono font-semibold text-black dark:text-white">
+                              {selectedGroup.displayAddress}
+                            </span>
+                          </p>
+                        </div>
+
+                        {/* Summary Stats */}
+                        <div className="grid grid-cols-3 gap-3">
+                          <div className="glass-macos rounded-xl p-3 text-center">
+                            <p className="text-[10px] uppercase tracking-wider text-black/50 dark:text-white/50 mb-1">
+                              Transactions
+                            </p>
+                            <p className="text-xl font-bold text-black dark:text-white">
+                              {selectedGroup.transactionCount}
+                            </p>
+                          </div>
+                          <div className="glass-macos rounded-xl p-3 text-center">
+                            <p className="text-[10px] uppercase tracking-wider text-black/50 dark:text-white/50 mb-1">
+                              {selectedGroup.role === "client" ? "Total Spent" : "Total Earned"}
+                            </p>
+                            <div className="flex items-center justify-center gap-1">
+                              <EthIcon className="w-4 h-4" />
+                              <p className="text-xl font-bold text-black dark:text-white">
+                                {selectedGroup.totalAmount.toFixed(4)}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="glass-macos rounded-xl p-3 text-center">
+                            <p className="text-[10px] uppercase tracking-wider text-black/50 dark:text-white/50 mb-1">
+                              Services
+                            </p>
+                            <p className="text-xl font-bold text-black dark:text-white">
+                              {selectedGroup.services.length}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Service Tags */}
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-black/50 dark:text-white/50 mb-2">
+                            {selectedGroup.role === "client"
+                              ? "Services Purchased"
+                              : "Services Delivered"}
+                          </h4>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedGroup.services.map((s) => (
+                              <span
+                                key={s}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-semibold ${
+                                  selectedGroup.role === "client"
+                                    ? "bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border border-cyan-500/20"
+                                    : "bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20"
+                                }`}
+                              >
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Individual Transactions */}
+                        <div>
+                          <h4 className="text-xs font-bold uppercase tracking-wider text-black/50 dark:text-white/50 mb-3">
+                            Transaction History
+                          </h4>
+                          <div className="space-y-2">
+                            {selectedGroup.works.map((w, idx) => (
+                              <div
+                                key={w.id}
+                                className="glass-macos rounded-xl p-4"
+                              >
+                                <div className="flex items-start justify-between mb-2">
+                                  <div className="flex-1">
+                                    <h5 className="font-semibold text-sm text-black dark:text-white">
+                                      {w.serviceTitle}
+                                    </h5>
+                                    <p className="text-xs text-black/50 dark:text-white/50 mt-0.5">
+                                      Request #{w.id.substring(0, 10)}...
+                                    </p>
+                                  </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <EthIcon className="w-3.5 h-3.5" />
+                                    <span className="text-sm font-bold text-black dark:text-white">
+                                      {w.amount}
+                                    </span>
+                                  </div>
+                                </div>
+                                {w.taskDetails && (
+                                  <p className="text-xs text-black/60 dark:text-white/60 mt-2 line-clamp-2">
+                                    {w.taskDetails}
+                                  </p>
+                                )}
+                                <div className="flex items-center justify-between mt-3 pt-2 border-t border-black/5 dark:border-white/5">
+                                  <div className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+                                    Resolved
+                                  </div>
+                                  {w.completionProofCid && (
+                                    <span className="text-[10px] font-mono text-black/40 dark:text-white/40 truncate max-w-[160px]">
+                                      CID: {w.completionProofCid}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex-1 flex items-center justify-center p-8">
+                        <div className="text-center">
+                          <Users className="w-12 h-12 mx-auto mb-4 text-black/10 dark:text-white/10" />
+                          <p className="text-black/60 dark:text-white/60 text-sm">
+                            Select a counterparty to view transaction history
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  ) : loading ? (
                     <div className="p-6 h-full flex flex-col">
                       <div className="border-b border-black/5 dark:border-white/5 pb-6">
                         <Skeleton className="h-8 w-1/2 mb-4" />
