@@ -13,6 +13,8 @@ from ..core.data_models import (
     FilePayload,
     GigCategorizationRequest,
     GigValidationRequest,
+    PromptGigComparisonRequest,
+    PromptGigComparisonResponse,
 )
 from ..core.data_models import ImageReviewRequest
 from ..core.data_models import PythonFilesReviewRequest
@@ -77,6 +79,31 @@ def classify_gig(payload: GigCategorizationRequest) -> dict[str, str]:
         "title": payload.title,
         "description": payload.description,
     }
+
+
+@router.post("/compare-prompt-with-gig")
+def compare_prompt_with_gig(
+    payload: PromptGigComparisonRequest,
+) -> PromptGigComparisonResponse:
+    """Compare a prompt with gig information to ensure relevance.
+
+    Validates that the booking prompt aligns with the service's gig details.
+
+    Args:
+        payload: Gig info and prompt text to compare
+
+    Returns:
+        Comparison result with match status, confidence, and explanation
+    """
+    gig_data = GigValidationRequest(
+        title=payload.title,
+        description=payload.description,
+        tags=payload.tags,
+        category=payload.category,
+    )
+    print(f"Comparing prompt with gig data: {gig_data}")
+    result = _ai_service.compare_prompt_with_gig(gig_data, payload.prompt)
+    return PromptGigComparisonResponse(**result)
 
 
 @router.get("/query/{query}")
@@ -164,7 +191,7 @@ async def stream_complete_work_with_verification(
         try:
             # Parse requirements from JSON string
             requirements_list = json.loads(requirements)
-            
+
             # Check if this is a raw job description (single string) or pre-parsed requirements
             if len(requirements_list) == 1 and isinstance(requirements_list[0], str):
                 # This is likely a raw job description, pass it as such
@@ -230,7 +257,9 @@ async def stream_complete_work_with_verification(
             verify_request = UnifiedVerifyRequest(
                 requirements_list=[
                     RequirementItem(requirement=r) for r in requirements_list
-                ] if requirements_list else [],
+                ]
+                if requirements_list
+                else [],
                 raw_job_description=raw_job_description,
                 seller_profile="Seller",  # Could be enhanced with actual profile data
                 what_they_offer="Service",  # Could be enhanced with actual service data
@@ -343,7 +372,7 @@ Requirements Passed: {report.get("totals", {}).get("completed", 0)}/{report.get(
                 # Backend-driven winner determination
                 # Provider wins ONLY if status is "pass" (100% completion)
                 is_success = report.get("overall_status", "").lower() == "pass"
-                
+
                 yield _logging_service.format_sse_event(
                     {
                         "event": "settlement_ready",

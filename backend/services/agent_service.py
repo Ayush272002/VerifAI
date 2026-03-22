@@ -4,6 +4,7 @@ import logging
 import re
 
 from langchain_ollama import ChatOllama
+import json
 
 from backend.core.data_models import GigValidationRequest
 
@@ -132,6 +133,71 @@ No additional text.
 """.strip()
 
         return self.text_query(prompt)
+
+    def compare_prompt_with_gig(self, gig: GigValidationRequest, prompt: str) -> dict:
+        """Compare and confirm if a prompt matches the gig information.
+
+        Args:
+            gig: Current gig information (title, description, tags, category)
+            prompt: Prompt text to compare against gig info
+
+        Returns:
+            Dictionary with keys:
+            - matches: bool indicating if prompt aligns with gig
+            - confidence: str ("high", "medium", "low")
+            - explanation: str describing the comparison result
+        """
+        tags_text = ", ".join(gig.tags or []) or "(none)"
+
+        comparison_prompt = f"""
+You are an expert prompt-to-gig matcher. Your task: determine if the given prompt aligns with the defined gig information.
+
+Gig Information:
+- Title: {gig.title}
+- Description: {gig.description}
+- Tags: {tags_text}
+- Category: {gig.category}
+
+Prompt to Compare:
+{prompt}
+
+Evaluation criteria:
+1. Does the prompt request or describe something related to the gig's service?
+2. Are the scope and context consistent with the gig description?
+3. Do the tags or category relate to what the prompt is asking for?
+4. Flag any major contradictions or domain mismatches.
+
+Output exactly in this JSON format (no additional text):
+{{
+  "matches": true/false,
+  "confidence": "high/medium/low",
+  "explanation": "Brief reason for the match/mismatch assessment"
+}}
+""".strip()
+
+        model_response = self.text_query(comparison_prompt)
+
+        # Attempt to extract and parse JSON from response
+        try:
+            # Try direct parsing
+            result = json.loads(model_response)
+            return result
+        except json.JSONDecodeError:
+            # Fallback: search for JSON block in response
+            json_match = re.search(r"\{.*\}", model_response, re.DOTALL)
+            if json_match:
+                try:
+                    result = json.loads(json_match.group())
+                    return result
+                except json.JSONDecodeError:
+                    pass
+
+        # Fallback response if parsing fails
+        return {
+            "matches": False,
+            "confidence": "low",
+            "explanation": f"Unable to parse model response: {model_response[:100]}"
+        }
 
 def main() -> None:
     """Run local smoke test for chat query."""

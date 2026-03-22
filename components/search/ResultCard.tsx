@@ -33,6 +33,7 @@ export interface ResultData {
     address: string; // Added for contract integration
   };
   category: string;
+  description?: string;
   price: {
     amount: number;
     type: "fixed" | "hourly";

@@ -13,8 +13,7 @@ from .routers.test_router import router as test_router
 
 # Configure logging to show DEBUG and INFO level messages
 logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.DEBUG, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 
 dotenv.load_dotenv()
