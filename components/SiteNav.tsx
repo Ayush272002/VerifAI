@@ -6,8 +6,8 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { motion } from "motion/react";
-import { Grid3x3 } from "lucide-react";
 import WalletConnect from "@/components/WalletConnect";
 
 const SPRING = {
@@ -26,8 +26,6 @@ interface SiteNavProps {
   onPublishClick: () => void;
   onMyServicesClick: () => void;
   onMyPendingWorksClick: () => void;
-  /** Show the Browse All link with icon (used on search page). */
-  showBrowseIcon?: boolean;
 }
 
 /**
@@ -41,10 +39,13 @@ const SiteNav = ({
   onPublishClick,
   onMyServicesClick,
   onMyPendingWorksClick,
-  showBrowseIcon = false,
-}: SiteNavProps): React.JSX.Element => (
+}: SiteNavProps): React.JSX.Element => {
+  const pathname = usePathname();
+  const isBrowsePage = pathname === '/browse' || pathname === '/search';
+
+  return (
   <motion.nav
-    className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-[#0a0a0a]/80 backdrop-blur-3xl border-b border-white/20 dark:border-white/10 shadow-lg shadow-black/5"
+    className="fixed top-0 left-0 right-0 z-50 bg-white/60 dark:bg-[#0a0a0a]/60 backdrop-blur-2xl border-b border-black/5 dark:border-white/5 shadow-sm"
     initial={{ y: -100 }}
     animate={{ y: 0 }}
     transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
@@ -60,16 +61,17 @@ const SiteNav = ({
         </motion.span>
       </Link>
 
-      <div className="flex items-center gap-6">
-        <motion.div whileHover={{ scale: 1.05 }} transition={SPRING}>
-          <Link
-            href="/browse"
-            className="text-sm font-medium text-black/80 dark:text-white/80 hover:text-black dark:hover:text-white transition-colors flex items-center gap-2"
-          >
-            {showBrowseIcon && <Grid3x3 className="w-4 h-4" />}
-            <span className={showBrowseIcon ? "hidden md:inline" : undefined}>Browse</span>
-          </Link>
-        </motion.div>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/browse"
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            isBrowsePage
+              ? 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400'
+              : 'text-black/70 dark:text-white/70 hover:text-black dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+          }`}
+        >
+          Browse
+        </Link>
 
         {mounted && isConnected && (
           <motion.button
@@ -77,7 +79,7 @@ const SiteNav = ({
             whileTap={{ scale: 0.98 }}
             transition={SPRING}
             onClick={onPublishClick}
-            className="rounded-lg px-4 py-1.5 text-sm font-medium border border-black/10 dark:border-white/10 text-black dark:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-all"
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-black dark:bg-white text-white dark:text-black hover:bg-black/90 dark:hover:bg-white/90 transition-all"
           >
             Publish
           </motion.button>
@@ -93,5 +95,6 @@ const SiteNav = ({
     </div>
   </motion.nav>
 );
+};
 
 export default SiteNav;

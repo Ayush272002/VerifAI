@@ -7,7 +7,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Star, MapPin, Clock, CheckCircle2, TrendingUp, Shield, Zap } from "lucide-react";
+import { X, MapPin, Clock, CheckCircle2 } from "lucide-react";
 import type { ResultData } from "./ResultCard";
 import { EthIcon } from "@/components/EthIcon";
 import { BookServiceModal } from "@/components/BookServiceModal";
@@ -24,19 +24,35 @@ const SPRING = {
   stiffness: 100,
 } as const;
 
-const LEVEL_ICONS = {
-  "Beginner": Shield,
-  "Intermediate": TrendingUp,
-  "Expert": Zap,
-  "Top Rated": Star,
-};
-
 export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetailsModalProps) {
   const [showBookModal, setShowBookModal] = useState(false);
 
   if (!service) return null;
 
-  const LevelIcon = LEVEL_ICONS[service.provider.level];
+  // Generate deterministic gradient for provider avatar
+  const getGradientFromText = (text: string): string => {
+    let hash = 0;
+    for (let i = 0; i < text.length; i++) {
+      hash = text.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    const gradients = [
+      "from-cyan-400 to-blue-500",
+      "from-purple-400 to-pink-500",
+      "from-emerald-400 to-teal-500",
+      "from-orange-400 to-red-500",
+      "from-indigo-400 to-purple-500",
+      "from-rose-400 to-pink-500",
+      "from-amber-400 to-orange-500",
+      "from-lime-400 to-green-500",
+      "from-sky-400 to-cyan-500",
+      "from-fuchsia-400 to-purple-500",
+    ];
+    
+    return gradients[Math.abs(hash) % gradients.length];
+  };
+
+  const avatarGradient = getGradientFromText(service.provider.address || service.provider.name);
 
   return (
     <AnimatePresence>
@@ -104,25 +120,13 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
                         <img src={service.thumbnail}/>
                       <div className="absolute bottom-0 right-0 w-40 h-40 bg-black/20 dark:bg-white/15 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s', animationDelay: '0.5s' }}></div>
                     </div>
-                    
-                    {service.featured && (
-                      <div className="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg">
-                        <Star className="w-3 h-3 fill-current" />
-                        FEATURED
-                      </div>
-                    )}
-                    {service.successRate && (
-                      <div className="absolute top-4 right-4 px-3 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-lg">
-                        {service.successRate}% Success
-                      </div>
-                    )}
                   </div>
                 )}
 
                 {/* Provider Info */}
                 <div className="glass-macos rounded-2xl p-6">
                   <div className="flex items-center gap-4 mb-4">
-                    <div className="relative w-16 h-16 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white font-bold text-xl overflow-hidden">
+                    <div className={`relative w-16 h-16 rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-white font-bold text-xl overflow-hidden`}>
                       {service.provider.avatar ? (
                         <div className="w-full h-full bg-cover bg-center" style={{ backgroundImage: `url(${service.provider.avatar})` }}></div>
                       ) : (
@@ -138,24 +142,15 @@ export function ServiceDetailsModal({ isOpen, onClose, service }: ServiceDetails
                           <CheckCircle2 className="w-5 h-5 text-cyan-500 flex-shrink-0" />
                         )}
                       </div>
-                      <div className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-white/50 dark:bg-black/50 border border-white/20 dark:border-white/10 backdrop-blur-xl">
-                        <LevelIcon className="w-4 h-4 text-black/60 dark:text-white/60" />
-                        <span className="text-sm font-semibold text-black/70 dark:text-white/70">{service.provider.level}</span>
-                      </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 pt-4 border-t border-black/5 dark:border-white/5">
                     <div className="flex items-center gap-2">
-                      <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
-                      <span className="font-bold text-black dark:text-white">{service.rating.toFixed(1)}</span>
-                      <span className="text-sm text-black/60 dark:text-white/60">({service.reviewCount} reviews)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
                       <Clock className="w-4 h-4 text-black/60 dark:text-white/60" />
                       <span className="text-sm text-black dark:text-white">{service.deliveryTime}</span>
                     </div>
-                    <div className="flex items-center gap-2 col-span-2">
+                    <div className="flex items-center gap-2">
                       <MapPin className="w-4 h-4 text-black/60 dark:text-white/60" />
                       <span className="text-sm text-black dark:text-white">{service.location}</span>
                     </div>

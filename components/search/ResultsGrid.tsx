@@ -312,7 +312,7 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
             <h2 className="text-2xl font-serif font-bold text-black dark:text-white">
               Featured Services
             </h2>
-            <div className="flex-1 h-px bg-gradient-to-r from-amber-500/30 to-transparent" />
+            <div className="flex-1 h-px bg-gradient-to-r from-cyan-500/30 to-transparent" />
           </div>
           <motion.div
             initial="hidden"

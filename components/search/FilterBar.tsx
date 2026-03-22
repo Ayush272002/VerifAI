@@ -211,25 +211,19 @@ function FilterDropdown({ label, options, selected, onSelect, showIcon }: Filter
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            className="fixed z-40 glass-macos rounded-xl overflow-hidden max-h-[280px] overflow-y-auto custom-scrollbar"
-            style={{
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.08)',
-              top: `${(document.activeElement as HTMLElement)?.getBoundingClientRect().bottom + 8}px`,
-              left: `${(document.activeElement as HTMLElement)?.getBoundingClientRect().left}px`,
-              width: `${(document.activeElement as HTMLElement)?.getBoundingClientRect().width}px`,
-            }}
+            className="absolute z-20 mt-2 w-full bg-white/90 dark:bg-black/90 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-xl overflow-hidden max-h-[280px] overflow-y-auto custom-scrollbar shadow-2xl"
           >
             {options.map((option) => (
               <motion.button
                 key={option.id}
-                whileHover={{ backgroundColor: "rgba(0,0,0,0.03)" }}
+                whileHover={{ backgroundColor: "rgba(6,182,212,0.05)" }}
                 onClick={() => {
                   onSelect(option.id);
                   setIsOpen(false);
                 }}
                 className={`w-full px-4 py-2.5 text-left flex items-center gap-2 text-sm transition-colors ${selected === option.id
-                  ? "text-cyan-600 dark:text-cyan-400 font-semibold bg-cyan-500/5"
-                  : "text-black/70 dark:text-white/70"
+                  ? "text-cyan-600 dark:text-cyan-400 font-semibold bg-cyan-500/10"
+                  : "text-black/70 dark:text-white/70 hover:bg-black/5 dark:hover:bg-white/5"
                   }`}
               >
                 {showIcon && option.icon}

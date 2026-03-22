@@ -58,7 +58,6 @@ function SearchPageContent() {
           onPublishClick={() => setShowPublishModal(true)}
           onMyServicesClick={() => setShowMyServicesModal(true)}
           onMyPendingWorksClick={() => setShowMyPendingWorksModal(true)}
-          showBrowseIcon
         />
 
         {/* Main Content */}
