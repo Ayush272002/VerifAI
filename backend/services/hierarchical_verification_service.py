@@ -278,6 +278,11 @@ class HierarchicalVerificationService:
                                 "message": f"Agent verified branch: {agent_name}",
                             },
                         )
+                        # Stream full agent output with requirement checks
+                        yield self.base_service._format_sse("agent_result", {
+                            "agent_name": agent_name,
+                            "requirement_checks": out.get("requirement_checks", []),
+                        })
 
                 elif "aggregator" in event:
                     report = event["aggregator"].get("final_report", {})

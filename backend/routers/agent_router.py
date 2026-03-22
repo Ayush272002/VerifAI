@@ -6,7 +6,7 @@ import logging
 import mimetypes
 from typing import Any, Generator
 
-from fastapi import APIRouter, File, Form, UploadFile
+from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 
 from ..core.data_models import FilePayload, GigCategorizationRequest
@@ -31,6 +31,11 @@ _marketplace_service = MarketplaceService()
 _ipfs_service = IPFSService()
 _logging_service = VerificationLoggingService()
 
+# Verification result cache keyed by requestId
+_verification_cache: dict[str, dict] = {}
+# Set of requestIds currently being verified (duplicate prevention)
+_verification_in_progress: set[str] = {}
+
 
 @router.get("/health")
 def health() -> dict[str, str]:
@@ -40,6 +45,16 @@ def health() -> dict[str, str]:
         Health response payload
     """
     return {"message": "Agent service is available"}
+
+
+@router.get("/verification-status/{request_id}")
+def get_verification_status(request_id: str) -> dict[str, Any]:
+    """Return cached verification result for a request, or status if in-progress/unknown."""
+    if request_id in _verification_cache:
+        return {"status": "completed", **_verification_cache[request_id]}
+    if request_id in _verification_in_progress:
+        return {"status": "in_progress"}
+    return {"status": "not_found"}
 
 
 @router.post("/classify-gig")
@@ -112,23 +127,30 @@ async def stream_complete_work_with_verification(
     buyerAddress: str = Form(...),
 ) -> StreamingResponse:
     """Complete gig work: verify deliverables and store verification on-chain.
-    
+
     This integrates the full seller workflow:
     1. Upload deliverables (files)
     2. Run MoA verification against buyer requirements
     3. Stream real-time verification progress and findings
     4. Store immutable verification audit log on-chain via oracle
-    
+
     Args:
         files: Uploaded deliverable files
         requirements: JSON string of requirement strings
         requestId: Work request ID
         buyerAddress: Buyer's wallet address
-        
+
     Returns:
         Server-Sent Events stream with verification progress + blockchain storage confirmation
     """
+    # Duplicate prevention
+    if requestId in _verification_in_progress:
+        raise HTTPException(status_code=409, detail="Verification already in progress for this request")
+    if requestId in _verification_cache:
+        raise HTTPException(status_code=409, detail="Verification already completed for this request")
+
     def _generator() -> Generator[str, None, None]:
+        _verification_in_progress.add(requestId)
         try:
             # Parse requirements from JSON string
             requirements_list = json.loads(requirements)
@@ -273,13 +295,37 @@ Requirements Passed: {report.get('totals', {}).get('completed', 0)}/{report.get(
                         "message": "Proof CID available for on-chain completion"
                     }
                 })
-                    
+
+                # Backend-driven winner determination
+                is_success = (
+                    report.get("overall_status", "").lower() == "pass"
+                    or report.get("completion_pct", 0) >= 60
+                )
+                yield _logging_service.format_sse_event({
+                    "event": "settlement_ready",
+                    "data": {
+                        "proof_cid": proof_cid,
+                        "winner_is_provider": is_success,
+                        "completion_pct": report.get("completion_pct", 0),
+                        "overall_status": report.get("overall_status", ""),
+                    }
+                })
+
+                # Cache the result for recovery on page refresh
+                _verification_cache[requestId] = {
+                    "report": report,
+                    "proof_cid": proof_cid,
+                    "winner_is_provider": is_success,
+                }
+
         except Exception as e:
             logger.error("Work completion verification failed: %s", e)
             yield _logging_service.format_sse_event({
                 "event": "error",
                 "data": {"error": str(e)}
             })
+        finally:
+            _verification_in_progress.discard(requestId)
 
     return StreamingResponse(
         _generator(),

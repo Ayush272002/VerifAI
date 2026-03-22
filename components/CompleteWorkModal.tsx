@@ -9,6 +9,9 @@ import {
   ImageIcon,
   Loader2,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
+  Lock,
 } from "lucide-react";
 
 interface VerificationResult {
@@ -26,6 +29,15 @@ interface VerificationResult {
     completed: number;
     total: number;
   };
+}
+
+interface AgentResultData {
+  agent_name: string;
+  requirement_checks: {
+    requirement?: string;
+    checked?: boolean;
+    evidence?: string;
+  }[];
 }
 
 interface CompleteWorkModalProps {
@@ -52,24 +64,54 @@ export function CompleteWorkModal({
   buyerAddress,
 }: CompleteWorkModalProps) {
   const [files, setFiles] = useState<File[]>([]);
+  const [filesLocked, setFilesLocked] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
   const [result, setResult] = useState<VerificationResult | null>(null);
+  const [agentResults, setAgentResults] = useState<AgentResultData[]>([]);
+  const [expandedAgents, setExpandedAgents] = useState<Set<string>>(new Set());
   const logsEndRef = useRef<HTMLDivElement>(null);
   const [blockchainStatus, setBlockchainStatus] = useState<string>("");
   const [proofCid, setProofCid] = useState<string>("");
+  const [autoCompleteTriggered, setAutoCompleteTriggered] = useState(false);
+
+  // Refs to hold latest values for the auto-complete effect
+  const resultRef = useRef<VerificationResult | null>(null);
+  const proofCidRef = useRef<string>("");
+
+  // Keep refs in sync
+  useEffect(() => {
+    resultRef.current = result;
+  }, [result]);
+  useEffect(() => {
+    proofCidRef.current = proofCid;
+  }, [proofCid]);
 
   // Auto-scroll logs to bottom
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
+  // Auto-trigger onComplete when proofCid arrives (after verification stream ends)
+  useEffect(() => {
+    if (proofCid && result && !autoCompleteTriggered && onComplete) {
+      setAutoCompleteTriggered(true);
+      // Small delay so the user can see the final state
+      const timer = setTimeout(() => {
+        onComplete(result, proofCid);
+      }, 800);
+      return () => clearTimeout(timer);
+    }
+  }, [proofCid, result, autoCompleteTriggered, onComplete]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (filesLocked) return;
     const selectedFiles = Array.from(e.target.files || []);
     setFiles((prev) => [...prev, ...selectedFiles]);
   };
 
   const removeFile = (index: number) => {
+    if (filesLocked) return;
     setFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
@@ -77,13 +119,26 @@ export function CompleteWorkModal({
     file.type.startsWith("image/") ||
     /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(file.name);
 
+  const toggleAgent = (agentName: string) => {
+    setExpandedAgents((prev) => {
+      const next = new Set(prev);
+      if (next.has(agentName)) next.delete(agentName);
+      else next.add(agentName);
+      return next;
+    });
+  };
+
   const handleSubmit = useCallback(async () => {
     if (files.length === 0) return;
 
+    setFilesLocked(true);
     setIsVerifying(true);
     setLogs(["Starting verification process..."]);
     setResult(null);
+    setAgentResults([]);
     setBlockchainStatus("");
+    setProofCid("");
+    setAutoCompleteTriggered(false);
 
     try {
       const formData = new FormData();
@@ -103,6 +158,10 @@ export function CompleteWorkModal({
       );
 
       if (!response.ok) {
+        if (response.status === 409) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.detail || "Verification already in progress or completed for this request");
+        }
         throw new Error(`Server error: ${response.statusText}`);
       }
 
@@ -174,6 +233,25 @@ export function CompleteWorkModal({
                   }
                 }
               }
+            } else if (eventType === "agent_result") {
+              i++;
+              if (i < lines.length - 1) {
+                const dataLine = lines[i];
+                if (dataLine.startsWith("data: ")) {
+                  try {
+                    const data = JSON.parse(dataLine.substring(6)) as AgentResultData;
+                    setAgentResults((prev) => [...prev, data]);
+                    const passCount = data.requirement_checks.filter((c) => c.checked).length;
+                    const totalCount = data.requirement_checks.length;
+                    setLogs((prev) => [
+                      ...prev,
+                      `Agent "${data.agent_name}" completed: ${passCount}/${totalCount} checks passed`,
+                    ]);
+                  } catch (e) {
+                    console.error("Failed to parse agent_result event:", e);
+                  }
+                }
+              }
             } else if (eventType === "report") {
               i++;
               if (i < lines.length - 1) {
@@ -228,6 +306,22 @@ export function CompleteWorkModal({
                   }
                 }
               }
+            } else if (eventType === "settlement_ready") {
+              i++;
+              if (i < lines.length - 1) {
+                const dataLine = lines[i];
+                if (dataLine.startsWith("data: ")) {
+                  try {
+                    const data = JSON.parse(dataLine.substring(6));
+                    setLogs((prev) => [
+                      ...prev,
+                      `Settlement ready: ${data.winner_is_provider ? "Provider wins" : "Client refund"} (${data.completion_pct}%)`,
+                    ]);
+                  } catch (e) {
+                    console.error("Failed to parse settlement_ready event:", e);
+                  }
+                }
+              }
             } else if (eventType === "blockchain_error") {
               i++;
               if (i < lines.length - 1) {
@@ -268,6 +362,8 @@ export function CompleteWorkModal({
         ...prev,
         `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
       ]);
+      // Unlock files on error so user can retry
+      setFilesLocked(false);
     } finally {
       setIsVerifying(false);
     }
@@ -321,8 +417,8 @@ export function CompleteWorkModal({
 
               {/* Content */}
               <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-5">
-                {/* File Upload Section */}
-                {!isVerifying && !result && (
+                {/* File Upload Section — hidden once files are locked */}
+                {!filesLocked && (
                   <div className="space-y-4">
                     {/* Drop zone */}
                     <label className="flex flex-col items-center justify-center p-8 rounded-2xl border-2 border-dashed border-black/10 dark:border-white/10 hover:border-cyan-500/40 dark:hover:border-cyan-500/40 transition-colors cursor-pointer glass-macos">
@@ -337,7 +433,6 @@ export function CompleteWorkModal({
                         type="file"
                         multiple
                         onChange={handleFileChange}
-                        disabled={isVerifying}
                         className="hidden"
                       />
                     </label>
@@ -406,6 +501,16 @@ export function CompleteWorkModal({
                   </div>
                 )}
 
+                {/* Locked files indicator */}
+                {filesLocked && (
+                  <div className="glass-macos rounded-xl p-3 flex items-center gap-2 border border-amber-500/20">
+                    <Lock className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                      {files.length} file(s) locked for verification
+                    </p>
+                  </div>
+                )}
+
                 {/* Verification Progress */}
                 {(isVerifying || logs.length > 0) && (
                   <div className="space-y-3">
@@ -430,6 +535,84 @@ export function CompleteWorkModal({
                       ))}
                       <div ref={logsEndRef} />
                     </div>
+                  </div>
+                )}
+
+                {/* Detailed Agent Results */}
+                {agentResults.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold text-black/70 dark:text-white/70">
+                      AGENT FINDINGS ({agentResults.length} agent{agentResults.length !== 1 ? "s" : ""})
+                    </p>
+                    {agentResults.map((agent) => {
+                      const isExpanded = expandedAgents.has(agent.agent_name);
+                      const passCount = agent.requirement_checks.filter((c) => c.checked).length;
+                      const totalCount = agent.requirement_checks.length;
+                      return (
+                        <div
+                          key={agent.agent_name}
+                          className="glass-macos rounded-xl overflow-hidden"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleAgent(agent.agent_name)}
+                            className="w-full flex items-center justify-between px-3 py-2.5 text-left hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? (
+                                <ChevronDown className="w-3.5 h-3.5 text-black/50 dark:text-white/50" />
+                              ) : (
+                                <ChevronRight className="w-3.5 h-3.5 text-black/50 dark:text-white/50" />
+                              )}
+                              <span className="text-xs font-semibold text-black dark:text-white">
+                                {agent.agent_name}
+                              </span>
+                            </div>
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                passCount === totalCount
+                                  ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                                  : passCount > 0
+                                    ? "bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                                    : "bg-red-500/20 text-red-600 dark:text-red-400"
+                              }`}
+                            >
+                              {passCount}/{totalCount} passed
+                            </span>
+                          </button>
+                          {isExpanded && (
+                            <div className="px-3 pb-3 space-y-1.5 border-t border-black/5 dark:border-white/5 pt-2">
+                              {agent.requirement_checks.map((check, idx) => (
+                                <div
+                                  key={`${check.requirement}-${idx}`}
+                                  className="glass-macos rounded-lg p-2 space-y-1"
+                                >
+                                  <div className="flex justify-between items-center gap-2">
+                                    <span className="text-xs font-medium text-black dark:text-white truncate">
+                                      {check.requirement || "Unnamed check"}
+                                    </span>
+                                    <span
+                                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                                        check.checked
+                                          ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400"
+                                          : "bg-red-500/20 text-red-600 dark:text-red-400"
+                                      }`}
+                                    >
+                                      {check.checked ? "Pass" : "Fail"}
+                                    </span>
+                                  </div>
+                                  {check.evidence && (
+                                    <p className="text-[11px] text-black/50 dark:text-white/50 leading-relaxed pl-1">
+                                      {check.evidence}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -502,6 +685,16 @@ export function CompleteWorkModal({
                         </p>
                       </div>
                     )}
+
+                    {/* Auto-complete status indicator */}
+                    {autoCompleteTriggered && (
+                      <div className="glass-macos rounded-xl p-3 flex items-center gap-2 border border-cyan-500/20">
+                        <Loader2 className="w-4 h-4 text-cyan-500 animate-spin flex-shrink-0" />
+                        <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-400">
+                          Triggering wallet transaction automatically...
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -517,18 +710,18 @@ export function CompleteWorkModal({
                 >
                   Close
                 </motion.button>
-                {!result && (
+                {!filesLocked && (
                   <motion.button
                     whileHover={
-                      !isVerifying && files.length > 0 ? { scale: 1.02 } : {}
+                      files.length > 0 ? { scale: 1.02 } : {}
                     }
                     whileTap={
-                      !isVerifying && files.length > 0 ? { scale: 0.98 } : {}
+                      files.length > 0 ? { scale: 0.98 } : {}
                     }
                     onClick={handleSubmit}
                     disabled={isVerifying || files.length === 0}
                     className={`px-6 py-2.5 rounded-2xl font-semibold text-sm flex items-center gap-2 transition-all ${
-                      !isVerifying && files.length > 0
+                      files.length > 0
                         ? "bg-gradient-to-r from-cyan-500 to-blue-500 text-white"
                         : "bg-gray-400/50 dark:bg-gray-600/50 text-gray-600 dark:text-gray-400 cursor-not-allowed"
                     }`}
@@ -544,22 +737,6 @@ export function CompleteWorkModal({
                         Submit &amp; Verify
                       </>
                     )}
-                  </motion.button>
-                )}
-                {result && (
-                  <motion.button
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => {
-                      if (onComplete && proofCid) {
-                        onComplete(result, proofCid);
-                      }
-                      onClose();
-                    }}
-                    className="px-6 py-2.5 rounded-2xl font-semibold text-sm bg-gradient-to-r from-emerald-500 to-teal-500 text-white flex items-center gap-2"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Lock Evidence &amp; Settle
                   </motion.button>
                 )}
               </div>

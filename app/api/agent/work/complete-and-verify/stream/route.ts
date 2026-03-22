@@ -27,13 +27,15 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       console.error(`Backend error: ${response.status} ${response.statusText}`);
+      // Forward the backend's response body so error details (e.g. 409 duplicate) are preserved
+      const errorBody = await response.text().catch(() => "");
       return new Response(
-        JSON.stringify({
+        errorBody || JSON.stringify({
           error: `Backend error: ${response.status} ${response.statusText}`,
         }),
         {
           status: response.status,
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": response.headers.get("Content-Type") || "application/json" },
         },
       );
     }

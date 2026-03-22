@@ -888,8 +888,55 @@ export function MyPendingWorksModal({
       // Store verification result for display in detail panel
       setCompletedVerification({ result: report, proofCid, txHash: txHash });
 
-      // Step 2: Submit oracle ruling to release funds
-      await submitRulingToOracle(report);
+      // Step 2: Auto-settle via backend (backend determines winner from cached report)
+      toast.info("Submitting Oracle Ruling...", { id: "oracle-ruling" });
+      try {
+        const res = await fetch(
+          `${BACKEND_BASE_URL}/marketplace/oracle/auto-settle`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ request_id: selectedWork.id }),
+          },
+        );
+
+        if (!res.ok) {
+          const errorBody = await res.json().catch(() => null);
+          throw new Error(
+            errorBody?.detail || `Oracle API rejected the task (${res.status}).`,
+          );
+        }
+
+        const oracleData = await res.json();
+        if (!oracleData.success) {
+          if (
+            oracleData.error &&
+            oracleData.error.includes("Not pending oracle review")
+          ) {
+            toast.warning("Request already resolved on-chain.", {
+              id: "oracle-ruling",
+            });
+          } else {
+            throw new Error(oracleData.error);
+          }
+        } else {
+          toast.success("Transaction Resolved On-Chain!", {
+            id: "oracle-ruling",
+          });
+        }
+
+        setSelectedWork({ ...selectedWork, status: "completed" as any });
+        setWorks((prev) =>
+          prev.map((w) =>
+            w.id === selectedWork.id ? { ...w, status: "completed" as any } : w,
+          ),
+        );
+      } catch (settleErr: any) {
+        console.error("Auto-settle error:", settleErr);
+        toast.error("Oracle Failed: " + (settleErr.message || "Unknown error"));
+        // Fall back to manual oracle submission
+        await submitRulingToOracle(report);
+      }
     } catch (err: any) {
       if (
         err?.message?.includes("User rejected the request") ||
@@ -908,9 +955,58 @@ export function MyPendingWorksModal({
     }
   };
 
+  // Recovery polling: when selecting a work item that's in_progress,
+  // check if the backend has cached verification results (e.g. after page refresh)
+  const [isRecovering, setIsRecovering] = useState(false);
+
+  useEffect(() => {
+    if (!selectedWork || selectedWork.status !== "in_progress" || selectedWork.role !== "provider") return;
+    if (completedVerification) return; // Already have results
+
+    let cancelled = false;
+    const checkCachedVerification = async () => {
+      try {
+        setIsRecovering(true);
+        const res = await fetch(
+          `${BACKEND_BASE_URL}/agent/verification-status/${selectedWork.id}`,
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+
+        if (cancelled) return;
+
+        if (data.status === "completed" && data.report && data.proof_cid) {
+          setCompletedVerification({
+            result: data.report,
+            proofCid: data.proof_cid,
+          });
+          // Auto-trigger the complete flow
+          toast.info("Recovered verification results, triggering on-chain completion...");
+          handleWorkComplete(data.report, data.proof_cid);
+        } else if (data.status === "in_progress") {
+          toast.info("Verification still in progress on backend...");
+          // Poll again after a delay
+          const timer = setTimeout(() => {
+            if (!cancelled) checkCachedVerification();
+          }, 5000);
+          return () => clearTimeout(timer);
+        }
+      } catch (e) {
+        console.error("Failed to check verification status:", e);
+      } finally {
+        if (!cancelled) setIsRecovering(false);
+      }
+    };
+
+    checkCachedVerification();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedWork?.id, selectedWork?.status, selectedWork?.role]);
+
   // Note: The old Lock Evidence and handleVerifySubmit flows have been removed.
   // Verification now happens exclusively through CompleteWorkModal,
-  // which calls handleWorkComplete → completeRequest → submitRulingToOracle.
+  // which calls handleWorkComplete → completeRequest → auto-settle.
 
   return (
     <AnimatePresence mode="wait">
@@ -1528,7 +1624,7 @@ export function MyPendingWorksModal({
                           selectedWork.status === "completed") && (
                           <div className="p-6 border-b border-black/5 dark:border-white/5 bg-white/30 dark:bg-black/30">
                             {/* Submit Work Button */}
-                            {selectedWork.status === "in_progress" && (
+                            {selectedWork.status === "in_progress" && !isRecovering && (
                               <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950 rounded-xl border border-blue-200 dark:border-blue-800">
                                 <p className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-3">
                                   Submit Your Work
@@ -1547,6 +1643,16 @@ export function MyPendingWorksModal({
                                 >
                                   Submit Work with Advanced Verification
                                 </motion.button>
+                              </div>
+                            )}
+
+                            {/* Recovery indicator */}
+                            {isRecovering && (
+                              <div className="flex flex-col items-center justify-center gap-2 p-4 text-cyan-600 dark:text-cyan-400 glass-macos rounded-xl border border-cyan-500/20">
+                                <Loader2 className="w-6 h-6 animate-spin" />
+                                <span className="text-sm font-semibold tracking-wide">
+                                  Recovering verification results...
+                                </span>
                               </div>
                             )}
 
