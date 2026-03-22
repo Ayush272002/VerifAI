@@ -230,7 +230,7 @@ export function BookServiceModal({
                       rows={10}
                       value={taskDetails}
                       onChange={(e) => setTaskDetails(e.target.value)}
-                      placeholder="Example:
+                      placeholder={`Example:
 
 PROJECT: Essay on Climate Change Impact
 
@@ -251,7 +251,7 @@ TIMELINE:
 
 ADDITIONAL NOTES:
 - Target audience: University level (undergraduate)
-- Prefer recent sources (last 5 years)"
+- Prefer recent sources (last 5 years)`}
                       className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/40 dark:placeholder:text-white/40 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all resize-none font-mono text-sm"
                     />
                     <p className="text-xs text-black/50 dark:text-white/50 mt-2">
