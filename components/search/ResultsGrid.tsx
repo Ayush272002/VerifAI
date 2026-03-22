@@ -206,24 +206,19 @@ export const ResultsGrid = ({ searchQuery = "" }: ResultsGridProps) => {
 
     const query = debouncedQuery.toLowerCase().trim();
 
-    if (semanticReady && indexRef.current) {
-      const results = indexRef.current.search(query);
-      setFilteredResults(results);
-    } else {
-      // Fallback to simple filtering
-      const results = servicesWithImages.filter((result) => {
-        return (
-          result.title.toLowerCase().includes(query) ||
-          result.category.toLowerCase().includes(query) ||
-          result.tags.some((tag) => tag.toLowerCase().includes(query)) ||
-          result.provider.name.toLowerCase().includes(query)
-        );
-      });
+    if (!semanticReady || !indexRef.current) {
+      // Fuzzy-only fallback while embeddings are loading
+      const results = servicesWithImages.filter((result) => (
+        result.title.toLowerCase().includes(query) ||
+        result.category.toLowerCase().includes(query) ||
+        result.tags.some((tag) => tag.toLowerCase().includes(query)) ||
+        result.provider.name.toLowerCase().includes(query)
+      ));
 
       setFilteredResults(results);
+      setIsSearching(false);
     }
-
-    setIsSearching(false);
+    // Semantic path is handled by runSearch via the effect below
   }, [debouncedQuery, semanticReady, servicesWithImages]);
 
   // Re-run search whenever debounced query or semantic readiness changes
