@@ -16,6 +16,7 @@ from ..core.data_models import RequirementItem
 from ..core.data_models import UnifiedVerifyRequest
 from ..services.agent_service import OllamaAgentService
 from ..services.hierarchical_verification_service import HierarchicalVerificationService
+from ..services.ipfs_service import IPFSService
 from ..services.marketplace_service import MarketplaceService
 from ..services.verification_logging_service import VerificationLoggingService
 from ..services.verification_service import VerificationService
@@ -27,6 +28,7 @@ _ai_service = OllamaAgentService()
 _verification_service = VerificationService()
 _moa_service = HierarchicalVerificationService()
 _marketplace_service = MarketplaceService()
+_ipfs_service = IPFSService()
 _logging_service = VerificationLoggingService()
 
 
@@ -200,7 +202,6 @@ async def stream_complete_work_with_verification(
                 if "event: report" in sse_line:
                     logger.info("✅ Verification complete, storing on-chain...")
                     try:
-                        import json
                         data_start = sse_line.find("data: ") + 6
                         report_json = sse_line[data_start:].strip()
                         verification_log["final_report"] = json.loads(report_json)
@@ -224,7 +225,7 @@ Requirements Passed: {report.get('totals', {}).get('completed', 0)}/{report.get(
 
                 try:
                     blockchain_result = _marketplace_service.post_verification_log(
-                        verification_summary, 
+                        verification_summary,
                         requestId
                     )
                     yield _logging_service.format_sse_event({
@@ -245,6 +246,33 @@ Requirements Passed: {report.get('totals', {}).get('completed', 0)}/{report.get(
                             "message": "Could not store verification on-chain, but frontend verification complete"
                         }
                     })
+
+                # Upload verification summary to IPFS to get a proof CID for completeRequest()
+                proof_cid = ""
+                try:
+                    if _ipfs_service.is_configured():
+                        ipfs_result = _ipfs_service.upload_json(
+                            name=f"verification-{requestId}.json",
+                            content=verification_log,
+                            keyvalues={"type": "verification", "request_id": requestId},
+                        )
+                        proof_cid = ipfs_result.get("IpfsHash", "")
+                        logger.info("✅ Verification uploaded to IPFS: %s", proof_cid)
+                    else:
+                        # Fallback: use tx_hash as proof identifier
+                        proof_cid = blockchain_result.get("tx_hash", "no-ipfs-configured")
+                        logger.warning("IPFS not configured, using tx_hash as proof_cid")
+                except Exception as e:
+                    logger.error("Failed to upload verification to IPFS: %s", e)
+                    proof_cid = blockchain_result.get("tx_hash", "ipfs-upload-failed")
+
+                yield _logging_service.format_sse_event({
+                    "event": "proof_cid",
+                    "data": {
+                        "proof_cid": proof_cid,
+                        "message": "Proof CID available for on-chain completion"
+                    }
+                })
                     
         except Exception as e:
             logger.error("Work completion verification failed: %s", e)
