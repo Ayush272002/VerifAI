@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect, KeyboardEvent } from "react";
+import { useState, KeyboardEvent } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Plus, Clock, Upload, CheckCircle2, Loader2 } from "lucide-react";
+import { X, Plus, Clock, Loader2 } from "lucide-react";
 import { useAddService } from "@/lib/marketplace";
 import { EthIcon } from "@/components/EthIcon";
 import { GIG_CATEGORIES, getRandomPlaceholderImage } from "@/lib/gigCategories";
@@ -31,7 +31,6 @@ export function PublishServiceModal({
     priceType: "fixed" as "fixed" | "hourly",
     priceAmount: "",
     deliveryTime: "",
-    backgroundImage: null as string | null,
   });
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -40,19 +39,13 @@ export function PublishServiceModal({
   >([{ id: Math.random().toString(), text: "" }]);
   const [isCategorizing, setIsCategorizing] = useState(false);
   const [classificationError, setClassificationError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validDeliverables = deliverables.filter((d) => d.text.trim() !== "");
 
-  useEffect(() => {
-    if (formData.category) {
-      const placeholderImage = getRandomPlaceholderImage(formData.category);
-      setFormData((prev) => ({
-        ...prev,
-        backgroundImage: placeholderImage,
-      }));
-    }
-  }, [formData.category]);
+  // Auto-generate background image based on category
+  const backgroundImage = formData.category 
+    ? getRandomPlaceholderImage(formData.category)
+    : null;
 
   const handleAutoCategorize = async () => {
     if (!formData.title.trim() || !formData.description.trim()) {
@@ -105,15 +98,8 @@ export function PublishServiceModal({
     tags.length > 0 &&
     validDeliverables.length > 0;
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, backgroundImage: reader.result as string });
-      };
-      reader.readAsDataURL(file);
-    }
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
   const handleTagKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
@@ -124,10 +110,6 @@ export function PublishServiceModal({
       }
       setTagInput("");
     }
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setTags(tags.filter((tag) => tag !== tagToRemove));
   };
 
   const updateDeliverable = (id: string, value: string) => {
@@ -198,9 +180,7 @@ export function PublishServiceModal({
     if (!isFormValid || isPending || isConfirming) return;
 
     try {
-      const resolvedBackgroundImage =
-        formData.backgroundImage ||
-        getRandomPlaceholderImage(formData.category);
+      const resolvedBackgroundImage = backgroundImage || getRandomPlaceholderImage(formData.category);
 
       const deliverablesText = validDeliverables
         .map((d, i) => `${i + 1}. ${d.text}`)
@@ -243,7 +223,6 @@ export function PublishServiceModal({
         priceType: "fixed",
         priceAmount: "",
         deliveryTime: "",
-        backgroundImage: null,
       });
       setTags([]);
       setTagInput("");
@@ -328,7 +307,7 @@ export function PublishServiceModal({
                         setFormData({ ...formData, title: e.target.value })
                       }
                       placeholder="e.g., Full-Stack Web Development - React, Node.js"
-                      className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                      className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all"
                     />
                   </div>
 
@@ -348,7 +327,7 @@ export function PublishServiceModal({
                         })
                       }
                       placeholder="Describe your service, what you offer, and what makes you stand out..."
-                      className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all resize-none"
+                      className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all resize-none"
                     />
                   </div>
 
@@ -364,7 +343,7 @@ export function PublishServiceModal({
                         onChange={(e) =>
                           setFormData({ ...formData, category: e.target.value })
                         }
-                        className="flex-1 glass-search px-4 py-3 rounded-xl text-black dark:text-white outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                        className="flex-1 glass-search px-4 py-3 rounded-xl text-black dark:text-white outline-none transition-all"
                       >
                         <option value="">Select a category</option>
                         {GIG_CATEGORIES.map((cat) => (
@@ -379,7 +358,7 @@ export function PublishServiceModal({
                         disabled={isCategorizing}
                         className="btn-macos min-w-[170px] px-3 py-2 text-sm"
                       >
-                        {isCategorizing ? "Classifying..." : "Auto categorize"}
+                        {isCategorizing ? "Classifying..." : "Auto categorise"}
                       </button>
                     </div>
                     {classificationError && (
@@ -528,7 +507,7 @@ export function PublishServiceModal({
                             }
                           }}
                           placeholder="0.5"
-                          className="w-full glass-search pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                          className="w-full glass-search pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all"
                         />
                       </div>
                     </div>
@@ -552,7 +531,7 @@ export function PublishServiceModal({
                           })
                         }
                         placeholder="e.g., 7 days, 2 weeks, Flexible"
-                        className="w-full glass-search pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                        className="w-full glass-search pl-10 pr-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -569,7 +548,7 @@ export function PublishServiceModal({
                         onChange={(e) => setTagInput(e.target.value)}
                         onKeyDown={handleTagKeyDown}
                         placeholder="Type a tag and press Enter..."
-                        className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all"
+                        className="w-full glass-search px-4 py-3 rounded-xl text-black dark:text-white placeholder:text-black/50 dark:placeholder:text-white/50 outline-none transition-all"
                       />
                       {tags.length > 0 && (
                         <div className="flex flex-wrap gap-2">
@@ -596,121 +575,6 @@ export function PublishServiceModal({
                       <p className="text-xs text-black/50 dark:text-white/50">
                         Press Enter to add each tag
                       </p>
-                    </div>
-                  </div>
-
-                  {/* Background Image Upload */}
-                  <div>
-                    <label className="block text-sm font-semibold text-black dark:text-white mb-3">
-                      Background Image
-                    </label>
-                    <div className="space-y-3">
-                      <input
-                        ref={fileInputRef}
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="hidden"
-                      />
-                      <div className="flex gap-3">
-                        <motion.button
-                          type="button"
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                          onClick={() => fileInputRef.current?.click()}
-                          className="flex-1 glass-macos glass-macos-hover px-4 py-3 rounded-xl flex items-center justify-center gap-2 text-black dark:text-white font-semibold"
-                        >
-                          <Upload className="w-5 h-5" />
-                          Upload Background Image
-                        </motion.button>
-                        {formData.backgroundImage && (
-                          <motion.button
-                            type="button"
-                            initial={{ scale: 0 }}
-                            animate={{ scale: 1 }}
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() =>
-                              setFormData({
-                                ...formData,
-                                backgroundImage: null,
-                              })
-                            }
-                            className="glass-macos glass-macos-hover px-4 py-3 rounded-xl text-red-600 dark:text-red-400 font-semibold"
-                          >
-                            <X className="w-5 h-5" />
-                          </motion.button>
-                        )}
-                      </div>
-                      {formData.backgroundImage && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          className="glass-macos rounded-xl p-4 flex items-center gap-3"
-                        >
-                          <div className="w-24 h-16 rounded-xl overflow-hidden bg-black/5 dark:bg-white/5">
-                            <img
-                              src={formData.backgroundImage}
-                              alt="Background preview"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold text-black dark:text-white">
-                              Background uploaded
-                            </p>
-                            <p className="text-xs text-black/60 dark:text-white/60">
-                              This will be the card background
-                            </p>
-                          </div>
-                        </motion.div>
-                      )}
-                      {!formData.backgroundImage && (
-                        <p className="text-xs text-black/50 dark:text-white/50">
-                          Upload a widescreen image (recommended: 800x450px or
-                          larger)
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Preview */}
-                  <div>
-                    <label className="block text-sm font-semibold text-black dark:text-white mb-3">
-                      Preview
-                    </label>
-                    <div className="glass-macos rounded-2xl p-4">
-                      <div className="aspect-video rounded-xl bg-linear-to-br from-slate-700 via-gray-800 to-zinc-900 flex items-center justify-center mb-3 overflow-hidden relative">
-                        {formData.backgroundImage ? (
-                          <img
-                            src={formData.backgroundImage}
-                            alt="Background"
-                            className="w-full h-full object-cover"
-                          />
-                        ) : (
-                          <div className="text-white/20 text-sm font-medium">
-                            No background image
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="font-bold text-black dark:text-white text-sm mb-1">
-                        {formData.title || "Your service title"}
-                      </h3>
-                      <p className="text-xs text-black/60 dark:text-white/60">
-                        {formData.category || "Category"}
-                      </p>
-                      {tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-2">
-                          {tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-2 py-0.5 rounded-lg bg-black/5 dark:bg-white/5 text-xs font-medium text-black/70 dark:text-white/70"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </div>

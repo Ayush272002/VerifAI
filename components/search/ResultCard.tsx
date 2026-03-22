@@ -8,15 +8,10 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 import {
-  Star,
   MapPin,
   Clock,
   CheckCircle2,
-  TrendingUp,
-  Shield,
-  Zap,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ServiceDetailsModal } from "./ServiceDetailsModal";
 import { EthIcon } from "@/components/EthIcon";
 
@@ -57,16 +52,35 @@ interface ResultCardProps {
   index: number;
 }
 
-const LEVEL_ICONS = {
-  Beginner: Shield,
-  Intermediate: TrendingUp,
-  Expert: Zap,
-  "Top Rated": Star,
+/**
+ * Generates a deterministic gradient based on input text.
+ * Same text always produces the same gradient.
+ */
+const getGradientFromText = (text: string): string => {
+  let hash = 0;
+  for (let i = 0; i < text.length; i++) {
+    hash = text.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  const gradients = [
+    "from-cyan-400 to-blue-500",
+    "from-purple-400 to-pink-500",
+    "from-emerald-400 to-teal-500",
+    "from-orange-400 to-red-500",
+    "from-indigo-400 to-purple-500",
+    "from-rose-400 to-pink-500",
+    "from-amber-400 to-orange-500",
+    "from-lime-400 to-green-500",
+    "from-sky-400 to-cyan-500",
+    "from-fuchsia-400 to-purple-500",
+  ];
+  
+  return gradients[Math.abs(hash) % gradients.length];
 };
 
 export function ResultCard({ data, index }: ResultCardProps) {
-  const LevelIcon = LEVEL_ICONS[data.provider.level];
   const [showDetails, setShowDetails] = useState(false);
+  const avatarGradient = getGradientFromText(data.provider.address || data.provider.name);
 
   return (
     <>
@@ -88,15 +102,8 @@ export function ResultCard({ data, index }: ResultCardProps) {
         onClick={() => setShowDetails(true)}
         className="group relative cursor-pointer h-full"
       >
-        {/* Featured Glow */}
-        {data.featured && (
-          <div className="absolute -inset-1 bg-gradient-to-br from-amber-400/30 to-orange-500/30 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        )}
-
-        {/* Regular Glow */}
-        {!data.featured && (
-          <div className="absolute -inset-1 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-        )}
+        {/* Hover Glow */}
+        <div className="absolute -inset-1 bg-gradient-to-br from-cyan-400/20 to-blue-500/20 rounded-[2rem] blur-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
 
         {/* Card */}
         <div className="relative h-full bg-white/70 dark:bg-black/70 backdrop-blur-3xl rounded-3xl border border-white/20 dark:border-white/10 shadow-xl group-hover:shadow-2xl transition-all duration-300 overflow-hidden flex flex-col">
@@ -153,28 +160,13 @@ export function ResultCard({ data, index }: ResultCardProps) {
                 )}
               </div>
             </div>
-
-            {/* Featured Badge */}
-            {data.featured && (
-              <div className="absolute top-3 left-3 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg">
-                <Star className="w-3 h-3 fill-current" />
-                FEATURED
-              </div>
-            )}
-
-            {/* Success Rate */}
-            {data.successRate && (
-              <div className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-emerald-500 text-white text-xs font-bold shadow-lg">
-                {data.successRate}% Success
-              </div>
-            )}
           </div>
 
           {/* Content */}
           <div className="relative p-6 flex-1 flex flex-col">
             {/* Provider Info */}
             <div className="flex items-center gap-3 mb-4">
-              <div className="relative w-10 h-10 rounded-full bg-gradient-to-br from-cyan-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm overflow-hidden">
+              <div className={`relative w-10 h-10 rounded-full bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-white font-bold text-sm overflow-hidden`}>
                 {data.provider.avatar ? (
                   <div
                     className="w-full h-full bg-cover bg-center"
@@ -192,12 +184,6 @@ export function ResultCard({ data, index }: ResultCardProps) {
                   {data.provider.verified && (
                     <CheckCircle2 className="w-4 h-4 text-cyan-500 flex-shrink-0" />
                   )}
-                </div>
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/50 dark:bg-black/50 border border-white/20 dark:border-white/10 backdrop-blur-xl">
-                  <LevelIcon className="w-3 h-3 text-black/60 dark:text-white/60" />
-                  <span className="text-xs font-semibold text-black/70 dark:text-white/70">
-                    {data.provider.level}
-                  </span>
                 </div>
               </div>
             </div>
@@ -226,13 +212,6 @@ export function ResultCard({ data, index }: ResultCardProps) {
 
             {/* Meta Info */}
             <div className="flex items-center gap-4 text-xs text-black/60 dark:text-white/60 mb-4 mt-auto">
-              <div className="flex items-center gap-1">
-                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                <span className="font-bold text-black dark:text-white">
-                  {data.rating.toFixed(1)}
-                </span>
-                <span>({data.reviewCount})</span>
-              </div>
               <div className="flex items-center gap-1">
                 <Clock className="w-3.5 h-3.5" />
                 <span>{data.deliveryTime}</span>
@@ -276,16 +255,6 @@ export function ResultCard({ data, index }: ResultCardProps) {
                 </button>
               </motion.div>
             </div>
-            <div className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" />
-              <span>{data.deliveryTime}</span>
-            </div>
-            {data.location && (
-              <div className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5" />
-                <span className="truncate">{data.location}</span>
-              </div>
-            )}
           </div>
         </div>
       </motion.div>
