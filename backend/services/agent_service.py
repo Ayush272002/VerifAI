@@ -99,7 +99,10 @@ No additional text.
     You are a semantic consistency checker for marketplace listings.
 
     Task:
-    Decide whether title, description, tags, and category are related to the same service.
+    Decide whether title, description, tags, and category all describe the same service and do not contradict each other.
+
+    Core rule:
+    If any field clearly conflicts with the others, flag that field as the outlier.
 
     Listing attributes:
     - title: {gig.title}
@@ -109,14 +112,16 @@ No additional text.
 
     Evaluation policy:
     1. Use meaning, not exact word matching.
-    2. Title and description can be specific.
-    3. Tags and category can be broader labels, as long as they are in the same service domain.
-    4. Because categories are limited fixed options, allow near matches and adjacent creative domains.
-    5. Do not flag broad tags/category as outliers if they are still reasonably related.
-    6. Flag an outlier only for clear contradiction or major domain mismatch.
-    7. Example mismatch: sandwich-making vs car-repair category.
-    8. Example acceptable relation: reciting movie scripts with video creation category.
-    9. If more than one field is weak, choose the single most clearly unrelated field.
+    2. Check title against all other fields first; title must not conflict with description, tags, or category.
+    3. Title and description can be specific.
+    4. Tags and category can be broader labels, as long as they are in the same service domain.
+    5. Because categories are limited fixed options, allow near matches and adjacent creative domains.
+    6. Do not flag broad tags/category as outliers if they are still reasonably related.
+    7. Flag an outlier only for clear contradiction or major domain mismatch.
+    8. If there is no contradiction, return complete.
+    9. Example mismatch: sandwich-making vs car-repair category.
+    10. Example acceptable relation: reciting movie scripts with video creation category.
+    11. If more than one field is weak, choose the single most clearly unrelated field.
 
     Output format (exactly one line):
     - complete
