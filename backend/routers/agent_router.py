@@ -2,10 +2,10 @@
 
 from typing import Any, Generator
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 
-from ..core.data_models import GigCategorizationRequest
+from ..core.data_models import GigCategorizationRequest, GigValidationRequest
 from ..core.data_models import ImageReviewRequest
 from ..core.data_models import PythonFilesReviewRequest
 from ..core.data_models import UnifiedVerifyRequest
@@ -202,7 +202,7 @@ def stream_verify_image_delivery(
 
 
 @router.post("/verify/form/service")
-def verify_gig_form(payload: GigCategorizationRequest) -> dict[str, str]:
+def verify_gig_form(payload: GigValidationRequest) -> dict[str, str]:
     """Validate gig form fields for consistency and coherence.
 
     Args:
@@ -214,20 +214,14 @@ def verify_gig_form(payload: GigCategorizationRequest) -> dict[str, str]:
     Raises:
         HTTPException: 422 if fields are inconsistent or unrelated
     """
-    from fastapi import HTTPException
 
     print(payload)
 
-    validation_result = _ai_service.validate_gig_fields(
-        payload.title,
-        payload.description,
-        tags=payload.tags,
-        category=payload.category
-    )
+    validation_result = _ai_service.validate_gig_fields(payload)
     print(f"Validation result: {validation_result}")
 
     # Check if validation failed (contains "Outlier" or is not "complete")
-    if "outlier" in validation_result.lower() or validation_result.strip().lower() != "complete":
+    if "outlier" in validation_result.lower() or "complete" not in validation_result.strip().lower():
         raise HTTPException(
             status_code=422,
             detail=validation_result
